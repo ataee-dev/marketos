@@ -1,7 +1,5 @@
 /**
- * قیمتو 5.2 — APP BOOT
- * ✅ حذف initHeaderTicker (جایش در ui.js → renderHomeTicker)
- * ✅ بدون ارجاع به هدر قدیمی
+ * قیمتو 5.5 — APP BOOT
  */
 (function(){
 'use strict';
@@ -10,7 +8,7 @@
    GESTURES
 ============================================================ */
 window.Gestures = (function(){
-  const state = { enabled: true, swipeThreshold: 80, pullThreshold: 80 };
+  const state = { enabled: true };
 
   function attachPageSwipe(container){
     if(!container) return;
@@ -68,15 +66,6 @@ window.Anim = (function(){
     });
   }
 
-  function flashPrice(el, direction){
-    if(!el) return;
-    const cls = direction === 'up' ? 'flash-up' : 'flash-down';
-    el.classList.remove('flash-up','flash-down');
-    void el.offsetWidth;
-    el.classList.add(cls);
-    setTimeout(() => el.classList.remove(cls), 850);
-  }
-
   function init(){
     if(!document.getElementById('anim-keyframes')){
       const style = document.createElement('style');
@@ -91,13 +80,8 @@ window.Anim = (function(){
     console.log('[Anim] ✓');
   }
 
-  return { init, flashPrice };
+  return { init };
 })();
-
-/* ============================================================
-   ❌ initHeaderTicker حذف شد
-   ✅ جایگزین: renderHomeTicker در ui.js
-============================================================ */
 
 /* ============================================================
    SPLASH + OFFLINE
@@ -105,7 +89,7 @@ window.Anim = (function(){
 function hideSplash(){
   const s = document.querySelector('[data-splash]');
   if(!s) return;
-  setTimeout(() => s.classList.add('is-hidden'), 1500);
+  setTimeout(() => s.classList.add('is-hidden'), 1200);
 }
 
 function initOnlineStatus(){
@@ -138,7 +122,7 @@ function initOnlineStatus(){
    BOOT
 ============================================================ */
 function boot(){
-  console.log('%cقیمتو 5.2', 'color:#10b981;font-size:20px;font-weight:900');
+  console.log('%cقیمتو 5.5', 'color:#10b981;font-size:20px;font-weight:900');
 
   try {
     // 1. Config
@@ -160,20 +144,17 @@ function boot(){
     // 5. Gestures
     if(window.Gestures?.init) Gestures.init();
 
-    // 6. ❌ initHeaderTicker حذف شد
-    // (renderHomeTicker در UI.init → go('home') صدا زده می‌شود)
-
-    // 7. Online/Offline
+    // 6. Online/Offline
     initOnlineStatus();
 
-    // 8. API
+    // 7. API
     if(window.API){
-      const interval = CFG.get('refreshInterval') || 20000;
+      const interval = CFG.get('refreshInterval') || 60000;
       if(CFG.get('autoRefresh') !== false) API.start(interval);
       else API.fetchData().catch(() => {});
     }
 
-    // 9. Hide splash
+    // 8. Hide splash
     hideSplash();
 
     console.log('%c[قیمتو] ✓ آماده', 'color:#10b981;font-weight:900');
