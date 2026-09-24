@@ -12,7 +12,6 @@
 <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
 <link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="css/app.css">
-<link rel="stylesheet" href="css/tv.css">
 </head>
 <body class="dark">
 
@@ -34,7 +33,7 @@
     </svg>
   </div>
   <h2>اتصال قطع شد</h2>
-  <p>به نظر می‌رسد اینترنت شما قطع شده است. لطفاً اتصال خود را بررسی کنید.</p>
+  <p>لطفاً اتصال خود را بررسی کنید.</p>
   <button data-retry>تلاش مجدد</button>
 </div>
 
@@ -92,12 +91,10 @@
   <!-- ═══════════════ MAIN ═══════════════ -->
   <main class="main">
 
-    <!-- ═══════════════ HEADER ═══════════════ -->
     <header class="app-header">
       <button class="hdr-btn" data-menu aria-label="منو">
         <span data-icon="menu"></span>
       </button>
-
       <div class="hdr-search-wrap">
         <div class="hdr-search">
           <span class="hdr-search-icon" data-icon="search"></span>
@@ -105,13 +102,11 @@
         </div>
         <div class="hdr-search-results" data-search-results hidden></div>
       </div>
-
       <button class="hdr-btn" data-action="refresh" aria-label="بروزرسانی">
         <span data-icon="refresh"></span>
       </button>
     </header>
 
-    <!-- ═══════════════ MOVING TICKER زیر هدر ═══════════════ -->
     <div class="hdr-ticker" data-hdr-ticker>
       <div class="hdr-ticker-track" data-hdr-ticker-track></div>
     </div>
@@ -121,15 +116,15 @@
       <!-- ═══════════════ HOME ═══════════════ -->
       <section class="page is-active" data-page="home">
 
-        <!-- Portfolio -->
+        <!-- Portfolio Card (بانکی) -->
         <div class="sec-head">
           <div class="sec-title"><span data-icon="briefcase"></span>پرتفوی من</div>
           <button class="link" data-tool="portfolio">مدیریت<span data-icon="arrowLeft"></span></button>
         </div>
-        <div class="portfolio-scroll-wrap" data-portfolio-grid></div>
+        <div class="portfolio-card-wrap" data-portfolio-card></div>
 
         <!-- Banner Home -->
-        <div class="banner-single" data-banner="home">
+        <div class="banner-single">
           <img src="assets/banners/banner-home.jpg" alt="پایش زنده بازار" loading="lazy">
         </div>
 
@@ -154,7 +149,7 @@
         <div class="scroll-wrap"><div class="scroll-row" data-most></div></div>
 
         <!-- Banner Home 2 -->
-        <div class="banner-single" data-banner="home2">
+        <div class="banner-single">
           <img src="assets/banners/banner-home2.jpg" alt="تحلیل حرفه‌ای" loading="lazy">
         </div>
 
@@ -179,8 +174,7 @@
       <!-- ═══════════════ MARKETS ═══════════════ -->
       <section class="page" data-page="markets">
 
-        <!-- Banner Markets -->
-        <div class="banner-single" data-banner="markets">
+        <div class="banner-single">
           <img src="assets/banners/banner-markets.jpg" alt="بازارها" loading="lazy">
         </div>
 
@@ -202,11 +196,10 @@
         <div class="grid-assets" data-market-grid></div>
       </section>
 
-      <!-- ═══════════════ CHART ═══════════════ -->
+      <!-- ═══════════════ CHART با سوالات TGJU ═══════════════ -->
       <section class="page" data-page="chart">
 
-        <!-- Banner Chart -->
-        <div class="banner-single" data-banner="chart">
+        <div class="banner-single">
           <img src="assets/banners/banner-chart.jpg" alt="نمودار" loading="lazy">
         </div>
 
@@ -224,6 +217,11 @@
         <div class="chart-main">
           <div class="chart-price" data-c-price>—</div>
           <div class="chart-change" data-c-change>—</div>
+          <div class="chart-main-meta">
+            <span data-c-unit>—</span>
+            <span>•</span>
+            <span data-c-time>—</span>
+          </div>
         </div>
 
         <!-- Period selector -->
@@ -240,76 +238,21 @@
           </div>
         </div>
 
-        <!-- سوالات: تغییرات در بازه‌های زمانی -->
-        <div class="chart-questions">
-          <div class="chart-q-item" data-q="1h">
-            <div class="chart-q-icon">⏱</div>
-            <div class="chart-q-info">
-              <span class="chart-q-label">۱ ساعت قبل</span>
-              <span class="chart-q-price" data-q-price>—</span>
-            </div>
-            <div class="chart-q-change" data-q-change>—</div>
+        <!-- سوالات کامل (مثل TGJU) -->
+        <div class="chart-questions-full">
+          <div class="chart-q-header">
+            <span class="chart-q-title">سوالات متداول</span>
+            <span class="chart-q-date" data-c-questions-date>—</span>
           </div>
-          <div class="chart-q-item" data-q="24h">
-            <div class="chart-q-icon">📅</div>
-            <div class="chart-q-info">
-              <span class="chart-q-label">۲۴ ساعت قبل</span>
-              <span class="chart-q-price" data-q-price>—</span>
-            </div>
-            <div class="chart-q-change" data-q-change>—</div>
-          </div>
-          <div class="chart-q-item" data-q="1w">
-            <div class="chart-q-icon">📆</div>
-            <div class="chart-q-info">
-              <span class="chart-q-label">۱ هفته قبل</span>
-              <span class="chart-q-price" data-q-price>—</span>
-            </div>
-            <div class="chart-q-change" data-q-change>—</div>
-          </div>
-          <div class="chart-q-item" data-q="1m">
-            <div class="chart-q-icon">🗓</div>
-            <div class="chart-q-info">
-              <span class="chart-q-label">۱ ماه قبل</span>
-              <span class="chart-q-price" data-q-price>—</span>
-            </div>
-            <div class="chart-q-change" data-q-change>—</div>
-          </div>
+          <div class="chart-q-list" data-c-questions></div>
         </div>
 
-        <!-- آمار ۲۴ ساعت -->
-        <div class="chart-stats">
-          <div class="chart-stat">
-            <small>بالاترین ۲۴h</small>
-            <strong data-c-high>—</strong>
+        <!-- تحلیل حباب -->
+        <div class="bubble-analysis" data-bubble-analysis hidden>
+          <div class="bubble-header">
+            <span class="bubble-title">📊 تحلیل حباب</span>
           </div>
-          <div class="chart-stat">
-            <small>پایین‌ترین ۲۴h</small>
-            <strong data-c-low>—</strong>
-          </div>
-          <div class="chart-stat">
-            <small>میانگین</small>
-            <strong data-c-avg>—</strong>
-          </div>
-          <div class="chart-stat">
-            <small>تغییر مبلغ</small>
-            <strong data-c-delta>—</strong>
-          </div>
-        </div>
-
-        <!-- اطلاعات بیشتر -->
-        <div class="chart-meta">
-          <div class="chart-meta-row">
-            <span>واحد</span>
-            <strong data-c-unit>—</strong>
-          </div>
-          <div class="chart-meta-row">
-            <span>دسته‌بندی</span>
-            <strong data-c-cat>—</strong>
-          </div>
-          <div class="chart-meta-row">
-            <span>آخرین بروزرسانی</span>
-            <strong data-c-time>—</strong>
-          </div>
+          <div class="bubble-body" data-bubble-body></div>
         </div>
 
         <!-- نمادهای مرتبط -->
@@ -352,10 +295,30 @@
           <div class="sec-title"><span data-icon="settings"></span>تنظیمات</div>
         </div>
 
+        <!-- پروفایل کاربر -->
+        <div class="set-card">
+          <h3>پروفایل</h3>
+          <div class="set-row">
+            <div><span>نام شما</span><small>روی کارت پرتفوی نمایش داده می‌شود</small></div>
+            <input class="input" type="text" placeholder="کاربر مهمان" data-input="userName" style="width:140px">
+          </div>
+        </div>
+
+        <div class="set-card">
+          <h3>واحد پول</h3>
+          <div class="set-row">
+            <div><span>واحد نمایش</span><small>همه قیمت‌ها و محاسبات بر این اساس</small></div>
+            <div class="unit-toggle">
+              <button data-unit="toman" class="is-active">تومان</button>
+              <button data-unit="rial">ریال</button>
+            </div>
+          </div>
+        </div>
+
         <div class="set-card">
           <h3>ظاهر</h3>
           <div class="set-row">
-            <div><span>حالت تاریک</span><small>پالت تیره سبز</small></div>
+            <div><span>حالت تاریک</span></div>
             <button class="switch is-on" data-toggle="darkTheme"></button>
           </div>
           <div class="set-row">

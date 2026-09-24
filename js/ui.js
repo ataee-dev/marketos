@@ -1,10 +1,11 @@
 /**
- * قیمتو 5.6 — UI
+ * قیمتو 5.7 — UI
+ * ✅ کارت بانکی پرتفوی
+ * ✅ ۲۰ سوال TGJU در Chart
+ * ✅ تحلیل حباب طلا
+ * ✅ سیستم واحد هوشمند (تومان/ریال)
  * ✅ جستجوی inline
- * ✅ Chart با سوالات (1h/24h/1w/1m)
- * ✅ پرتفوی افقی
- * ✅ زیرنویس متحرک در هدر
- * ✅ تومان همیشه
+ * ✅ تومان/ریال هماهنگ با محاسبات
  */
 window.UI = (function(){
 'use strict';
@@ -37,6 +38,61 @@ function assetIcon(asset){
 function catColor(asset){ return CAT_COLOR[asset.cat] || 'gold'; }
 
 /* ============================================================
+   UNIT SYSTEM — همه چیز بر اساس واحد کاربر
+============================================================ */
+function getUnit(){
+  return window.CFG.get('currency') || 'toman';
+}
+
+/**
+ * تبدیل ورودی کاربر به واحد پایه (ریال)
+ * چون API داده رو ریال می‌ده
+ */
+function userToBase(value){
+  if(value == null || isNaN(value)) return null;
+  const unit = getUnit();
+  return unit === 'toman' ? value * 10 : value;
+}
+
+/**
+ * تبدیل داده پایه (ریال) به واحد کاربر
+ */
+function baseToUser(value){
+  if(value == null || isNaN(value)) return null;
+  const unit = getUnit();
+  return unit === 'toman' ? value / 10 : value;
+}
+
+/**
+ * نمایش قیمت با واحد
+ */
+function formatPrice(asset, rialValue){
+  if(rialValue == null || isNaN(rialValue)) return '—';
+  
+  const unit = getUnit();
+  const unitText = unit === 'toman' ? 'تومان' : 'ریال';
+  
+  // برای نمادهای USD — دلار نمایش بده
+  if(asset && asset.ptype === 'usd'){
+    return '$' + window.U.num(rialValue, asset.dec || 2);
+  }
+  
+  const val = baseToUser(rialValue);
+  const abs = Math.abs(val);
+  const d = abs < 10 ? 4 : (abs < 1000 ? 2 : 0);
+  return window.U.num(val, d) + ' ' + unitText;
+}
+
+/**
+ * نمایش عدد خالص بدون واحد (برای محاسبات)
+ */
+function formatNumber(asset, rialValue){
+  if(rialValue == null || isNaN(rialValue)) return '—';
+  if(asset && asset.ptype === 'usd') return window.U.num(rialValue, asset.dec || 2);
+  return window.U.num(baseToUser(rialValue), 0);
+}
+
+/* ============================================================
    CARD HTML
 ============================================================ */
 function marketCardHTML(asset){
@@ -61,7 +117,7 @@ function marketCardHTML(asset){
           ${Icons.get('star')}
         </button>
       </div>
-      <div class="m-card-price">${noPrice ? '—' : U.price(asset, price)}</div>
+      <div class="m-card-price">${noPrice ? '—' : formatPrice(asset, price)}</div>
       ${cp != null && !noPrice ? `
         <span class="m-card-change ${up?'up':'down'}">
           ${up?'▲':'▼'} ${Math.abs(cp).toFixed(2)}٪
@@ -148,121 +204,91 @@ function renderTools(){
 }
 
 /* ============================================================
-   PORTFOLIO — افقی
+   BANK CARD — کارت بانکی پرتفوی
 ============================================================ */
-function renderPortfolioCards(){
-  const grid = $('[data-portfolio-grid]');
-  if(!grid) return;
+function getUserName(){
+  return window.Storage.get('gheymato.username', '') || 'کاربر مهمان';
+}
+
+function saveUserName(name){
+  window.Storage.set('gheymato.username', name || '');
+}
+
+function renderBankCard(){
+  const wrap = $('[data-portfolio-card]');
+  if(!wrap) return;
 
   const list = window.Storage.pf.get();
-
-  if(!list.length){
-    grid.innerHTML = `
-      <div class="scroll-row portfolio-row">
-        <button type="button" class="pf-card pf-card-add" data-tool="portfolio">
-          <div class="pf-card-add-icon">${window.Icons.get('plus')}</div>
-          <span>افزودن دارایی</span>
-        </button>
-      </div>
-    `;
-    return;
-  }
+  const userName = getUserName();
+  const isFav = (window.Storage.fav.get() || []).length;
 
   let totalBuy = 0, totalNow = 0;
+  const isEmpty = !list.length;
 
-  const cards = list.map(item => {
-    const a = window.DATA.find(item.id);
-    const l = window.API.getById(item.id);
-    if(!a) return '';
-
-    const price = (l && l.price != null) ? l.price : item.buyPrice;
-    const bv = item.buyPrice * item.qty;
-    const nv = price * item.qty;
-    totalBuy += bv;
-    totalNow += nv;
-
-    const pl = nv - bv;
-    const pct = bv > 0 ? (pl / bv) * 100 : 0;
-    const up = pl >= 0;
-
-    const colors = {
-      gold:     { bg:'rgba(229,185,110,.14)', color:'#c8974a' },
-      currency: { bg:'rgba(91,157,217,.12)',  color:'#3d7eb8' },
-      crypto:   { bg:'rgba(155,125,219,.12)', color:'#7558b8' },
-      metal:    { bg:'rgba(107,190,214,.12)', color:'#3d8ea8' },
-      energy:   { bg:'rgba(232,165,92,.12)',  color:'#c87c3a' },
-      commodity:{ bg:'rgba(16,162,110,.12)',  color:'#10a26e' },
-      index:    { bg:'rgba(221,126,161,.12)', color:'#b85c7e' },
-      goldCrypto:{ bg:'rgba(229,185,110,.14)',color:'#c8974a' }
-    };
-    const c = colors[a.cat] || colors.gold;
-
-    return `
-      <div class="pf-card" data-card-id="${a.id}">
-        <div class="pf-card-head">
-          <div class="pf-card-icon" style="--pf-color:${c.color};--pf-bg:${c.bg}">
-            ${assetIcon(a)}
-          </div>
-          <div class="pf-card-info">
-            <strong>${window.U.esc(a.short || a.name)}</strong>
-            <small>${window.U.num(item.qty)} × ${window.U.price(a, item.buyPrice)}</small>
-          </div>
-        </div>
-        <div class="pf-card-value">${window.U.price(a, nv)}</div>
-        <div class="pf-card-sub">ارزش فعلی</div>
-        <div class="pf-card-foot">
-          <span class="pf-card-badge ${up ? 'up' : 'down'}">
-            ${up ? '▲' : '▼'} ${up ? '+' : ''}${pct.toFixed(2)}%
-          </span>
-          <button type="button" class="icon-btn" data-pf-del="${item.ts}"
-            style="width:24px;height:24px;font-size:13px;color:var(--muted);padding:0;background:none;border:0">
-            ${window.Icons.get('trash')}
-          </button>
-        </div>
-      </div>
-    `;
-  }).join('');
+  if(!isEmpty){
+    list.forEach(item => {
+      const a = window.DATA.find(item.id);
+      const l = window.API.getById(item.id);
+      if(!a) return;
+      const price = (l && l.price != null) ? l.price : item.buyPrice;
+      totalBuy += item.buyPrice * item.qty;
+      totalNow += price * item.qty;
+    });
+  }
 
   const pl = totalNow - totalBuy;
   const plPct = totalBuy > 0 ? (pl / totalBuy) * 100 : 0;
   const up = pl >= 0;
 
-  const totalCard = `
-    <div class="pf-card pf-card-total">
-      <div class="pf-card-head">
-        <div class="pf-card-icon" style="--pf-color:var(--accent);--pf-bg:var(--accent-soft)">
-          ${window.Icons.get('briefcase')}
-        </div>
-        <div class="pf-card-info">
-          <strong>مجموع پرتفوی</strong>
-          <small>${window.U.num(list.length)} دارایی</small>
-        </div>
-      </div>
-      <div class="pf-card-value">${window.U.money(totalNow)}</div>
-      <div class="pf-card-sub">ارزش کل دارایی‌ها</div>
-      <div class="pf-card-foot">
-        <span class="pf-card-badge ${up ? 'up' : 'down'}">
-          ${up ? '▲' : '▼'} ${up ? '+' : ''}${plPct.toFixed(2)}%
-        </span>
-        <small style="color:var(--muted);font-size:10px;direction:ltr">
-          ${up ? '+' : ''}${window.U.money(Math.abs(pl))}
-        </small>
-      </div>
-    </div>
-  `;
+  // حرف اول اسم کاربر برای آواتار
+  const firstChar = userName.trim().charAt(0) || '👤';
 
-  const addCard = `
-    <button type="button" class="pf-card pf-card-add" data-tool="portfolio">
-      <div class="pf-card-add-icon">${window.Icons.get('plus')}</div>
-      <span>افزودن دارایی</span>
-    </button>
-  `;
+  // مقدار نمایشی
+  let displayValue = '0 تومان';
+  let displayChange = '';
+  if(!isEmpty){
+    const unit = getUnit();
+    const unitText = unit === 'toman' ? 'تومان' : 'ریال';
+    const val = baseToUser(totalNow);
+    displayValue = window.U.num(val, 0) + ' ' + unitText;
+    displayChange = `
+      <span class="bank-card-change">
+        ${up ? '▲' : '▼'} ${up ? '+' : ''}${plPct.toFixed(2)}%
+      </span>
+    `;
+  }
 
-  grid.innerHTML = `
-    <div class="scroll-row portfolio-row">
-      ${totalCard}
-      ${cards}
-      ${addCard}
+  wrap.innerHTML = `
+    <div class="bank-card ${isEmpty ? 'is-empty' : ''}" data-tool="portfolio">
+      <div class="bank-card-top">
+        <div class="bank-card-brand">
+          <img src="assets/logo.svg" alt="قیمتو">
+          <div class="bank-card-brand-text">
+            <strong>قیمتو</strong>
+            <small>${isEmpty ? 'پرتفوی خالی' : window.U.num(list.length) + ' دارایی'}</small>
+          </div>
+        </div>
+        <div class="bank-card-chip"></div>
+      </div>
+
+      <div class="bank-card-center">
+        <span class="bank-card-label">ارزش کل پرتفوی</span>
+        <span class="bank-card-value">${displayValue}</span>
+        ${displayChange}
+      </div>
+
+      <div class="bank-card-bottom">
+        <div class="bank-card-user">
+          <div class="bank-card-avatar">${firstChar}</div>
+          <div class="bank-card-user-info">
+            <strong>${window.U.esc(userName)}</strong>
+            <small>${isEmpty ? 'برای شروع دارایی اضافه کنید' : 'دارایی‌های شما'}</small>
+          </div>
+        </div>
+        <button type="button" class="bank-card-add" data-tool="portfolio" aria-label="افزودن">
+          ${window.Icons.get('plus')}
+        </button>
+      </div>
     </div>
   `;
 }
@@ -309,7 +335,7 @@ function renderFavs(){
 }
 
 /* ============================================================
-   HEADER TICKER (زیرنویس متحرک)
+   HEADER TICKER
 ============================================================ */
 function renderHdrTicker(){
   const track = $('[data-hdr-ticker-track]');
@@ -331,18 +357,17 @@ function renderHdrTicker(){
     return `
       <div class="hdr-ticker-item">
         <span class="name">${window.U.esc(a.short || a.name)}</span>
-        <span class="price">${window.U.price(a, l.price)}</span>
+        <span class="price">${formatPrice(a, l.price)}</span>
         <span class="chg ${up?'up':'down'}">${up?'▲':'▼'} ${Math.abs(cp).toFixed(2)}%</span>
       </div>
     `;
   }).filter(Boolean).join('');
 
-  // تکرار برای اسکرول بی‌نهایت
   track.innerHTML = items + items;
 }
 
 /* ============================================================
-   CHART PAGE — بازطراحی کامل با سوالات
+   CHART PAGE — با ۲۰ سوال TGJU + تحلیل حباب
 ============================================================ */
 async function renderChartPage(){
   const asset = window.DATA.find(activeChartId);
@@ -350,7 +375,7 @@ async function renderChartPage(){
 
   const live = window.API.getById(asset.id);
 
-  // ۱. هدر نماد
+  // ۱. هدر
   const iconEl = $('[data-c-icon]');
   if(iconEl) iconEl.innerHTML = assetIcon(asset);
 
@@ -360,7 +385,6 @@ async function renderChartPage(){
   const codeEl = $('[data-c-code]');
   if(codeEl) codeEl.textContent = asset.code;
 
-  // ۲. دکمه علاقه‌مندی
   const favEl = $('[data-c-fav]');
   if(favEl){
     const isFav = window.Storage.fav.get().includes(asset.id);
@@ -369,13 +393,13 @@ async function renderChartPage(){
     favEl.textContent = isFav ? '★' : '☆';
   }
 
-  // ۳. قیمت اصلی
+  // ۲. قیمت اصلی
   const priceEl = $('[data-c-price]');
   if(priceEl){
-    priceEl.textContent = live && live.price != null ? window.U.price(asset, live.price) : '—';
+    priceEl.textContent = live && live.price != null ? formatPrice(asset, live.price) : '—';
   }
 
-  // ۴. تغییرات
+  // ۳. تغییرات
   const changeEl = $('[data-c-change]');
   if(changeEl && live && live.changePercent != null){
     const up = live.changePercent >= 0;
@@ -386,59 +410,27 @@ async function renderChartPage(){
     changeEl.className = 'chart-change';
   }
 
-  // ۵. آمار
-  function fmt(v){
-    if(v == null) return '—';
-    return asset.ptype === 'usd' ? '$' + window.U.num(v, asset.dec) : window.U.money(v);
-  }
-
-  const highEl = $('[data-c-high]');
-  if(highEl) highEl.textContent = fmt(live && live.high);
-
-  const lowEl = $('[data-c-low]');
-  if(lowEl) lowEl.textContent = fmt(live && live.low);
-
-  const deltaEl = $('[data-c-delta]');
-  if(deltaEl){
-    if(live && live.change != null){
-      const up = live.change >= 0;
-      deltaEl.textContent = (up ? '+' : '') + fmt(Math.abs(live.change));
-      deltaEl.style.color = up ? 'var(--up)' : 'var(--down)';
-    } else {
-      deltaEl.textContent = '—';
-    }
-  }
-
-  const avgEl = $('[data-c-avg]');
-  if(avgEl){
-    if(live && live.high != null && live.low != null){
-      avgEl.textContent = fmt((live.high + live.low) / 2);
-    } else {
-      avgEl.textContent = '—';
-    }
-  }
-
-  // ۶. اطلاعات بیشتر
+  // ۴. واحد + زمان
   const unitEl = $('[data-c-unit]');
-  if(unitEl) unitEl.textContent = asset.unit || '—';
-
-  const catEl = $('[data-c-cat]');
-  if(catEl){
-    const cat = window.DATA.CATEGORIES[asset.cat];
-    catEl.textContent = cat ? cat.label : asset.cat;
+  if(unitEl){
+    const unitText = getUnit() === 'toman' ? 'تومان' : 'ریال';
+    unitEl.textContent = asset.ptype === 'usd' ? 'دلار' : unitText;
   }
 
   const timeEl = $('[data-c-time]');
   if(timeEl) timeEl.textContent = live && live.time ? live.time : '—';
 
-  // ۷. نمودار
+  // ۵. نمودار
   const canvas = $('[data-chart-canvas]');
   if(canvas) drawChartAsync(canvas, asset);
 
-  // ۸. سوالات (تغییرات در بازه‌های زمانی)
-  renderChartQuestions(asset, live);
+  // ۶. ۲۰ سوال TGJU
+  await renderChartQuestions(asset, live);
 
-  // ۹. نمادهای مرتبط
+  // ۷. تحلیل حباب (فقط برای طلا/سکه)
+  renderBubbleAnalysis(asset, live);
+
+  // ۸. نمادهای مرتبط
   const relEl = $('[data-c-related]');
   if(relEl){
     const related = window.DATA.byCat(asset.cat)
@@ -448,88 +440,430 @@ async function renderChartPage(){
   }
 }
 
-/**
- * رندر سوالات صفحه Chart
- */
+/* ============================================================
+   ۲۰ سوال TGJU
+============================================================ */
 async function renderChartQuestions(asset, live){
-  if(!live || live.price == null) return;
+  const listEl = $('[data-c-questions]');
+  const dateEl = $('[data-c-questions-date]');
+  if(!listEl) return;
 
-  const currentPrice = live.price;
+  const today = new Date().toLocaleDateString('fa-IR', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  });
+  if(dateEl) dateEl.textContent = today;
 
-  // بازه‌های زمانی به میلی‌ثانیه
-  const intervals = {
-    '1h':  1 * 60 * 60 * 1000,
-    '24h': 24 * 60 * 60 * 1000,
-    '1w':  7 * 24 * 60 * 60 * 1000,
-    '1m':  30 * 24 * 60 * 60 * 1000
-  };
+  if(!live || live.price == null){
+    listEl.innerHTML = '<div class="chart-q-item"><div class="chart-q-body"><span class="chart-q-answer">داده‌ای موجود نیست</span></div></div>';
+    return;
+  }
 
-  for(const [key, ms] of Object.entries(intervals)){
-    const item = document.querySelector(`[data-q="${key}"]`);
-    if(!item) continue;
+  const current = live.price;
+  const high = live.high;
+  const low = live.low;
+  const open = live.open;
+  const changePct = live.changePercent || 0;
 
-    const priceEl = item.querySelector('[data-q-price]');
-    const changeEl = item.querySelector('[data-q-change]');
+  // تاریخچه برای محاسبه
+  let history = [];
+  try {
+    if(window.API.getHistory){
+      history = await window.API.getHistory(asset, 365); // ۱ سال
+    }
+  } catch(e){}
 
-    try {
-      // از تاریخچه استفاده کن
-      let pastPrice = null;
+  const sortedHistory = (history || []).slice().sort((a,b) => a.t - b.t);
 
-      if(window.API.getHistory){
-        // تعداد روز بر اساس بازه
-        const days = Math.max(1, Math.ceil(ms / (24 * 60 * 60 * 1000)));
-        const history = await window.API.getHistory(asset, days);
+  function findPriceAt(msAgo){
+    if(!sortedHistory.length) return null;
+    const target = Date.now() - msAgo;
+    let closest = null, minDiff = Infinity;
+    for(const p of sortedHistory){
+      const diff = Math.abs(p.t - target);
+      if(diff < minDiff){ minDiff = diff; closest = p; }
+    }
+    if(closest && minDiff < 3 * 24 * 60 * 60 * 1000){ // حداکثر ۳ روز اختلاف
+      return closest.p;
+    }
+    return null;
+  }
 
-        if(history && history.length){
-          // پیدا کن نزدیک‌ترین نقطه به زمان هدف
-          const targetTime = Date.now() - ms;
-          let closest = null;
-          let minDiff = Infinity;
+  const hourAgo = 60 * 60 * 1000;
+  const dayAgo = 24 * 60 * 60 * 1000;
+  const weekAgo = 7 * dayAgo;
+  const monthAgo = 30 * dayAgo;
+  const sixMonthAgo = 180 * dayAgo;
+  const yearAgo = 365 * dayAgo;
 
-          for(const point of history){
-            const diff = Math.abs(point.t - targetTime);
-            if(diff < minDiff){
-              minDiff = diff;
-              closest = point;
-            }
-          }
+  function pctChange(from, to){
+    if(from == null || to == null || from === 0) return null;
+    return ((to - from) / from) * 100;
+  }
 
-          if(closest && closest.p){
-            pastPrice = closest.p;
-          }
-        }
-      }
+  function changeItem(label, value, change, upGood){
+    const hasValue = value != null;
+    const hasChange = change != null;
+    
+    let cls = 'neutral';
+    if(hasChange){
+      const isUp = change >= 0;
+      cls = isUp ? 'up' : 'down';
+    }
 
-      // اگه تاریخچه نبود، از داده fallback استفاده کن
-      if(pastPrice == null){
-        pastPrice = currentPrice * (1 - (live.changePercent || 0) / 100 * (key === '1h' ? 0.1 : key === '24h' ? 1 : key === '1w' ? 3 : 7));
-      }
+    const changeText = hasChange 
+      ? `<span class="chart-q-answer ${cls}">${change >= 0 ? '▲' : '▼'} ${Math.abs(change).toFixed(2)}%</span>`
+      : `<span class="chart-q-answer neutral">—</span>`;
 
-      // محاسبه تغییر
-      const change = currentPrice - pastPrice;
-      const changePct = (change / pastPrice) * 100;
-      const up = change >= 0;
+    return `
+      <div class="chart-q-item">
+        <div class="chart-q-num">${upGood || ''}</div>
+        <div class="chart-q-body">
+          <span class="chart-q-question">${label}</span>
+          ${changeText}
+        </div>
+      </div>
+    `;
+  }
 
-      if(priceEl) priceEl.textContent = window.U.price(asset, pastPrice);
-      if(changeEl){
-        changeEl.textContent = (up ? '▲' : '▼') + ' ' + Math.abs(changePct).toFixed(2) + '%';
-        changeEl.className = 'chart-q-change ' + (up ? 'up' : 'down');
-      }
+  function valueItem(label, value){
+    return `
+      <div class="chart-q-item">
+        <div class="chart-q-num">•</div>
+        <div class="chart-q-body">
+          <span class="chart-q-question">${label}</span>
+          <span class="chart-q-answer neutral">${value || '—'}</span>
+        </div>
+      </div>
+    `;
+  }
 
-    } catch(e){
-      console.warn('[ChartQ] Failed for', key, e.message);
-      if(priceEl) priceEl.textContent = '—';
-      if(changeEl){
-        changeEl.textContent = '—';
-        changeEl.className = 'chart-q-change muted';
-      }
+  const priceToday = current;
+  const priceDayAgo = findPriceAt(dayAgo);
+  const priceHourAgo = findPriceAt(hourAgo);
+  const priceWeekAgo = findPriceAt(weekAgo);
+  const priceMonthAgo = findPriceAt(monthAgo);
+  const price6MonthAgo = findPriceAt(sixMonthAgo);
+  const priceYearAgo = findPriceAt(yearAgo);
+
+  const questions = [];
+
+  // ۱. قیمت فعلی (تومان یا ریال بر اساس واحد کاربر)
+  const unitText = getUnit() === 'toman' ? 'تومان' : 'ریال';
+  const currentDisplay = asset.ptype === 'usd' 
+    ? '$' + window.U.num(current, asset.dec || 2)
+    : window.U.num(baseToUser(current), 0) + ' ' + unitText;
+
+  questions.push(valueItem(
+    `در حال حاضر قیمت ${asset.name} چقدر می‌باشد؟`,
+    currentDisplay
+  ));
+
+  // ۲. تغییر نسبت به دیروز
+  if(priceDayAgo){
+    questions.push(changeItem(
+      `قیمت ${asset.name} نسبت به دیروز چقدر تغییر کرده است؟`,
+      priceDayAgo,
+      pctChange(priceDayAgo, current)
+    ));
+  }
+
+  // ۳. نرخ بازگشایی امروز
+  if(open != null){
+    questions.push(changeItem(
+      `نرخ بازگشایی ${asset.name} در روز جاری چقدر بوده است؟`,
+      open,
+      pctChange(open, current)
+    ));
+  }
+
+  // ۴. پایین‌ترین قیمت امروز
+  if(low != null){
+    questions.push(valueItem(
+      `پایین‌ترین قیمتی که در بازار امروز برای ${asset.name} به ثبت رسیده چقدر بوده است؟`,
+      formatPrice(asset, low)
+    ));
+  }
+
+  // ۵. بالاترین قیمت امروز
+  if(high != null){
+    questions.push(valueItem(
+      `بالاترین قیمتی که در بازار امروز برای ${asset.name} به ثبت رسیده چقدر بوده است؟`,
+      formatPrice(asset, high)
+    ));
+  }
+
+  // ۶. تغییر نسبت به ماه گذشته
+  if(priceMonthAgo){
+    questions.push(changeItem(
+      `قیمت ${asset.name} نسبت به ماه گذشته چقدر تغییر کرده است؟`,
+      priceMonthAgo,
+      pctChange(priceMonthAgo, current)
+    ));
+  }
+
+  // ۷. تغییر نسبت به ۶ ماه گذشته
+  if(price6MonthAgo){
+    questions.push(changeItem(
+      `قیمت ${asset.name} نسبت به ۶ ماه گذشته چقدر تغییر کرده است؟`,
+      price6MonthAgo,
+      pctChange(price6MonthAgo, current)
+    ));
+  }
+
+  // ۸. بالاترین قیمت تاکنون
+  if(sortedHistory.length > 0){
+    let highest = { p: 0, t: 0 };
+    for(const p of sortedHistory){
+      if(p.p > highest.p){ highest = p; }
+    }
+    if(highest.p > 0){
+      const dateStr = new Date(highest.t).toLocaleDateString('fa-IR');
+      questions.push(`
+        <div class="chart-q-item">
+          <div class="chart-q-num">•</div>
+          <div class="chart-q-body">
+            <span class="chart-q-question">بالاترین قیمت ${asset.name} تاکنون چقدر و در چه تاریخی بوده است؟</span>
+            <span class="chart-q-answer neutral">${formatPrice(asset, highest.p)}</span>
+            <span class="chart-q-date-tiny">📅 ${dateStr}</span>
+          </div>
+        </div>
+      `);
     }
   }
+
+  // ۹. سود یک ماهه
+  if(priceMonthAgo){
+    const profit = pctChange(priceMonthAgo, current);
+    questions.push(changeItem(
+      `سود یک ماهه خرید ${asset.name} چقدر بوده است؟`,
+      priceMonthAgo,
+      profit
+    ));
+  }
+
+  // ۱۰. سود ۶ ماهه
+  if(price6MonthAgo){
+    const profit = pctChange(price6MonthAgo, current);
+    questions.push(changeItem(
+      `سود شش ماهه سرمایه‌گذاری در ${asset.name} چقدر برآورد می‌شود؟`,
+      price6MonthAgo,
+      profit
+    ));
+  }
+
+  // ۱۱. سود سه ماهه
+  const threeMonthAgo = findPriceAt(90 * dayAgo);
+  if(threeMonthAgo){
+    questions.push(changeItem(
+      `سود سه ماهه سرمایه‌گذاری در ${asset.name} چقدر برآورد می‌شود؟`,
+      threeMonthAgo,
+      pctChange(threeMonthAgo, current)
+    ));
+  }
+
+  // ۱۲. سود سالانه
+  if(priceYearAgo){
+    questions.push(changeItem(
+      `سود سالانه سرمایه‌گذاری در ${asset.name} چقدر بوده است؟`,
+      priceYearAgo,
+      pctChange(priceYearAgo, current)
+    ));
+  }
+
+  // ۱۳. سود روزانه
+  if(priceDayAgo){
+    questions.push(changeItem(
+      `سود روزانه سرمایه‌گذاری در ${asset.name} چقدر برآورد می‌شود؟`,
+      priceDayAgo,
+      pctChange(priceDayAgo, current)
+    ));
+  }
+
+  // ۱۴. مقایسه با سکه
+  const coinMonthAgo = getHistoryPriceFor('coin', monthAgo, history.length ? 30 : 0);
+  if(coinMonthAgo && priceMonthAgo){
+    const thisProfit = pctChange(priceMonthAgo, current);
+    const coinProfit = coinMonthAgo.change;
+    questions.push(`
+      <div class="chart-q-item">
+        <div class="chart-q-num">⚖</div>
+        <div class="chart-q-body">
+          <span class="chart-q-question">آیا در یک ماه اخیر، سرمایه‌گذاری در ${asset.name} نسبت به سکه سودمندتر بوده یا خیر؟</span>
+          <span class="chart-q-answer ${thisProfit >= coinProfit ? 'up' : 'down'}">
+            ${thisProfit >= coinProfit ? '✅ بله' : '❌ خیر'} (شما: ${thisProfit.toFixed(2)}% / سکه: ${coinProfit.toFixed(2)}%)
+          </span>
+        </div>
+      </div>
+    `);
+  }
+
+  // ۱۵. مقایسه با دلار
+  const dollarMonthAgo = getHistoryPriceFor('dollar', monthAgo, history.length ? 30 : 0);
+  if(dollarMonthAgo && priceMonthAgo){
+    const thisProfit = pctChange(priceMonthAgo, current);
+    const dollarProfit = dollarMonthAgo.change;
+    questions.push(`
+      <div class="chart-q-item">
+        <div class="chart-q-num">⚖</div>
+        <div class="chart-q-body">
+          <span class="chart-q-question">آیا در یک ماه اخیر، سرمایه‌گذاری در ${asset.name} نسبت به دلار سودمندتر بوده یا خیر؟</span>
+          <span class="chart-q-answer ${thisProfit >= dollarProfit ? 'up' : 'down'}">
+            ${thisProfit >= dollarProfit ? '✅ بله' : '❌ خیر'} (شما: ${thisProfit.toFixed(2)}% / دلار: ${dollarProfit.toFixed(2)}%)
+          </span>
+        </div>
+      </div>
+    `);
+  }
+
+  // ۱۶. مقایسه با بیت‌کوین
+  const btcMonthAgo = getHistoryPriceFor('btc', monthAgo, history.length ? 30 : 0);
+  if(btcMonthAgo && priceMonthAgo){
+    const thisProfit = pctChange(priceMonthAgo, current);
+    const btcProfit = btcMonthAgo.change;
+    questions.push(`
+      <div class="chart-q-item">
+        <div class="chart-q-num">⚖</div>
+        <div class="chart-q-body">
+          <span class="chart-q-question">آیا در یک ماه اخیر، سرمایه‌گذاری در ${asset.name} نسبت به بیت‌کوین سودمندتر بوده یا خیر؟</span>
+          <span class="chart-q-answer ${thisProfit >= btcProfit ? 'up' : 'down'}">
+            ${thisProfit >= btcProfit ? '✅ بله' : '❌ خیر'} (شما: ${thisProfit.toFixed(2)}% / BTC: ${btcProfit.toFixed(2)}%)
+          </span>
+        </div>
+      </div>
+    `);
+  }
+
+  listEl.innerHTML = questions.join('');
 }
 
 /**
- * رسم نمودار async — از history + رنگ بر اساس جهت
+ * تاریخچه نماد دیگه رو می‌گیره و درصد تغییر یک ماهه برمی‌گردونه
  */
+async function getHistoryPriceFor(assetId, msAgo, days){
+  try {
+    const a = window.DATA.find(assetId);
+    if(!a) return null;
+    const hist = await window.API.getHistory(a, Math.ceil(days) || 30);
+    if(!hist || hist.length < 2) return null;
+    const sorted = hist.slice().sort((x,y) => x.t - y.t);
+    const target = Date.now() - msAgo;
+    let closest = null, minDiff = Infinity;
+    for(const p of sorted){
+      const diff = Math.abs(p.t - target);
+      if(diff < minDiff){ minDiff = diff; closest = p; }
+    }
+    if(closest && closest.p){
+      const last = sorted[sorted.length - 1].p;
+      const change = ((last - closest.p) / closest.p) * 100;
+      return { past: closest.p, current: last, change };
+    }
+    return null;
+  } catch(e){
+    return null;
+  }
+}
+
+/* ============================================================
+   تحلیل حباب طلا
+============================================================ */
+function renderBubbleAnalysis(asset, live){
+  const wrap = $('[data-bubble-analysis]');
+  const body = $('[data-bubble-body]');
+  if(!wrap || !body) return;
+
+  // فقط برای طلا و سکه
+  const isGold = asset.cat === 'gold' && (asset.tgju === 'geram18' || asset.tgju === 'geram24' || asset.tgju === 'gold_17');
+  const isCoin = asset.id === 'coin' || asset.id === 'coin_bahar';
+  
+  if(!isGold && !isCoin){
+    wrap.hidden = true;
+    return;
+  }
+
+  if(!live || live.price == null){
+    wrap.hidden = true;
+    return;
+  }
+
+  // دریافت داده‌های انس و دلار
+  const ounce = window.API.getById('ounce');
+  const dollar = window.API.getById('dollar');
+
+  if(!ounce || !dollar || ounce.price == null || dollar.price == null){
+    wrap.hidden = true;
+    return;
+  }
+
+  const ounceUSD = ounce.price;              // انس به دلار
+  const dollarRial = dollar.price;            // دلار به ریال
+  const goldIran = live.price;                // قیمت ایران به ریال
+
+  // عیار
+  let karat = 18;
+  if(asset.tgju === 'geram24') karat = 24;
+  else if(asset.tgju === 'gold_17') karat = 17;
+  else if(asset.id === 'coin' || asset.id === 'coin_bahar') karat = 24; // سکه ۲۴ عیار
+
+  // قیمت جهانی گرم طلا (به ریال)
+  // 1 اونس = 31.1035 گرم
+  const gramWorldRial = (ounceUSD / 31.1035) * dollarRial;
+  
+  // تبدیل به عیار مورد نظر
+  const gramWorldKarat = gramWorldRial * (karat / 24);
+
+  // برای سکه، وزن ۸.۱۳۳ گرم
+  let worldValue, iranValue;
+  if(isCoin){
+    worldValue = gramWorldKarat * 8.133;
+    iranValue = goldIran;
+  } else {
+    worldValue = gramWorldKarat;
+    iranValue = goldIran;
+  }
+
+  // حباب
+  const bubble = iranValue - worldValue;
+  const bubblePct = (bubble / worldValue) * 100;
+
+  const bubbleClass = bubblePct > 2 ? 'bubble-positive' : (bubblePct < -2 ? 'bubble-negative' : 'bubble-neutral');
+  const bubbleLabel = bubblePct > 2 ? 'حباب مثبت' : (bubblePct < -2 ? 'حباب منفی' : 'متعادل');
+
+  wrap.hidden = false;
+
+  body.innerHTML = `
+    <div class="bubble-row">
+      <span>انس جهانی طلا</span>
+      <strong>$${window.U.num(ounceUSD, 2)}</strong>
+    </div>
+    <div class="bubble-row">
+      <span>نرخ دلار</span>
+      <strong>${formatPrice({ptype:'rial'}, dollarRial)}</strong>
+    </div>
+    <div class="bubble-row">
+      <span>قیمت جهانی گرم ${karat} عیار</span>
+      <strong>${formatPrice({ptype:'rial'}, gramWorldKarat)}</strong>
+    </div>
+    <div class="bubble-row">
+      <span>قیمت ${isCoin ? 'ایران (سکه)' : 'ایران (گرم)'}</span>
+      <strong>${formatPrice({ptype:'rial'}, iranValue)}</strong>
+    </div>
+    <div class="bubble-row bubble-total">
+      <span>
+        ${bubbleLabel}
+        <span class="bubble-badge ${bubbleClass}" style="margin-right:8px">
+          ${bubblePct >= 0 ? '+' : ''}${bubblePct.toFixed(2)}%
+        </span>
+      </span>
+      <strong class="${bubbleClass}">
+        ${bubble >= 0 ? '+' : ''}${formatPrice({ptype:'rial'}, Math.abs(bubble))}
+      </strong>
+    </div>
+  `;
+}
+
+/* ============================================================
+   رسم نمودار
+============================================================ */
 async function drawChartAsync(canvas, asset){
   try {
     let prices = null;
@@ -542,11 +876,9 @@ async function drawChartAsync(canvas, asset){
       prices = window.API.history(asset, 60, window.CFG.get('chartPeriod') || '1D');
     }
 
-    // تعیین رنگ بر اساس جهت (نزولی = قرمز، صعودی = سبز)
     const first = prices[0];
     const last = prices[prices.length - 1];
     const up = last >= first;
-
     const color = up ? '#10b981' : '#ef4444';
 
     window.Charts.drawLine(canvas, prices, {
@@ -554,7 +886,6 @@ async function drawChartAsync(canvas, asset){
       lineWidth: 2.5,
       color: color
     });
-
   } catch(e){
     console.warn('[Chart] Failed:', e.message);
     const data = window.API.history(asset, 60, '1D');
@@ -593,7 +924,7 @@ function renderCompare(){
     st.innerHTML = `
       <div style="padding:16px;border-radius:14px;background:var(--card);border:1px solid var(--border)">
         <small style="display:block;font-size:11.5px;color:var(--muted);margin-bottom:6px;font-weight:600">${window.U.esc(A.name)}</small>
-        <strong style="display:block;font-size:16px;font-weight:800;direction:ltr">${lA ? window.U.price(A, lA.price) : '—'}</strong>
+        <strong style="display:block;font-size:16px;font-weight:800;direction:ltr">${lA ? formatPrice(A, lA.price) : '—'}</strong>
       </div>
       <div style="padding:16px;border-radius:14px;background:var(--card);border:1px solid var(--border)">
         <small style="display:block;font-size:11.5px;color:var(--muted);margin-bottom:6px;font-weight:600">تغییر ${A.code}</small>
@@ -603,7 +934,7 @@ function renderCompare(){
       </div>
       <div style="padding:16px;border-radius:14px;background:var(--card);border:1px solid var(--border)">
         <small style="display:block;font-size:11.5px;color:var(--muted);margin-bottom:6px;font-weight:600">${window.U.esc(B.name)}</small>
-        <strong style="display:block;font-size:16px;font-weight:800;direction:ltr">${lB ? window.U.price(B, lB.price) : '—'}</strong>
+        <strong style="display:block;font-size:16px;font-weight:800;direction:ltr">${lB ? formatPrice(B, lB.price) : '—'}</strong>
       </div>
       <div style="padding:16px;border-radius:14px;background:var(--card);border:1px solid var(--border)">
         <small style="display:block;font-size:11.5px;color:var(--muted);margin-bottom:6px;font-weight:600">تغییر ${B.code}</small>
@@ -641,7 +972,7 @@ function go(page){
   document.body.classList.remove('sidebar-open');
 
   if(page === 'home'){
-    renderPortfolioCards();
+    renderBankCard();
     renderFeatured();
     renderMostUsed();
     renderCats();
@@ -657,7 +988,7 @@ function go(page){
 }
 
 /* ============================================================
-   MODAL
+   MODAL / TOAST
 ============================================================ */
 function openModal(title, bodyHTML){
   const m = $('[data-modal]');
@@ -675,9 +1006,6 @@ function closeModal(){
   if(m) m.classList.remove('is-open');
 }
 
-/* ============================================================
-   TOAST
-============================================================ */
 function toast(msg, type = ''){
   const t = $('[data-toast]');
   if(!t) return;
@@ -687,9 +1015,16 @@ function toast(msg, type = ''){
   t._t = setTimeout(() => t.classList.remove('is-show'), 2400);
 }
 
+
+
+
 /* ============================================================
-   TOOLS
+   TOOLS — ابزارها با واحد هوشمند
 ============================================================ */
+function unitLabel(){ return getUnit() === 'toman' ? 'تومان' : 'ریال'; }
+
+function money(v){ return formatPrice({ptype:'rial'}, v); }
+
 function toolGold(){
   const gold = window.API.getById('gold18');
   if(!gold || gold.price == null){ toast('در حال دریافت قیمت...', 'warning'); return; }
@@ -742,11 +1077,11 @@ function toolGold(){
 
     const out = $('[data-gold-out]');
     if(out) out.innerHTML = `
-      <div class="result-row"><span>ارزش طلا</span><strong>${window.U.money(val)}</strong></div>
-      <div class="result-row"><span>اجرت (${wg}%)</span><strong>${window.U.money(wA)}</strong></div>
-      <div class="result-row"><span>سود (${pr}%)</span><strong>${window.U.money(pA)}</strong></div>
-      <div class="result-row"><span>مالیات (${tx}%)</span><strong>${window.U.money(tA)}</strong></div>
-      <div class="result-row result-total"><span>مبلغ نهایی</span><strong>${window.U.money(tot)}</strong></div>
+      <div class="result-row"><span>ارزش طلا</span><strong>${money(val)}</strong></div>
+      <div class="result-row"><span>اجرت (${wg}%)</span><strong>${money(wA)}</strong></div>
+      <div class="result-row"><span>سود (${pr}%)</span><strong>${money(pA)}</strong></div>
+      <div class="result-row"><span>مالیات (${tx}%)</span><strong>${money(tA)}</strong></div>
+      <div class="result-row result-total"><span>مبلغ نهایی</span><strong>${money(tot)}</strong></div>
     `;
   }
   $$('[data-gw],[data-gk],[data-gwg],[data-gp],[data-gt]').forEach(el => {
@@ -783,9 +1118,9 @@ function toolCoin(){
     }
     const tot = live.price * n;
     if(out) out.innerHTML = `
-      <div class="result-row"><span>قیمت واحد</span><strong>${window.U.money(live.price)}</strong></div>
+      <div class="result-row"><span>قیمت واحد</span><strong>${money(live.price)}</strong></div>
       <div class="result-row"><span>تعداد</span><strong>${window.U.num(n)} عدد</strong></div>
-      <div class="result-row result-total"><span>ارزش کل</span><strong>${window.U.money(tot)}</strong></div>
+      <div class="result-row result-total"><span>ارزش کل</span><strong>${money(tot)}</strong></div>
     `;
   }
   $$('[data-ct],[data-cc]').forEach(el => {
@@ -831,9 +1166,9 @@ function toolOunce(){
     const out = $('[data-ounce-out]');
     if(out) out.innerHTML = `
       <div class="result-row"><span>ارزش دلاری</span><strong>$${window.U.num(totalUSD, 2)}</strong></div>
-      <div class="result-row"><span>ارزش تومانی</span><strong>${window.U.money(totalRial)}</strong></div>
-      <div class="result-row"><span>هر گرم ۲۴ عیار</span><strong>${window.U.money(gramPrice)}</strong></div>
-      <div class="result-row result-total"><span>هر گرم ${k} عیار</span><strong>${window.U.money(gramK)}</strong></div>
+      <div class="result-row"><span>ارزش ${unitLabel()}</span><strong>${money(totalRial)}</strong></div>
+      <div class="result-row"><span>هر گرم ۲۴ عیار</span><strong>${money(gramPrice)}</strong></div>
+      <div class="result-row result-total"><span>هر گرم ${k} عیار</span><strong>${money(gramK)}</strong></div>
     `;
   }
   $$('[data-oc],[data-ok]').forEach(el => {
@@ -864,8 +1199,8 @@ function toolSilver(){
 
     const out = $('[data-silver-out]');
     if(out) out.innerHTML = `
-      <div class="result-row"><span>هر گرم</span><strong>${window.U.money(pricePerGram)}</strong></div>
-      <div class="result-row result-total"><span>ارزش ${w} گرم</span><strong>${window.U.money(total)}</strong></div>
+      <div class="result-row"><span>هر گرم</span><strong>${money(pricePerGram)}</strong></div>
+      <div class="result-row result-total"><span>ارزش ${w} گرم</span><strong>${money(total)}</strong></div>
     `;
   }
   $('[data-sv]')?.addEventListener('input', calc);
@@ -878,7 +1213,7 @@ function toolConv(){
 
   openModal(`<span data-icon="exchange"></span> مبدل ارز`, `
     <div class="form-group">
-      <label>مقدار</label>
+      <label>مقدار (${unitLabel()})</label>
       <input class="input" type="number" value="1000000" data-va>
     </div>
     <div style="display:grid;grid-template-columns:1fr 48px 1fr;gap:10px;align-items:center">
@@ -895,7 +1230,8 @@ function toolConv(){
   if(selT) selT.value = 'euro';
 
   function calc(){
-    const amt = parseFloat($('[data-va]')?.value) || 0;
+    const userAmt = parseFloat($('[data-va]')?.value) || 0;
+    const amtBase = userToBase(userAmt); // به ریال
     const f = window.DATA.find($('[data-vf]')?.value);
     const t = window.DATA.find($('[data-vt]')?.value);
     if(!f || !t) return;
@@ -906,9 +1242,9 @@ function toolConv(){
       if(out) out.innerHTML = '<div class="result-row"><span>در حال دریافت...</span></div>';
       return;
     }
-    const res = (amt * lf.price) / lt.price;
+    const res = (amtBase * lf.price) / lt.price;
     if(out) out.innerHTML = `
-      <div class="result-row"><span>${window.U.num(amt, 2)} ${f.code}</span><strong>${window.U.num(res, 4)} ${t.code}</strong></div>
+      <div class="result-row"><span>${window.U.num(userAmt, 2)} ${f.code}</span><strong>${window.U.num(res, 4)} ${t.code}</strong></div>
       <div class="result-row"><span>نرخ تبدیل</span><strong>۱ ${f.code} = ${window.U.num(lf.price / lt.price, 4)} ${t.code}</strong></div>
     `;
   }
@@ -969,7 +1305,7 @@ function toolCryptoConv(){
     if(out) out.innerHTML = `
       <div class="result-row"><span>${window.U.num(amt, 4)} ${from.code}</span><strong>${window.U.num(res, 6)} ${to.code}</strong></div>
       <div class="result-row"><span>ارزش دلاری</span><strong>$${window.U.num(usdVal, 2)}</strong></div>
-      ${tomanVal ? `<div class="result-row result-total"><span>ارزش تومانی</span><strong>${window.U.money(tomanVal)}</strong></div>` : ''}
+      ${tomanVal ? `<div class="result-row result-total"><span>ارزش ${unitLabel()}</span><strong>${money(tomanVal)}</strong></div>` : ''}
     `;
   }
   $$('[data-cca],[data-ccf],[data-cct]').forEach(el => {
@@ -1058,7 +1394,7 @@ function toolPortfolio(){
         <input class="input" type="number" placeholder="۱۰" data-pq>
       </div>
       <div class="form-group">
-        <label>قیمت خرید (اختیاری)</label>
+        <label>قیمت خرید (${unitLabel()})</label>
         <input class="input" type="number" placeholder="خودکار" data-pp>
       </div>
     </div>
@@ -1094,12 +1430,12 @@ function toolPortfolio(){
             </div>
             <div>
               <strong style="display:block;font-size:13px">${window.U.esc(a.name)}</strong>
-              <small style="font-size:11px;color:var(--muted)">${window.U.num(item.qty)} × ${window.U.price(a, item.buyPrice)}</small>
+              <small style="font-size:11px;color:var(--muted)">${window.U.num(item.qty)} × ${formatPrice(a, item.buyPrice)}</small>
             </div>
           </div>
           <div style="display:flex;align-items:center;gap:10px">
             <div style="text-align:end">
-              <strong style="display:block;font-size:13px;direction:ltr">${window.U.price(a, nv)}</strong>
+              <strong style="display:block;font-size:13px;direction:ltr">${formatPrice(a, nv)}</strong>
               <small style="color:${pl >= 0 ? 'var(--up)' : 'var(--down)'};font-weight:800;direction:ltr">
                 ${pl >= 0 ? '+' : ''}${pct.toFixed(2)}%
               </small>
@@ -1120,7 +1456,7 @@ function toolPortfolio(){
         const ts = +btn.dataset.pfDel2;
         window.Storage.pf.save(window.Storage.pf.get().filter(x => x.ts !== ts));
         render();
-        renderPortfolioCards();
+        renderBankCard();
       });
     });
   }
@@ -1130,19 +1466,23 @@ function toolPortfolio(){
     e.stopPropagation();
     const id = $('[data-pa]')?.value;
     const qty = parseFloat($('[data-pq]')?.value);
-    const pp = parseFloat($('[data-pp]')?.value);
+    const ppUser = parseFloat($('[data-pp]')?.value);
     if(!id || !qty || qty <= 0){ toast('مقدار را وارد کنید', 'error'); return; }
-    let buy = pp;
-    if(!buy || isNaN(buy)){
+    
+    let buyBase;
+    if(ppUser && !isNaN(ppUser)){
+      buyBase = userToBase(ppUser); // تبدیل ورودی کاربر به ریال
+    } else {
       const l = window.API.getById(id);
       if(!l || l.price == null){ toast('قیمت در دسترس نیست', 'error'); return; }
-      buy = l.price;
+      buyBase = l.price;
     }
+    
     const list = window.Storage.pf.get();
-    list.push({ id, qty, buyPrice: buy, ts: Date.now() });
+    list.push({ id, qty, buyPrice: buyBase, ts: Date.now() });
     window.Storage.pf.save(list);
     render();
-    renderPortfolioCards();
+    renderBankCard();
     const pq = $('[data-pq]');
     const ppEl = $('[data-pp]');
     if(pq) pq.value = '';
@@ -1163,11 +1503,11 @@ function toolAlerts(){
     </div>
     <div class="form-grid">
       <div class="form-group">
-        <label>بالاتر از</label>
+        <label>بالاتر از (${unitLabel()})</label>
         <input class="input" type="number" data-al-up>
       </div>
       <div class="form-group">
-        <label>پایین‌تر از</label>
+        <label>پایین‌تر از (${unitLabel()})</label>
         <input class="input" type="number" data-al-dn>
       </div>
     </div>
@@ -1189,8 +1529,8 @@ function toolAlerts(){
     el.innerHTML = list.map(al => {
       const a = window.DATA.find(al.id);
       const parts = [];
-      if(al.up) parts.push('بالاتر از ' + window.U.money(al.up));
-      if(al.dn) parts.push('پایین‌تر از ' + window.U.money(al.dn));
+      if(al.up) parts.push('بالاتر از ' + money(al.up));
+      if(al.dn) parts.push('پایین‌تر از ' + money(al.dn));
       return `
         <div class="result-row" style="padding:10px;border-radius:10px;background:var(--card-2);margin-bottom:6px">
           <span>${window.U.esc(a?.name || '—')} — ${parts.join(' / ')}</span>
@@ -1217,9 +1557,11 @@ function toolAlerts(){
     e.preventDefault();
     e.stopPropagation();
     const id = $('[data-al-a]')?.value;
-    const up = parseFloat($('[data-al-up]')?.value) || null;
-    const dn = parseFloat($('[data-al-dn]')?.value) || null;
-    if(!id || (!up && !dn)){ toast('حداقل یک شرط وارد کنید', 'error'); return; }
+    const upUser = parseFloat($('[data-al-up]')?.value) || null;
+    const dnUser = parseFloat($('[data-al-dn]')?.value) || null;
+    if(!id || (!upUser && !dnUser)){ toast('حداقل یک شرط وارد کنید', 'error'); return; }
+    const up = upUser ? userToBase(upUser) : null;
+    const dn = dnUser ? userToBase(dnUser) : null;
     const list = window.Storage.alerts.get();
     list.push({ id, up, dn, ts: Date.now() });
     window.Storage.alerts.save(list);
@@ -1261,7 +1603,7 @@ function toolProfit(){
     </div>
     <div class="form-grid">
       <div class="form-group">
-        <label>قیمت خرید</label>
+        <label>قیمت خرید (${unitLabel()})</label>
         <input class="input" type="number" placeholder="قیمت واحد" data-pr-buy>
       </div>
       <div class="form-group">
@@ -1274,28 +1616,29 @@ function toolProfit(){
 
   function calc(){
     const id = $('[data-pr-a]')?.value;
-    const buy = parseFloat($('[data-pr-buy]')?.value) || 0;
+    const buyUser = parseFloat($('[data-pr-buy]')?.value) || 0;
+    const buyBase = userToBase(buyUser);
     const qty = parseFloat($('[data-pr-qty]')?.value) || 0;
     const a = window.DATA.find(id);
     const l = window.API.getById(id);
     const out = $('[data-profit-out]');
-    if(!a || !l || l.price == null || !buy || !qty){
+    if(!a || !l || l.price == null || !buyBase || !qty){
       if(out) out.innerHTML = '<div class="result-row"><span>قیمت خرید و مقدار را وارد کنید</span></div>';
       return;
     }
     const nowVal = l.price * qty;
-    const buyVal = buy * qty;
+    const buyVal = buyBase * qty;
     const pl = nowVal - buyVal;
     const pct = (pl / buyVal) * 100;
     const up = pl >= 0;
 
     if(out) out.innerHTML = `
-      <div class="result-row"><span>ارزش خرید</span><strong>${window.U.price(a, buyVal)}</strong></div>
-      <div class="result-row"><span>ارزش فعلی</span><strong>${window.U.price(a, nowVal)}</strong></div>
+      <div class="result-row"><span>ارزش خرید</span><strong>${formatPrice(a, buyVal)}</strong></div>
+      <div class="result-row"><span>ارزش فعلی</span><strong>${formatPrice(a, nowVal)}</strong></div>
       <div class="result-row result-total">
         <span>${up ? 'سود' : 'زیان'}</span>
         <strong style="color:${up ? 'var(--up)' : 'var(--down)'}">
-          ${up ? '+' : ''}${window.U.price(a, Math.abs(pl))} (${up ? '+' : ''}${pct.toFixed(2)}%)
+          ${up ? '+' : ''}${formatPrice(a, Math.abs(pl))} (${up ? '+' : ''}${pct.toFixed(2)}%)
         </strong>
       </div>
     `;
@@ -1354,9 +1697,9 @@ function toolZakat(){
 
     if(out) out.innerHTML = `
       <div class="result-row"><span>معادل ۲۴ عیار</span><strong>${window.U.num(w24, 2)} گرم</strong></div>
-      <div class="result-row"><span>ارزش کل</span><strong>${window.U.money(totalValue)}</strong></div>
+      <div class="result-row"><span>ارزش کل</span><strong>${money(totalValue)}</strong></div>
       <div class="result-row"><span>نرخ زکات</span><strong>۲.۵٪</strong></div>
-      <div class="result-row result-total"><span>زکات واجب</span><strong>${window.U.money(zakat)}</strong></div>
+      <div class="result-row result-total"><span>زکات واجب</span><strong>${money(zakat)}</strong></div>
     `;
   }
   $$('[data-zw],[data-zk]').forEach(el => {
@@ -1382,15 +1725,15 @@ function toolAvgBuy(){
     <div class="result-box" data-avg-out></div>
   `);
 
-  function addRow(price = '', qty = ''){
+  function addRow(){
     const wrap = $('#avg-rows');
     if(!wrap) return;
     const row = document.createElement('div');
     row.setAttribute('data-avg-row', '');
     row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 40px;gap:8px;margin-bottom:8px';
     row.innerHTML = `
-      <input class="input" type="number" placeholder="قیمت" value="${price}" data-avg-p>
-      <input class="input" type="number" placeholder="مقدار" value="${qty}" data-avg-q>
+      <input class="input" type="number" placeholder="قیمت (${unitLabel()})" data-avg-p>
+      <input class="input" type="number" placeholder="مقدار" data-avg-q>
       <button type="button" class="btn btn-danger" data-avg-del style="padding:0;width:40px;font-size:18px">×</button>
     `;
     wrap.appendChild(row);
@@ -1414,7 +1757,8 @@ function toolAvgBuy(){
 
     let totalQty = 0, totalCost = 0;
     $$('[data-avg-row]').forEach(row => {
-      const p = parseFloat(row.querySelector('[data-avg-p]')?.value) || 0;
+      const pUser = parseFloat(row.querySelector('[data-avg-p]')?.value) || 0;
+      const p = userToBase(pUser);
       const q = parseFloat(row.querySelector('[data-avg-q]')?.value) || 0;
       totalQty += q;
       totalCost += p * q;
@@ -1429,10 +1773,10 @@ function toolAvgBuy(){
     const out = $('[data-avg-out]');
     if(out) out.innerHTML = `
       <div class="result-row"><span>مجموع مقدار</span><strong>${window.U.num(totalQty, 4)}</strong></div>
-      <div class="result-row"><span>مجموع هزینه</span><strong>${window.U.price(a, totalCost)}</strong></div>
-      <div class="result-row"><span>میانگین خرید</span><strong>${window.U.price(a, avg)}</strong></div>
+      <div class="result-row"><span>مجموع هزینه</span><strong>${formatPrice(a, totalCost)}</strong></div>
+      <div class="result-row"><span>میانگین خرید</span><strong>${formatPrice(a, avg)}</strong></div>
       ${l && l.price != null ? `
-        <div class="result-row"><span>قیمت فعلی</span><strong>${window.U.price(a, l.price)}</strong></div>
+        <div class="result-row"><span>قیمت فعلی</span><strong>${formatPrice(a, l.price)}</strong></div>
         <div class="result-row result-total">
           <span>سود / زیان</span>
           <strong style="color:${pl >= 0 ? 'var(--up)' : 'var(--down)'}">
@@ -1527,7 +1871,7 @@ function doSearch(query){
 
   res.innerHTML = list.map((a, i) => {
     const live = window.API.getById(a.id);
-    const price = live && live.price != null ? window.U.price(a, live.price) : '—';
+    const price = live && live.price != null ? formatPrice(a, live.price) : '—';
     return `
       <div class="ms-item ${i === 0 ? 'is-active' : ''}" data-idx="${i}">
         <div class="ms-item-icon">${assetIcon(a)}</div>
@@ -1659,7 +2003,7 @@ function handleClick(e){
     e.stopPropagation();
     const ts = +pfDel.dataset.pfDel;
     window.Storage.pf.save(window.Storage.pf.get().filter(x => x.ts !== ts));
-    renderPortfolioCards();
+    renderBankCard();
     toast('حذف شد', 'success');
     return;
   }
@@ -1699,6 +2043,24 @@ function handleClick(e){
     chip.classList.add('is-active');
     filter = chip.dataset.filter;
     renderMarkets();
+    return;
+  }
+
+  const unitBtn = e.target.closest('[data-unit]');
+  if(unitBtn){
+    e.preventDefault();
+    e.stopPropagation();
+    const newUnit = unitBtn.dataset.unit;
+    if(getUnit() === newUnit) return;
+    
+    window.CFG.set('currency', newUnit);
+    $$('[data-unit]').forEach(b => {
+      b.classList.toggle('is-active', b.dataset.unit === newUnit);
+    });
+    
+    // رفرش همه چیز با واحد جدید
+    refreshAll();
+    toast(newUnit === 'toman' ? 'واحد: تومان' : 'واحد: ریال', 'success');
     return;
   }
 
@@ -1751,6 +2113,7 @@ function handleClick(e){
       alerts: window.Storage.alerts.get(),
       pf: window.Storage.pf.get(),
       notes: window.Storage.notes.get(),
+      userName: getUserName(),
       date: new Date().toISOString()
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -1770,7 +2133,7 @@ function handleClick(e){
 ============================================================ */
 function refreshAll(){
   if(currentPage === 'home'){
-    renderPortfolioCards();
+    renderBankCard();
     renderFeatured();
     renderMostUsed();
     renderCats();
@@ -1818,6 +2181,21 @@ function init(){
   if(window.Icons && window.Icons.hydrate) window.Icons.hydrate();
   if(window.Icons && window.Icons.installImageFallback) window.Icons.installImageFallback();
 
+  // واحد
+  const unit = getUnit();
+  $$('[data-unit]').forEach(b => b.classList.toggle('is-active', b.dataset.unit === unit));
+
+  // نام کاربر
+  const unInput = $('[data-input="userName"]');
+  if(unInput){
+    unInput.value = getUserName() === 'کاربر مهمان' ? '' : getUserName();
+    unInput.addEventListener('input', window.U.debounce(e => {
+      const v = e.target.value.trim();
+      saveUserName(v);
+      if(currentPage === 'home') renderBankCard();
+    }, 300));
+  }
+
   const hash = (location.hash || '').replace('#', '');
   go(PAGES.includes(hash) ? hash : 'home');
 
@@ -1833,6 +2211,23 @@ function init(){
       closeSearch();
       closeModal();
       document.body.classList.remove('sidebar-open');
+    }
+    const results = $('[data-search-results]');
+    if(results && !results.hidden){
+      if(e.key === 'ArrowDown'){
+        e.preventDefault();
+        if(searchIdx < searchResults.length - 1){ searchIdx++; }
+        updateSearchActive();
+      }
+      if(e.key === 'ArrowUp'){
+        e.preventDefault();
+        if(searchIdx > 0){ searchIdx--; }
+        updateSearchActive();
+      }
+      if(e.key === 'Enter'){
+        e.preventDefault();
+        if(searchIdx >= 0) pickSearch(searchResults[searchIdx]);
+      }
     }
   });
 
@@ -1866,8 +2261,15 @@ function init(){
     checkAlerts();
   });
 
-  // زیرنویس اولیه
   renderHdrTicker();
+}
+
+function updateSearchActive(){
+  const res = $('[data-search-results]');
+  if(!res) return;
+  const items = res.querySelectorAll('.ms-item');
+  items.forEach(it => it.classList.remove('is-active'));
+  if(items[searchIdx]) items[searchIdx].classList.add('is-active');
 }
 
 /* ============================================================
@@ -1884,12 +2286,14 @@ return {
   renderChartPage,
   renderMarkets,
   renderFavs,
-  renderPortfolioCards,
+  renderBankCard,
   renderFeatured,
   renderMostUsed,
   renderTools,
   renderCats,
   renderHdrTicker,
+  getUserName,
+  saveUserName,
   openTool,
   toolGold, toolCoin, toolOunce, toolSilver,
   toolConv, toolCryptoConv, toolUnitConv,
@@ -1898,3 +2302,4 @@ return {
 };
 
 })();
+

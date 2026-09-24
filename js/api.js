@@ -1,16 +1,13 @@
 /**
- * قیمتو 5.6 — API
- * ✅ خواندن از GitHub Pages (data/latest.json)
- * ✅ تاریخچه واقعی از data/history/
- * ✅ getHistory با پرامتر days
- * ✅ بدون CORS
+ * قیمتو 5.7 — API
+ * ✅ خواندن از GitHub
+ * ✅ getHistory با پشتیبانی از روز دلخواه
+ * ✅ cache هوشمند
+ * ✅ fallback کامل
  */
 window.API = (function(){
 'use strict';
 
-/* ============================================================
-   CONFIG
-============================================================ */
 const CONFIG = {
   DATA_BASE: 'https://ataee-dev.github.io/marketos/data',
   RAW_BASE: 'https://raw.githubusercontent.com/ataee-dev/marketos/main/data',
@@ -20,9 +17,6 @@ const CONFIG = {
   retries: 2
 };
 
-/* ============================================================
-   STATE
-============================================================ */
 let raw = null;
 let norm = {};
 let lastFetch = 0;
@@ -36,9 +30,6 @@ let currentSource = 'primary';
 const HISTORY_CACHE = new Map();
 const HISTORY_TTL = 5 * 60 * 1000;
 
-/* ============================================================
-   HELPERS
-============================================================ */
 function cleanNum(v){
   if(v == null || v === '') return null;
   const n = Number(v);
@@ -61,10 +52,7 @@ function normalize(key, item){
   };
 }
 
-/* ============================================================
-   LOCAL CACHE
-============================================================ */
-const LCKEY = 'gheymato.last.v7';
+const LCKEY = 'gheymato.last.v8';
 
 function saveLocal(){
   try {
@@ -90,9 +78,6 @@ function loadLocal(){
   } catch(e){ return false; }
 }
 
-/* ============================================================
-   FETCH
-============================================================ */
 async function fetchJSON(url, attempt){
   attempt = attempt || 0;
   try {
@@ -158,9 +143,6 @@ async function fetchHistory(date){
   }
 }
 
-/* ============================================================
-   MAIN FETCH
-============================================================ */
 async function fetchData(force){
   force = force || false;
   const now = Date.now();
@@ -214,9 +196,6 @@ async function fetchData(force){
   }
 }
 
-/* ============================================================
-   ACCESSORS
-============================================================ */
 function get(k){ return norm[k] || null; }
 
 function getById(id){
@@ -258,9 +237,6 @@ function stop(){
   if(timer){ clearInterval(timer); timer = null; }
 }
 
-/* ============================================================
-   HISTORY
-============================================================ */
 function today(){
   const now = new Date();
   const tehranOffset = 3.5 * 60 * 60 * 1000;
@@ -269,14 +245,14 @@ function today(){
 }
 
 /**
- * تاریخچه یک نماد
+ * تاریخچه یک نماد — کامل
  * @param {Object} asset — نماد از DATA
- * @param {number} days — تعداد روز گذشته (پیش‌فرض ۱)
- * @returns {Promise<Array>} — آرایه {t, p}
+ * @param {number} days — تعداد روز (پیش‌فرض ۱)
+ * @returns {Promise<Array>} — آرایه از {t, p, dp}
  */
 async function getHistory(asset, days){
   if(!asset) return [];
-  days = days || 1;
+  days = Math.max(1, Math.ceil(days || 1));
 
   const dates = [];
   const now = new Date();
@@ -309,9 +285,6 @@ async function getHistoryPrices(asset, days){
   return history.map(h => h.p);
 }
 
-/**
- * تاریخچه ساده (cache-based) برای sparkline
- */
 function history(asset, count, period){
   const live = getById(asset.id);
   const base = live && live.price != null ? live.price : 1000;
@@ -321,7 +294,6 @@ function history(asset, count, period){
     return real.map(h => h.p);
   }
 
-  // fallback: داده مصنوعی
   const seed = (asset.id + (period || '1D')).split('').reduce(function(a, c){
     return a + c.charCodeAt(0);
   }, 0);
@@ -352,9 +324,35 @@ async function preloadTodayHistory(){
   console.log('[API] ✅ تاریخچه امروز preload شد');
 }
 
-/* ============================================================
-   FALLBACK
-============================================================ */
+/**
+ * پیدا کردن قیمت در یک زمان مشخص
+ * @param {Object} asset
+ * @param {number} msAgo — چند میلی‌ثانیه قبل
+ */
+async function getPriceAt(asset, msAgo){
+  const days = Math.max(1, Math.ceil(msAgo / (24 * 60 * 60 * 1000)) + 1);
+  const history = await getHistory(asset, days);
+  if(!history || !history.length) return null;
+
+  const target = Date.now() - msAgo;
+  let closest = null;
+  let minDiff = Infinity;
+
+  for(const p of history){
+    const diff = Math.abs(p.t - target);
+    if(diff < minDiff){
+      minDiff = diff;
+      closest = p;
+    }
+  }
+
+  // فقط اگه نزدیک باشه (حداکثر ۳ روز اختلاف)
+  if(closest && minDiff < 3 * 24 * 60 * 60 * 1000){
+    return closest;
+  }
+  return null;
+}
+
 function makeFallback(){
   const now = Date.now();
   const t = new Date(now).toLocaleTimeString('fa-IR', { hour:'2-digit', minute:'2-digit' });
@@ -407,9 +405,6 @@ function makeFallback(){
   };
 }
 
-/* ============================================================
-   EXPORT
-============================================================ */
 return {
   CFG: CONFIG,
   fetchData: fetchData,
@@ -426,6 +421,7 @@ return {
   history: history,
   getHistory: getHistory,
   getHistoryPrices: getHistoryPrices,
+  getPriceAt: getPriceAt,
   preloadTodayHistory: preloadTodayHistory,
   clearHistoryCache: function(){ HISTORY_CACHE.clear(); }
 };

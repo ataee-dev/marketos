@@ -18,7 +18,8 @@ const CFG_DEFAULTS = {
   showSparkline:true,
   autoRefresh:true,
   refreshInterval:60000,
-  chartPeriod:'1D'
+  chartPeriod:'1D',
+  currency:'toman'
 };
 
 const CFG = {
