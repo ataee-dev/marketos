@@ -1,19 +1,42 @@
 {
-  "updated": "2026-09-24T18:05:50.184Z",
+  "updated": "2026-09-24T18:31:19.281Z",
   "total": 1,
   "dates": [
     "2026-09-24"
   ],
   "symbols": [
     "geram18",
+    "geram24",
+    "mesghal",
     "sekeb",
+    "sekee",
+    "nim",
+    "rob",
     "price_dollar_rl",
     "price_eur",
-    "ons",
+    "price_gbp",
+    "price_aed",
+    "price_try",
+    "price_cny",
+    "price_jpy",
     "silver",
+    "platinum",
+    "palladium",
+    "copper",
+    "oil",
+    "oil_brent",
+    "energy_natural_gas",
     "crypto-bitcoin",
     "crypto-ethereum",
-    "oil_brent",
-    "bourse"
-  ]
+    "crypto-solana",
+    "commodity_us_wheat",
+    "commodity_corn",
+    "bourse",
+    "dow_jones_us",
+    "nasdaq_us",
+    "s_p_500_us",
+    "tether_gold_xaut"
+  ],
+  "interval": "15min",
+  "maxPointsPerDay": 100
 }
