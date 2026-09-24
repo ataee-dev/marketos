@@ -1,6 +1,64 @@
-New Text Document.txt 
-*.txt 
-tools/*.txt 
-.DS_Store 
-Thumbs.db 
-node_modules/ 
+# ═══════════════════════════════════════════════════════════
+# قیمتو 5.3 — GitIgnore
+# ═══════════════════════════════════════════════════════════
+
+# ─── سیستم‌عامل ───
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.lnk
+
+# ─── ویرایشگرها ───
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ─── Node.js ───
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+.pnpm-debug.log*
+
+# ─── اسکرپر ───
+scraper/node_modules/
+scraper/.cache/
+scraper/.env
+
+# ─── فایل‌های موقت ───
+*.tmp
+*.temp
+*.bak
+*.old
+*.log
+
+# ─── فایل‌های متنی بی‌استفاده ───
+New Text Document.txt
+tools/New Text Document.txt
+*.txt
+
+# ─── پوشه‌های خالی ───
+assets/banners/
+assets/images/
+
+# ─── امنیت ───
+.env
+.env.local
+.env.*.local
+secrets.json
+
+# ─── کش ───
+.cache/
+.parcel-cache/
+.next/
+dist/
+build/
+
+# ═══════════════════════════════════════════════════════════
+# توجه: پوشه data/ رو ignore نمی‌کنیم
+# چون اسکرپر داده‌ها رو اونجا ذخیره می‌کنه
+# ═══════════════════════════════════════════════════════════

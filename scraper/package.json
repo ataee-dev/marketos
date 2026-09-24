@@ -1,0 +1,16 @@
+{
+  "name": "gheymato-scraper",
+  "version": "1.0.0",
+  "description": "TGJU data scraper for Gheymato",
+  "type": "module",
+  "main": "scraper.js",
+  "scripts": {
+    "scrape": "node scraper.js"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
