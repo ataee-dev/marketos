@@ -1,6 +1,8 @@
 /**
- * قیمتو 5.3 — TGJU Scraper
- * استخراج داده از TGJU و ذخیره در data/
+ * قیمتو 5.4 — TGJU Scraper
+ * ✅ هر ۵ دقیقه: latest.json (overwrite)
+ * ✅ هر ۵ دقیقه: temp/*.json (پاک بعد از ۱۰ دقیقه)
+ * ✅ هر ۱۵ دقیقه: history/*.json (دائمی)
  */
 
 import fs from 'node:fs/promises';
@@ -12,6 +14,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const DATA_DIR = path.join(ROOT, 'data');
 const HISTORY_DIR = path.join(DATA_DIR, 'history');
+const TEMP_DIR = path.join(DATA_DIR, 'temp');
 
 /* ============================================================
    CONFIG
@@ -22,8 +25,12 @@ const TGJU_ENDPOINTS = [
   'https://call3.tgju.org/ajax.json'
 ];
 
-const HISTORY_KEEP_DAYS = 30;   // نگهداری ۳۰ روز اخیر
-const MAX_POINTS_PER_DAY = 288; // ۲۴ ساعت × ۱۲ (هر ۵ دقیقه)
+const CONFIG = {
+  TEMP_KEEP_MINUTES: 10,     // نگه‌داری temp به مدت ۱۰ دقیقه
+  HISTORY_INTERVAL: 15,      // هر ۱۵ دقیقه یک نقطه تاریخچه
+  MAX_HISTORY_POINTS: 100,   // حداکثر نقطه در روز (۱۵×۲۴ ≈ ۹۶)
+  HISTORY_KEEP_DAYS: 365     // نگه‌داری ۱ سال
+};
 
 /* ============================================================
    UTILS
@@ -36,7 +43,7 @@ function cleanNumber(v) {
   return isNaN(n) ? null : n;
 }
 
-function normalize(key, item) {
+function normalize(item) {
   return {
     p: cleanNumber(item.p),
     h: cleanNumber(item.h),
@@ -50,12 +57,34 @@ function normalize(key, item) {
   };
 }
 
-function today() {
+function tehranDate() {
   const now = new Date();
-  // تهران = UTC+3:30
-  const tehranOffset = 3.5 * 60;
-  const tehranTime = new Date(now.getTime() + tehranOffset * 60 * 1000);
-  return tehranTime.toISOString().slice(0, 10);
+  const tehranOffset = 3.5 * 60 * 60 * 1000;
+  const t = new Date(now.getTime() + tehranOffset);
+  return t.toISOString().slice(0, 10);
+}
+
+function tehranTime(short = false) {
+  const now = new Date();
+  const tehranOffset = 3.5 * 60 * 60 * 1000;
+  const t = new Date(now.getTime() + tehranOffset);
+  const hh = String(t.getUTCHours()).padStart(2, '0');
+  const mm = String(t.getUTCMinutes()).padStart(2, '0');
+  if (short) return hh + mm;
+  const ss = String(t.getUTCSeconds()).padStart(2, '0');
+  return hh + ':' + mm + ':' + ss;
+}
+
+/**
+ * تشخیص اینکه آیا الان زمان ثبت تاریخچه ۱۵ دقیقه‌ای هست
+ */
+function isHistoryTime() {
+  const now = new Date();
+  const tehranOffset = 3.5 * 60 * 60 * 1000;
+  const t = new Date(now.getTime() + tehranOffset);
+  const minutes = t.getUTCMinutes();
+  // اگه دقیقه مضرب ۱۵ باشه (0, 15, 30, 45) یا ±2 دقیقه
+  return minutes % 15 <= 2;
 }
 
 /* ============================================================
@@ -69,13 +98,12 @@ async function fetchWithTimeout(url, timeout = 10000) {
     const res = await fetch(url, {
       signal: controller.signal,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; Gheymato-Scraper/5.3)',
+        'User-Agent': 'Mozilla/5.0 (compatible; Gheymato-Scraper/5.4)',
         'Accept': 'application/json',
         'Accept-Language': 'fa-IR,fa;q=0.9'
       }
     });
     clearTimeout(timer);
-
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const text = await res.text();
     if (!text || text.length < 100) throw new Error('Response too small');
@@ -88,44 +116,47 @@ async function fetchWithTimeout(url, timeout = 10000) {
 
 async function fetchTGJU() {
   let lastError = null;
-
   for (const endpoint of TGJU_ENDPOINTS) {
     try {
       const url = endpoint + '?_=' + Date.now();
       console.log(`[Fetch] Trying ${endpoint}...`);
       const json = await fetchWithTimeout(url);
-      console.log(`[Fetch] ✅ Success from ${endpoint}`);
+      console.log(`[Fetch] ✅ Success`);
       return json;
     } catch (err) {
       lastError = err;
       console.warn(`[Fetch] ❌ ${endpoint}: ${err.message}`);
     }
   }
-
   throw lastError || new Error('All endpoints failed');
 }
 
 /* ============================================================
-   SAVE FUNCTIONS
+   DIRS
 ============================================================ */
 async function ensureDirs() {
   await fs.mkdir(DATA_DIR, { recursive: true });
   await fs.mkdir(HISTORY_DIR, { recursive: true });
+  await fs.mkdir(TEMP_DIR, { recursive: true });
 }
 
+/* ============================================================
+   SAVE: latest.json (هر ۵ دقیقه، overwrite)
+============================================================ */
 async function saveLatest(json) {
   const current = json.current || {};
   const filtered = {};
 
   for (const sym of SYMBOLS) {
     if (current[sym]) {
-      filtered[sym] = normalize(sym, current[sym]);
+      filtered[sym] = normalize(current[sym]);
     }
   }
 
   const latest = {
     updated: new Date().toISOString(),
     updatedTehran: new Date().toLocaleString('fa-IR'),
+    time: tehranTime(),
     count: Object.keys(filtered).length,
     symbols: SYMBOLS.length,
     data: filtered
@@ -133,16 +164,61 @@ async function saveLatest(json) {
 
   const filePath = path.join(DATA_DIR, 'latest.json');
   await fs.writeFile(filePath, JSON.stringify(latest, null, 2), 'utf-8');
-  console.log(`[Save] ✅ latest.json — ${latest.count}/${latest.symbols} symbols`);
-
+  console.log(`[Save] ✅ latest.json — ${latest.count}/${latest.symbols}`);
   return latest;
 }
 
+/* ============================================================
+   SAVE: temp/ (هر ۵ دقیقه، پاک بعد از ۱۰ دقیقه)
+============================================================ */
+async function saveTemp(latest) {
+  const date = tehranDate();
+  const time = tehranTime(true); // HHMM
+  const filename = `${date}-${time}.json`;
+  const filePath = path.join(TEMP_DIR, filename);
+
+  const tempData = {
+    date,
+    time,
+    created: new Date().toISOString(),
+    data: latest.data
+  };
+
+  await fs.writeFile(filePath, JSON.stringify(tempData), 'utf-8');
+  console.log(`[Save] ✅ temp/${filename}`);
+}
+
+async function cleanupTemp() {
+  try {
+    const files = await fs.readdir(TEMP_DIR);
+    const cutoff = Date.now() - (CONFIG.TEMP_KEEP_MINUTES * 60 * 1000);
+    let deleted = 0;
+
+    for (const file of files) {
+      if (!file.endsWith('.json')) continue;
+      const filePath = path.join(TEMP_DIR, file);
+      const stat = await fs.stat(filePath);
+      if (stat.mtimeMs < cutoff) {
+        await fs.unlink(filePath);
+        deleted++;
+      }
+    }
+
+    if (deleted > 0) {
+      console.log(`[Cleanup] 🗑️ ${deleted} temp files removed`);
+    }
+  } catch (err) {
+    console.warn('[Cleanup] ⚠️', err.message);
+  }
+}
+
+/* ============================================================
+   SAVE: history/ (هر ۱۵ دقیقه، دائمی)
+============================================================ */
 async function appendHistory(latest) {
-  const date = today();
+  const date = tehranDate();
   const filePath = path.join(HISTORY_DIR, `${date}.json`);
 
-  // خوندن فایل موجود (اگه هست)
   let history;
   try {
     const content = await fs.readFile(filePath, 'utf-8');
@@ -151,14 +227,14 @@ async function appendHistory(latest) {
     history = {
       date,
       created: new Date().toISOString(),
+      interval: '15min',
       symbols: {}
     };
   }
 
-  // timestamp فعلی
   const now = Date.now();
+  let added = 0;
 
-  // اضافه کردن نقاط جدید
   for (const sym of HISTORY_SYMBOLS) {
     if (!latest.data[sym]) continue;
     const item = latest.data[sym];
@@ -167,29 +243,38 @@ async function appendHistory(latest) {
       history.symbols[sym] = [];
     }
 
-    // اضافه کردن نقطه جدید
+    // چک کن آخرین نقطه بیشتر از ۱۲ دقیقه پیش نبوده باشه
+    const lastPoint = history.symbols[sym][history.symbols[sym].length - 1];
+    if (lastPoint && (now - lastPoint.t) < 12 * 60 * 1000) {
+      continue; // خیلی زوده، skip
+    }
+
     history.symbols[sym].push({
       t: now,
       p: item.p,
       dp: item.dp || 0
     });
+    added++;
 
-    // محدود کردن تعداد نقاط
-    if (history.symbols[sym].length > MAX_POINTS_PER_DAY) {
-      history.symbols[sym] = history.symbols[sym].slice(-MAX_POINTS_PER_DAY);
+    if (history.symbols[sym].length > CONFIG.MAX_HISTORY_POINTS) {
+      history.symbols[sym] = history.symbols[sym].slice(-CONFIG.MAX_HISTORY_POINTS);
     }
   }
 
   history.lastUpdate = new Date().toISOString();
+  history.lastTime = tehranTime();
+  history.totalPoints = Object.keys(history.symbols).reduce(
+    (sum, k) => sum + history.symbols[k].length, 0
+  );
 
   await fs.writeFile(filePath, JSON.stringify(history), 'utf-8');
-  console.log(`[Save] ✅ history/${date}.json — ${Object.keys(history.symbols).length} symbols`);
+  console.log(`[Save] ✅ history/${date}.json — ${added} new points (total: ${history.totalPoints})`);
 }
 
 async function cleanupOldHistory() {
   try {
     const files = await fs.readdir(HISTORY_DIR);
-    const cutoff = Date.now() - (HISTORY_KEEP_DAYS * 24 * 60 * 60 * 1000);
+    const cutoff = Date.now() - (CONFIG.HISTORY_KEEP_DAYS * 24 * 60 * 60 * 1000);
 
     for (const file of files) {
       if (!file.endsWith('.json')) continue;
@@ -198,7 +283,7 @@ async function cleanupOldHistory() {
 
       if (fileDate < cutoff) {
         await fs.unlink(path.join(HISTORY_DIR, file));
-        console.log(`[Cleanup] 🗑️ Removed ${file}`);
+        console.log(`[Cleanup] 🗑️ ${file} (too old)`);
       }
     }
   } catch (err) {
@@ -206,8 +291,10 @@ async function cleanupOldHistory() {
   }
 }
 
-async function saveIndex(latest) {
-  // فایل index برای لیست تاریخچه‌ها
+/* ============================================================
+   SAVE: history-index.json
+============================================================ */
+async function saveIndex() {
   const files = await fs.readdir(HISTORY_DIR);
   const dates = files
     .filter(f => f.endsWith('.json'))
@@ -219,7 +306,9 @@ async function saveIndex(latest) {
     updated: new Date().toISOString(),
     total: dates.length,
     dates,
-    symbols: HISTORY_SYMBOLS
+    symbols: HISTORY_SYMBOLS,
+    interval: '15min',
+    maxPointsPerDay: CONFIG.MAX_HISTORY_POINTS
   };
 
   await fs.writeFile(
@@ -236,34 +325,36 @@ async function saveIndex(latest) {
 async function main() {
   const startTime = Date.now();
   console.log('═══════════════════════════════════════');
-  console.log('🚀 Gheymato Scraper — Start');
+  console.log(`🚀 Scraper — ${tehranTime()}`);
+  console.log(`📅 History time? ${isHistoryTime() ? '✅ YES' : '❌ NO'}`);
   console.log('═══════════════════════════════════════');
 
   try {
-    // ۱. آماده‌سازی پوشه‌ها
     await ensureDirs();
 
-    // ۲. دریافت داده
+    // ۱. دریافت داده از TGJU
     const json = await fetchTGJU();
+    if (!json || !json.current) throw new Error('Invalid structure');
 
-    if (!json || !json.current) {
-      throw new Error('Invalid structure — no current field');
-    }
+    console.log(`[Data] 📊 ${Object.keys(json.current).length} symbols from TGJU`);
 
-    const totalSymbols = Object.keys(json.current).length;
-    console.log(`[Data] 📊 Received ${totalSymbols} symbols from TGJU`);
-
-    // ۳. ذخیره latest.json
+    // ۲. ذخیره latest.json (هر بار)
     const latest = await saveLatest(json);
 
-    // ۴. اضافه به تاریخچه
-    await appendHistory(latest);
+    // ۳. ذخیره temp (هر بار)
+    await saveTemp(latest);
 
-    // ۵. پاکسازی تاریخچه قدیمی
-    await cleanupOldHistory();
+    // ۴. پاکسازی temp قدیمی (بعد از ۱۰ دقیقه)
+    await cleanupTemp();
 
-    // ۶. ذخیره index
-    await saveIndex(latest);
+    // ۵. ذخیره history (فقط در بازه‌های ۱۵ دقیقه‌ای)
+    if (isHistoryTime()) {
+      await appendHistory(latest);
+      await cleanupOldHistory();
+      await saveIndex();
+    } else {
+      console.log('[History] ⏭️ Skip (not 15-min interval)');
+    }
 
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
     console.log('═══════════════════════════════════════');
