@@ -1,9 +1,10 @@
 /**
- * قیمتو 5.2 — UI
- * ✅ هدر مینیمال
+ * قیمتو 5.6 — UI
+ * ✅ جستجوی inline
+ * ✅ Chart با سوالات (1h/24h/1w/1m)
  * ✅ پرتفوی افقی
- * ✅ مودال ریسپانسیو
- * ✅ حذف توابع منسوخ (updateClock, updateStatus)
+ * ✅ زیرنویس متحرک در هدر
+ * ✅ تومان همیشه
  */
 window.UI = (function(){
 'use strict';
@@ -24,9 +25,7 @@ const PAGES = ['home', 'markets', 'chart', 'compare', 'favorites', 'settings'];
 const CAT_COLOR = {
   gold: 'gold', currency: 'blue', metal: 'purple',
   energy: 'orange', crypto: 'orange', commodity: 'green',
-  index: 'cyan', goldCrypto: 'gold', ratio: 'purple',
-  fund: 'purple', certificate: 'cyan',
-  exchange: 'blue', derivative: 'orange'
+  index: 'cyan', goldCrypto: 'gold', ratio: 'purple'
 };
 
 function assetIcon(asset){
@@ -47,9 +46,10 @@ function marketCardHTML(asset){
   const up = (cp || 0) >= 0;
   const color = catColor(asset);
   const isFav = Storage.fav.get().includes(asset.id);
+  const noPrice = price == null;
 
   return `
-    <article class="m-card" data-card-id="${asset.id}" role="button" tabindex="0">
+    <article class="m-card ${noPrice ? 'm-card-empty' : ''}" data-card-id="${asset.id}" role="button" tabindex="0">
       <div class="m-card-head">
         <div class="m-card-icon ${color}">${assetIcon(asset)}</div>
         <div class="m-card-info">
@@ -57,15 +57,17 @@ function marketCardHTML(asset){
           <small>${asset.code}</small>
         </div>
         <button type="button" class="icon-btn" data-fav-toggle="${asset.id}"
-          style="width:24px;height:24px;color:${isFav?'var(--warn)':'var(--dim)'};font-size:14px;flex-shrink:0;padding:0;background:none;border:0;cursor:pointer">
+          style="width:24px;height:24px;color:${isFav?'var(--warn)':'var(--dim)'};font-size:14px;flex-shrink:0;padding:0;background:none;border:0">
           ${Icons.get('star')}
         </button>
       </div>
-      <div class="m-card-price">${U.price(asset, price)}</div>
-      ${cp != null ? `
+      <div class="m-card-price">${noPrice ? '—' : U.price(asset, price)}</div>
+      ${cp != null && !noPrice ? `
         <span class="m-card-change ${up?'up':'down'}">
           ${up?'▲':'▼'} ${Math.abs(cp).toFixed(2)}٪
         </span>
+      ` : noPrice ? `
+        <span class="m-card-change muted">بدون داده</span>
       ` : ''}
     </article>
   `;
@@ -146,7 +148,7 @@ function renderTools(){
 }
 
 /* ============================================================
-   PORTFOLIO — افقی با اسکرول
+   PORTFOLIO — افقی
 ============================================================ */
 function renderPortfolioCards(){
   const grid = $('[data-portfolio-grid]');
@@ -154,7 +156,6 @@ function renderPortfolioCards(){
 
   const list = window.Storage.pf.get();
 
-  // اگر خالی بود → کارت افزودن
   if(!list.length){
     grid.innerHTML = `
       <div class="scroll-row portfolio-row">
@@ -191,7 +192,8 @@ function renderPortfolioCards(){
       metal:    { bg:'rgba(107,190,214,.12)', color:'#3d8ea8' },
       energy:   { bg:'rgba(232,165,92,.12)',  color:'#c87c3a' },
       commodity:{ bg:'rgba(16,162,110,.12)',  color:'#10a26e' },
-      index:    { bg:'rgba(221,126,161,.12)', color:'#b85c7e' }
+      index:    { bg:'rgba(221,126,161,.12)', color:'#b85c7e' },
+      goldCrypto:{ bg:'rgba(229,185,110,.14)',color:'#c8974a' }
     };
     const c = colors[a.cat] || colors.gold;
 
@@ -213,7 +215,7 @@ function renderPortfolioCards(){
             ${up ? '▲' : '▼'} ${up ? '+' : ''}${pct.toFixed(2)}%
           </span>
           <button type="button" class="icon-btn" data-pf-del="${item.ts}"
-            style="width:24px;height:24px;font-size:13px;color:var(--muted);padding:0;background:none;border:0;cursor:pointer">
+            style="width:24px;height:24px;font-size:13px;color:var(--muted);padding:0;background:none;border:0">
             ${window.Icons.get('trash')}
           </button>
         </div>
@@ -307,47 +309,256 @@ function renderFavs(){
 }
 
 /* ============================================================
-   CHART PAGE
+   HEADER TICKER (زیرنویس متحرک)
 ============================================================ */
-function renderChartPage(){
+function renderHdrTicker(){
+  const track = $('[data-hdr-ticker-track]');
+  if(!track) return;
+
+  const ids = [
+    'gold18', 'coin', 'dollar', 'euro', 'ounce', 'mesghal',
+    'btc', 'eth', 'silver', 'oil_brent', 'bourse', 'usdt',
+    'gold24', 'coin_bahar', 'gbp', 'aed', 'crypto-solana'
+  ];
+
+  const items = ids.map(id => {
+    const a = window.DATA.find(id);
+    if(!a) return '';
+    const l = window.API.getById(id);
+    if(!l || l.price == null) return '';
+    const cp = l.changePercent || 0;
+    const up = cp >= 0;
+    return `
+      <div class="hdr-ticker-item">
+        <span class="name">${window.U.esc(a.short || a.name)}</span>
+        <span class="price">${window.U.price(a, l.price)}</span>
+        <span class="chg ${up?'up':'down'}">${up?'▲':'▼'} ${Math.abs(cp).toFixed(2)}%</span>
+      </div>
+    `;
+  }).filter(Boolean).join('');
+
+  // تکرار برای اسکرول بی‌نهایت
+  track.innerHTML = items + items;
+}
+
+/* ============================================================
+   CHART PAGE — بازطراحی کامل با سوالات
+============================================================ */
+async function renderChartPage(){
   const asset = window.DATA.find(activeChartId);
   if(!asset) return;
+
   const live = window.API.getById(asset.id);
-  if(!live) return;
 
-  const pEl = $('[data-c-price]');
-  if(pEl) pEl.textContent = window.U.price(asset, live.price);
+  // ۱. هدر نماد
+  const iconEl = $('[data-c-icon]');
+  if(iconEl) iconEl.innerHTML = assetIcon(asset);
 
-  const cEl = $('[data-c-change]');
-  if(cEl && live.changePercent != null){
-    const up = live.changePercent >= 0;
-    cEl.textContent = (up ? '▲' : '▼') + ' ' + Math.abs(live.changePercent).toFixed(2) + '%';
-    cEl.className = up ? 'up' : 'down';
-    cEl.style.background = up ? 'var(--up-soft)' : 'var(--down-soft)';
-    cEl.style.color = up ? 'var(--up)' : 'var(--down)';
+  const nameEl = $('[data-c-name]');
+  if(nameEl) nameEl.textContent = asset.name;
+
+  const codeEl = $('[data-c-code]');
+  if(codeEl) codeEl.textContent = asset.code;
+
+  // ۲. دکمه علاقه‌مندی
+  const favEl = $('[data-c-fav]');
+  if(favEl){
+    const isFav = window.Storage.fav.get().includes(asset.id);
+    favEl.classList.toggle('is-fav', isFav);
+    favEl.dataset.favToggle = asset.id;
+    favEl.textContent = isFav ? '★' : '☆';
   }
 
+  // ۳. قیمت اصلی
+  const priceEl = $('[data-c-price]');
+  if(priceEl){
+    priceEl.textContent = live && live.price != null ? window.U.price(asset, live.price) : '—';
+  }
+
+  // ۴. تغییرات
+  const changeEl = $('[data-c-change]');
+  if(changeEl && live && live.changePercent != null){
+    const up = live.changePercent >= 0;
+    changeEl.textContent = (up ? '▲' : '▼') + ' ' + Math.abs(live.changePercent).toFixed(2) + '%';
+    changeEl.className = 'chart-change ' + (up ? 'up' : 'down');
+  } else if(changeEl){
+    changeEl.textContent = '—';
+    changeEl.className = 'chart-change';
+  }
+
+  // ۵. آمار
   function fmt(v){
     if(v == null) return '—';
     return asset.ptype === 'usd' ? '$' + window.U.num(v, asset.dec) : window.U.money(v);
   }
 
-  if($('[data-c-low]'))   $('[data-c-low]').textContent   = fmt(live.low);
-  if($('[data-c-high]'))  $('[data-c-high]').textContent  = fmt(live.high);
-  if($('[data-c-delta]')) $('[data-c-delta]').textContent = (live.changePercent >= 0 ? '+' : '') + (live.changePercent || 0).toFixed(2) + '%';
-  if($('[data-c-avg]'))   $('[data-c-avg]').textContent   = fmt((live.high + live.low) / 2);
+  const highEl = $('[data-c-high]');
+  if(highEl) highEl.textContent = fmt(live && live.high);
 
-  const canvas = $('[data-chart-canvas]');
-  if(canvas){
-    const data = window.API.history(asset, 80, window.CFG.get('chartPeriod') || '1D');
-    window.Charts.drawLine(canvas, data, { padding: 20, lineWidth: 2.5 });
+  const lowEl = $('[data-c-low]');
+  if(lowEl) lowEl.textContent = fmt(live && live.low);
+
+  const deltaEl = $('[data-c-delta]');
+  if(deltaEl){
+    if(live && live.change != null){
+      const up = live.change >= 0;
+      deltaEl.textContent = (up ? '+' : '') + fmt(Math.abs(live.change));
+      deltaEl.style.color = up ? 'var(--up)' : 'var(--down)';
+    } else {
+      deltaEl.textContent = '—';
+    }
   }
 
-  const sg = $('[data-symbols]');
-  if(sg){
-    const ids = ['gold18','coin','dollar','euro','ounce','btc','eth','usdt','silver','oil'];
-    const assets = ids.map(id => window.DATA.find(id)).filter(Boolean);
-    sg.innerHTML = assets.map(marketCardHTML).join('');
+  const avgEl = $('[data-c-avg]');
+  if(avgEl){
+    if(live && live.high != null && live.low != null){
+      avgEl.textContent = fmt((live.high + live.low) / 2);
+    } else {
+      avgEl.textContent = '—';
+    }
+  }
+
+  // ۶. اطلاعات بیشتر
+  const unitEl = $('[data-c-unit]');
+  if(unitEl) unitEl.textContent = asset.unit || '—';
+
+  const catEl = $('[data-c-cat]');
+  if(catEl){
+    const cat = window.DATA.CATEGORIES[asset.cat];
+    catEl.textContent = cat ? cat.label : asset.cat;
+  }
+
+  const timeEl = $('[data-c-time]');
+  if(timeEl) timeEl.textContent = live && live.time ? live.time : '—';
+
+  // ۷. نمودار
+  const canvas = $('[data-chart-canvas]');
+  if(canvas) drawChartAsync(canvas, asset);
+
+  // ۸. سوالات (تغییرات در بازه‌های زمانی)
+  renderChartQuestions(asset, live);
+
+  // ۹. نمادهای مرتبط
+  const relEl = $('[data-c-related]');
+  if(relEl){
+    const related = window.DATA.byCat(asset.cat)
+      .filter(a => a.id !== asset.id)
+      .slice(0, 10);
+    relEl.innerHTML = related.map(marketCardHTML).join('');
+  }
+}
+
+/**
+ * رندر سوالات صفحه Chart
+ */
+async function renderChartQuestions(asset, live){
+  if(!live || live.price == null) return;
+
+  const currentPrice = live.price;
+
+  // بازه‌های زمانی به میلی‌ثانیه
+  const intervals = {
+    '1h':  1 * 60 * 60 * 1000,
+    '24h': 24 * 60 * 60 * 1000,
+    '1w':  7 * 24 * 60 * 60 * 1000,
+    '1m':  30 * 24 * 60 * 60 * 1000
+  };
+
+  for(const [key, ms] of Object.entries(intervals)){
+    const item = document.querySelector(`[data-q="${key}"]`);
+    if(!item) continue;
+
+    const priceEl = item.querySelector('[data-q-price]');
+    const changeEl = item.querySelector('[data-q-change]');
+
+    try {
+      // از تاریخچه استفاده کن
+      let pastPrice = null;
+
+      if(window.API.getHistory){
+        // تعداد روز بر اساس بازه
+        const days = Math.max(1, Math.ceil(ms / (24 * 60 * 60 * 1000)));
+        const history = await window.API.getHistory(asset, days);
+
+        if(history && history.length){
+          // پیدا کن نزدیک‌ترین نقطه به زمان هدف
+          const targetTime = Date.now() - ms;
+          let closest = null;
+          let minDiff = Infinity;
+
+          for(const point of history){
+            const diff = Math.abs(point.t - targetTime);
+            if(diff < minDiff){
+              minDiff = diff;
+              closest = point;
+            }
+          }
+
+          if(closest && closest.p){
+            pastPrice = closest.p;
+          }
+        }
+      }
+
+      // اگه تاریخچه نبود، از داده fallback استفاده کن
+      if(pastPrice == null){
+        pastPrice = currentPrice * (1 - (live.changePercent || 0) / 100 * (key === '1h' ? 0.1 : key === '24h' ? 1 : key === '1w' ? 3 : 7));
+      }
+
+      // محاسبه تغییر
+      const change = currentPrice - pastPrice;
+      const changePct = (change / pastPrice) * 100;
+      const up = change >= 0;
+
+      if(priceEl) priceEl.textContent = window.U.price(asset, pastPrice);
+      if(changeEl){
+        changeEl.textContent = (up ? '▲' : '▼') + ' ' + Math.abs(changePct).toFixed(2) + '%';
+        changeEl.className = 'chart-q-change ' + (up ? 'up' : 'down');
+      }
+
+    } catch(e){
+      console.warn('[ChartQ] Failed for', key, e.message);
+      if(priceEl) priceEl.textContent = '—';
+      if(changeEl){
+        changeEl.textContent = '—';
+        changeEl.className = 'chart-q-change muted';
+      }
+    }
+  }
+}
+
+/**
+ * رسم نمودار async — از history + رنگ بر اساس جهت
+ */
+async function drawChartAsync(canvas, asset){
+  try {
+    let prices = null;
+
+    if(window.API.getHistoryPrices){
+      prices = await window.API.getHistoryPrices(asset, 7);
+    }
+
+    if(!prices || prices.length < 2){
+      prices = window.API.history(asset, 60, window.CFG.get('chartPeriod') || '1D');
+    }
+
+    // تعیین رنگ بر اساس جهت (نزولی = قرمز، صعودی = سبز)
+    const first = prices[0];
+    const last = prices[prices.length - 1];
+    const up = last >= first;
+
+    const color = up ? '#10b981' : '#ef4444';
+
+    window.Charts.drawLine(canvas, prices, {
+      padding: 20,
+      lineWidth: 2.5,
+      color: color
+    });
+
+  } catch(e){
+    console.warn('[Chart] Failed:', e.message);
+    const data = window.API.history(asset, 60, '1D');
+    window.Charts.drawLine(canvas, data, { padding: 20, lineWidth: 2.5 });
   }
 }
 
@@ -412,32 +623,7 @@ function renderHomeChart(){
   if(!c) return;
   const asset = window.DATA.find('gold18');
   if(!asset) return;
-  const data = window.API.history(asset, 60, window.CFG.get('chartPeriod') || '1D');
-  window.Charts.drawLine(c, data, { padding: 20, lineWidth: 2 });
-}
-
-/* ============================================================
-   HOME TICKER STRIP (جدید)
-============================================================ */
-function renderHomeTicker(){
-  const el = $('[data-home-ticker]');
-  if(!el) return;
-
-  const ids = ['gold18', 'dollar', 'ounce', 'coin'];
-  el.innerHTML = ids.map(id => {
-    const a = window.DATA.find(id);
-    if(!a) return '';
-    const l = window.API.getById(id);
-    const cp = l?.changePercent || 0;
-    const up = cp >= 0;
-    return `
-      <div class="ticker-item">
-        <span class="name">${window.U.esc(a.short)}</span>
-        <span class="price">${window.U.price(a, l?.price)}</span>
-        <span class="chg ${up?'up':'down'}">${up?'▲':'▼'} ${Math.abs(cp).toFixed(2)}%</span>
-      </div>
-    `;
-  }).join('');
+  drawChartAsync(c, asset);
 }
 
 /* ============================================================
@@ -461,12 +647,13 @@ function go(page){
     renderCats();
     renderTools();
     renderHomeChart();
-    renderHomeTicker();
   }
   if(page === 'markets') renderMarkets();
   if(page === 'chart') renderChartPage();
   if(page === 'compare') renderCompare();
   if(page === 'favorites') renderFavs();
+
+  renderHdrTicker();
 }
 
 /* ============================================================
@@ -500,12 +687,9 @@ function toast(msg, type = ''){
   t._t = setTimeout(() => t.classList.remove('is-show'), 2400);
 }
 
-
-
 /* ============================================================
-   TOOLS — محاسبه‌گرها و ابزارها
+   TOOLS
 ============================================================ */
-
 function toolGold(){
   const gold = window.API.getById('gold18');
   if(!gold || gold.price == null){ toast('در حال دریافت قیمت...', 'warning'); return; }
@@ -647,7 +831,7 @@ function toolOunce(){
     const out = $('[data-ounce-out]');
     if(out) out.innerHTML = `
       <div class="result-row"><span>ارزش دلاری</span><strong>$${window.U.num(totalUSD, 2)}</strong></div>
-      <div class="result-row"><span>ارزش ریالی</span><strong>${window.U.money(totalRial)}</strong></div>
+      <div class="result-row"><span>ارزش تومانی</span><strong>${window.U.money(totalRial)}</strong></div>
       <div class="result-row"><span>هر گرم ۲۴ عیار</span><strong>${window.U.money(gramPrice)}</strong></div>
       <div class="result-row result-total"><span>هر گرم ${k} عیار</span><strong>${window.U.money(gramK)}</strong></div>
     `;
@@ -1307,69 +1491,60 @@ function openTool(tool){
 }
 
 /* ============================================================
-   SEARCH
+   SEARCH — Inline
 ============================================================ */
 let searchIdx = -1;
 let searchResults = [];
 
-function openSearch(){
-  const m = $('[data-search]');
-  if(!m) return;
-  m.classList.add('is-open');
-  setTimeout(() => $('[data-search-input]')?.focus(), 100);
-}
-
-function closeSearch(){
-  const m = $('[data-search]');
-  if(m) m.classList.remove('is-open');
-  const i = $('[data-search-input]');
-  if(i) i.value = '';
-  const r = $('[data-search-results]');
-  if(r) r.innerHTML = '<div class="ms-empty">برای جستجو تایپ کنید...</div>';
-  searchIdx = -1;
-  searchResults = [];
-}
-
-function doSearch(q){
+function doSearch(query){
   const res = $('[data-search-results]');
   if(!res) return;
-  const query = (q || '').trim().toLowerCase();
-  if(!query){
-    res.innerHTML = '<div class="ms-empty">برای جستجو تایپ کنید...</div>';
+
+  const q = (query || '').trim().toLowerCase();
+
+  if(!q || q.length < 2){
+    res.hidden = true;
+    res.innerHTML = '';
     searchResults = [];
     searchIdx = -1;
     return;
   }
+
   const list = window.DATA.ASSETS.filter(a =>
-    a.name.toLowerCase().includes(query) ||
-    a.code.toLowerCase().includes(query) ||
-    a.id.toLowerCase().includes(query)
-  ).slice(0, 20);
+    a.name.toLowerCase().includes(q) ||
+    a.code.toLowerCase().includes(q) ||
+    a.id.toLowerCase().includes(q)
+  ).slice(0, 15);
+
   searchResults = list;
+  searchIdx = list.length ? 0 : -1;
+
   if(!list.length){
     res.innerHTML = '<div class="ms-empty">نتیجه‌ای یافت نشد</div>';
+    res.hidden = false;
     return;
   }
-  res.innerHTML = list.map((a, i) => `
-    <div class="ms-item ${i === 0 ? 'is-active' : ''}" data-idx="${i}">
-      <div class="ms-item-icon">${assetIcon(a)}</div>
-      <div class="ms-item-info">
-        <strong>${window.U.esc(a.name)}</strong>
-        <small>${a.code} · ${window.DATA.CATEGORIES[a.cat]?.label || ''}</small>
+
+  res.innerHTML = list.map((a, i) => {
+    const live = window.API.getById(a.id);
+    const price = live && live.price != null ? window.U.price(a, live.price) : '—';
+    return `
+      <div class="ms-item ${i === 0 ? 'is-active' : ''}" data-idx="${i}">
+        <div class="ms-item-icon">${assetIcon(a)}</div>
+        <div class="ms-item-info">
+          <strong>${window.U.esc(a.name)}</strong>
+          <small>${a.code} · ${window.DATA.CATEGORIES[a.cat]?.label || ''}</small>
+        </div>
+        <div class="ms-item-price">${price}</div>
       </div>
-      <div class="ms-item-price">${window.U.price(a, window.API.getById(a.id)?.price)}</div>
-    </div>
-  `).join('');
-  searchIdx = 0;
+    `;
+  }).join('');
+  res.hidden = false;
+
   res.querySelectorAll('.ms-item').forEach(el => {
     el.addEventListener('click', e => {
       e.stopPropagation();
       pickSearch(searchResults[+el.dataset.idx]);
-    });
-    el.addEventListener('mouseenter', () => {
-      res.querySelectorAll('.ms-item').forEach(x => x.classList.remove('is-active'));
-      el.classList.add('is-active');
-      searchIdx = +el.dataset.idx;
     });
   });
 }
@@ -1381,11 +1556,22 @@ function pickSearch(asset){
   go('chart');
 }
 
+function closeSearch(){
+  const res = $('[data-search-results]');
+  if(res){
+    res.hidden = true;
+    res.innerHTML = '';
+  }
+  const input = $('[data-search-input]');
+  if(input) input.value = '';
+  searchResults = [];
+  searchIdx = -1;
+}
+
 /* ============================================================
-   EVENT HANDLING — بازنویسی کامل
+   EVENT HANDLING
 ============================================================ */
 function handleClick(e){
-  /* ===== ۱. منو ===== */
   const menuBtn = e.target.closest('[data-menu]');
   if(menuBtn){
     e.preventDefault();
@@ -1398,14 +1584,12 @@ function handleClick(e){
     return;
   }
 
-  /* ===== ۲. Backdrop ===== */
   if(e.target.closest('[data-backdrop]')){
     e.preventDefault();
     document.body.classList.remove('sidebar-open');
     return;
   }
 
-  /* ===== ۳. Refresh ===== */
   const refreshBtn = e.target.closest('[data-action="refresh"]');
   if(refreshBtn){
     e.preventDefault();
@@ -1422,23 +1606,13 @@ function handleClick(e){
     return;
   }
 
-  /* ===== ۴. Search ===== */
-  if(e.target.closest('[data-action="search"]')){
-    e.preventDefault();
-    e.stopPropagation();
-    openSearch();
-    return;
+  const results = $('[data-search-results]');
+  if(results && !results.hidden){
+    if(!e.target.closest('.hdr-search-wrap')){
+      closeSearch();
+    }
   }
 
-  /* ===== ۵. Close Search ===== */
-  if(e.target.closest('[data-search-close]')){
-    e.preventDefault();
-    e.stopPropagation();
-    closeSearch();
-    return;
-  }
-
-  /* ===== ۶. Close Modal ===== */
   if(e.target.closest('[data-modal-close]')){
     e.preventDefault();
     e.stopPropagation();
@@ -1446,7 +1620,6 @@ function handleClick(e){
     return;
   }
 
-  /* ===== ۷. TV Tool ===== */
   const tvBtn = e.target.closest('[data-tool="tv"]');
   if(tvBtn){
     e.preventDefault();
@@ -1461,7 +1634,6 @@ function handleClick(e){
     return;
   }
 
-  /* ===== ۸. Favorites toggle ===== */
   const favBtn = e.target.closest('[data-fav-toggle]');
   if(favBtn){
     e.preventDefault();
@@ -1475,10 +1647,12 @@ function handleClick(e){
       renderFeatured();
       renderMostUsed();
     }
+    else if(currentPage === 'chart'){
+      renderChartPage();
+    }
     return;
   }
 
-  /* ===== ۹. Portfolio delete ===== */
   const pfDel = e.target.closest('[data-pf-del]');
   if(pfDel){
     e.preventDefault();
@@ -1490,9 +1664,9 @@ function handleClick(e){
     return;
   }
 
-  /* ===== ۱۰. Card → chart ===== */
   const card = e.target.closest('[data-card-id]');
   if(card){
+    if(card.classList.contains('m-card-empty')) return;
     e.preventDefault();
     e.stopPropagation();
     activeChartId = card.dataset.cardId;
@@ -1500,7 +1674,6 @@ function handleClick(e){
     return;
   }
 
-  /* ===== ۱۱. Route ===== */
   const routeBtn = e.target.closest('[data-route]');
   if(routeBtn){
     e.preventDefault();
@@ -1509,7 +1682,6 @@ function handleClick(e){
     return;
   }
 
-  /* ===== ۱۲. Tool ===== */
   const toolBtn = e.target.closest('[data-tool]');
   if(toolBtn){
     e.preventDefault();
@@ -1519,7 +1691,6 @@ function handleClick(e){
     return;
   }
 
-  /* ===== ۱۳. Filter chips ===== */
   const chip = e.target.closest('[data-filter]');
   if(chip){
     e.preventDefault();
@@ -1531,23 +1702,6 @@ function handleClick(e){
     return;
   }
 
-  /* ===== ۱۴. Unit toggle ===== */
-  const unitBtn = e.target.closest('[data-unit]');
-  if(unitBtn){
-    e.preventDefault();
-    e.stopPropagation();
-    window.CFG.set('currency', unitBtn.dataset.unit);
-    $$('[data-unit]').forEach(b => {
-      b.classList.toggle('is-active', b.dataset.unit === unitBtn.dataset.unit);
-    });
-    const d = $('[data-unit-desc]');
-    if(d) d.textContent = unitBtn.dataset.unit === 'toman' ? 'تومان' : 'ریال';
-    refreshAll();
-    toast(unitBtn.dataset.unit === 'toman' ? 'واحد: تومان' : 'واحد: ریال', 'success');
-    return;
-  }
-
-  /* ===== ۱۵. Switch toggle ===== */
   const sw = e.target.closest('.switch');
   if(sw){
     e.preventDefault();
@@ -1564,7 +1718,6 @@ function handleClick(e){
     return;
   }
 
-  /* ===== ۱۶. Period pill ===== */
   const pill = e.target.closest('.pills button[data-period]');
   if(pill){
     e.preventDefault();
@@ -1578,7 +1731,6 @@ function handleClick(e){
     return;
   }
 
-  /* ===== ۱۷. Reset ===== */
   if(e.target.closest('[data-action="reset"]')){
     e.preventDefault();
     e.stopPropagation();
@@ -1590,7 +1742,6 @@ function handleClick(e){
     return;
   }
 
-  /* ===== ۱۸. Export ===== */
   if(e.target.closest('[data-action="export"]')){
     e.preventDefault();
     e.stopPropagation();
@@ -1625,67 +1776,18 @@ function refreshAll(){
     renderCats();
     renderTools();
     renderHomeChart();
-    renderHomeTicker();
   }
   if(currentPage === 'markets') renderMarkets();
   if(currentPage === 'chart') renderChartPage();
   if(currentPage === 'compare') renderCompare();
   if(currentPage === 'favorites') renderFavs();
+  renderHdrTicker();
   if(window.TV && window.TV.isActive()) window.TV.refresh();
 }
 
 /* ============================================================
    HELPERS
 ============================================================ */
-function initBannerReal(){
-  const b = $('[data-banner-real]');
-  if(!b) return;
-
-  const track = b.querySelector('.banner-real-track');
-  const slides = b.querySelectorAll('.banner-real-slide');
-  const dots = b.querySelectorAll('.banner-real-dots button');
-  if(!slides.length || !track) return;
-
-  let i = 0, t;
-
-  function show(n){
-    i = (n + slides.length) % slides.length;
-    track.style.transform = `translateX(${i * 100}%)`;
-    dots.forEach((d, idx) => d.classList.toggle('is-active', idx === i));
-  }
-
-  function auto(){
-    clearInterval(t);
-    t = setInterval(() => show(i + 1), 6500);
-  }
-
-  dots.forEach((d, idx) => {
-    d.addEventListener('click', e => {
-      e.stopPropagation();
-      show(idx);
-      auto();
-    });
-  });
-
-  let sx = 0;
-  b.addEventListener('touchstart', e => { sx = e.touches[0].clientX; }, { passive: true });
-  b.addEventListener('touchend', e => {
-    const dx = e.changedTouches[0].clientX - sx;
-    if(Math.abs(dx) > 60){
-      show(i + (dx > 0 ? -1 : 1));
-      auto();
-    }
-  }, { passive: true });
-
-  auto();
-}
-
-function highlightSearch(){
-  const items = $$('[data-search-results] .ms-item');
-  items.forEach(it => it.classList.remove('is-active'));
-  if(items[searchIdx]) items[searchIdx].classList.add('is-active');
-}
-
 function checkAlerts(){
   const list = window.Storage.alerts.get();
   if(!list.length) return;
@@ -1699,9 +1801,6 @@ function checkAlerts(){
     if(fired){
       const a = window.DATA.find(al.id);
       toast(`🔔 ${a?.name || al.id}`, 'warning');
-      if('Notification' in window && Notification.permission === 'granted'){
-        try { new Notification('قیمتو', { body: a?.name }); } catch(e){}
-      }
     } else {
       remaining.push(al);
     }
@@ -1719,45 +1818,28 @@ function init(){
   if(window.Icons && window.Icons.hydrate) window.Icons.hydrate();
   if(window.Icons && window.Icons.installImageFallback) window.Icons.installImageFallback();
 
-  const unit = window.CFG.get('currency');
-  $$('[data-unit]').forEach(b => b.classList.toggle('is-active', b.dataset.unit === unit));
-
   const hash = (location.hash || '').replace('#', '');
   go(PAGES.includes(hash) ? hash : 'home');
 
-  initBannerReal();
-
-  /* Event Listener */
   document.addEventListener('click', handleClick, true);
 
   document.addEventListener('keydown', e => {
     if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k'){
       e.preventDefault();
-      openSearch();
+      const input = $('[data-search-input]');
+      if(input) input.focus();
     }
     if(e.key === 'Escape'){
       closeSearch();
       closeModal();
       document.body.classList.remove('sidebar-open');
     }
-    if($('[data-search]')?.classList.contains('is-open')){
-      if(e.key === 'ArrowDown'){
-        e.preventDefault();
-        if(searchIdx < searchResults.length - 1){ searchIdx++; highlightSearch(); }
-      }
-      if(e.key === 'ArrowUp'){
-        e.preventDefault();
-        if(searchIdx > 0){ searchIdx--; highlightSearch(); }
-      }
-      if(e.key === 'Enter'){
-        e.preventDefault();
-        if(searchIdx >= 0) pickSearch(searchResults[searchIdx]);
-      }
-    }
   });
 
   const si = $('[data-search-input]');
-  if(si) si.addEventListener('input', window.U.debounce(e => doSearch(e.target.value), 150));
+  if(si){
+    si.addEventListener('input', window.U.debounce(e => doSearch(e.target.value), 150));
+  }
 
   const iv = $('[data-input="interval"]');
   if(iv){
@@ -1784,11 +1866,8 @@ function init(){
     checkAlerts();
   });
 
-  window.addEventListener('resize', window.U.debounce(() => {
-    if(currentPage === 'chart') renderChartPage();
-    if(currentPage === 'home') renderHomeChart();
-    if(currentPage === 'compare') renderCompare();
-  }, 200));
+  // زیرنویس اولیه
+  renderHdrTicker();
 }
 
 /* ============================================================
@@ -1801,7 +1880,6 @@ return {
   refreshAll,
   openModal,
   closeModal,
-  openSearch,
   closeSearch,
   renderChartPage,
   renderMarkets,
@@ -1811,21 +1889,12 @@ return {
   renderMostUsed,
   renderTools,
   renderCats,
-  renderHomeTicker,
+  renderHdrTicker,
   openTool,
-  toolGold,
-  toolCoin,
-  toolOunce,
-  toolSilver,
-  toolConv,
-  toolCryptoConv,
-  toolUnitConv,
-  toolPortfolio,
-  toolAlerts,
-  toolNotes,
-  toolProfit,
-  toolZakat,
-  toolAvgBuy
+  toolGold, toolCoin, toolOunce, toolSilver,
+  toolConv, toolCryptoConv, toolUnitConv,
+  toolPortfolio, toolAlerts, toolNotes,
+  toolProfit, toolZakat, toolAvgBuy
 };
 
 })();

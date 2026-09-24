@@ -1,8 +1,9 @@
 /**
- * قیمتو 5.4 — API
+ * قیمتو 5.6 — API
  * ✅ خواندن از GitHub Pages (data/latest.json)
  * ✅ تاریخچه واقعی از data/history/
- * ✅ بدون CORS، بدون Worker
+ * ✅ getHistory با پرامتر days
+ * ✅ بدون CORS
  */
 window.API = (function(){
 'use strict';
@@ -13,8 +14,8 @@ window.API = (function(){
 const CONFIG = {
   DATA_BASE: 'https://ataee-dev.github.io/marketos/data',
   RAW_BASE: 'https://raw.githubusercontent.com/ataee-dev/marketos/main/data',
-  cacheTTL: 30000,       // ۳۰ ثانیه کش
-  poll: 60000,           // ۶۰ ثانیه polling
+  cacheTTL: 30000,
+  poll: 60000,
   timeout: 8000,
   retries: 2
 };
@@ -33,7 +34,7 @@ let subs = new Set();
 let currentSource = 'primary';
 
 const HISTORY_CACHE = new Map();
-const HISTORY_TTL = 5 * 60 * 1000; // ۵ دقیقه
+const HISTORY_TTL = 5 * 60 * 1000;
 
 /* ============================================================
    HELPERS
@@ -63,7 +64,7 @@ function normalize(key, item){
 /* ============================================================
    LOCAL CACHE
 ============================================================ */
-const LCKEY = 'gheymato.last.v6';
+const LCKEY = 'gheymato.last.v7';
 
 function saveLocal(){
   try {
@@ -267,6 +268,12 @@ function today(){
   return tehranTime.toISOString().slice(0, 10);
 }
 
+/**
+ * تاریخچه یک نماد
+ * @param {Object} asset — نماد از DATA
+ * @param {number} days — تعداد روز گذشته (پیش‌فرض ۱)
+ * @returns {Promise<Array>} — آرایه {t, p}
+ */
 async function getHistory(asset, days){
   if(!asset) return [];
   days = days || 1;
@@ -282,9 +289,11 @@ async function getHistory(asset, days){
   }
 
   const allPoints = [];
+
   for(const date of dates){
     const history = await fetchHistory(date);
     if(!history || !history.symbols) continue;
+
     const points = history.symbols[asset.tgju];
     if(points && points.length){
       allPoints.push(...points);
@@ -300,6 +309,9 @@ async function getHistoryPrices(asset, days){
   return history.map(h => h.p);
 }
 
+/**
+ * تاریخچه ساده (cache-based) برای sparkline
+ */
 function history(asset, count, period){
   const live = getById(asset.id);
   const base = live && live.price != null ? live.price : 1000;
