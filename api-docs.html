@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>مستندات API — قیمتو</title>
+<link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+<link rel="stylesheet" href="css/reset.css">
+<link rel="stylesheet" href="css/variables.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/icons.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/animations.css">
+<style>
+.api-header{
+  position:sticky;top:0;z-index:30;
+  height:68px;padding:0 24px;
+  background:var(--bg-glass);
+  backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+}
+.api-header-brand{
+  display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit;
+}
+.api-header-brand img{width:38px;height:38px;border-radius:11px;}
+.api-header-brand strong{display:block;font-size:15px;font-weight:900;}
+.api-header-brand small{display:block;font-size:10.5px;color:var(--text-muted);}
+
+.api-container{
+  max-width:900px;
+  margin:0 auto;
+  padding:32px 24px 80px;
+}
+
+.api-hero{
+  text-align:center;
+  padding:40px 20px;
+  margin-bottom:32px;
+  border-radius:var(--r-xl);
+  background:linear-gradient(160deg,var(--bg-card),var(--bg-card-2));
+  border:1px solid var(--border);
+}
+.api-hero h1{
+  font-size:32px;font-weight:900;letter-spacing:-1px;margin-bottom:12px;
+  background:linear-gradient(135deg,var(--text),var(--accent));
+  -webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+.api-hero p{font-size:14px;color:var(--text-muted);max-width:520px;margin:0 auto;}
+
+.api-section{
+  padding:24px;
+  border-radius:var(--r-lg);
+  background:var(--bg-card);
+  border:1px solid var(--border);
+  margin-bottom:20px;
+}
+
+.api-section h2{
+  font-size:18px;font-weight:900;margin-bottom:8px;
+  display:flex;align-items:center;gap:10px;
+}
+.api-section h2 svg{width:22px;height:22px;color:var(--accent);}
+.api-section > p{font-size:13px;color:var(--text-muted);margin-bottom:20px;}
+
+.api-endpoint{
+  padding:16px;
+  border-radius:var(--r);
+  background:var(--bg-card-2);
+  border:1px solid var(--border);
+  margin-bottom:12px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap;
+}
+
+.api-method{
+  padding:4px 10px;
+  border-radius:6px;
+  background:var(--up-soft);
+  color:var(--up);
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:.5px;
+  direction:ltr;
+}
+
+.api-method.ws{
+  background:var(--accent-soft);
+  color:var(--accent);
+}
+
+.api-path{
+  font-family:'SF Mono',Monaco,Consolas,monospace;
+  font-size:13px;
+  color:var(--text);
+  direction:ltr;
+  flex:1;
+  min-width:200px;
+}
+
+.api-desc{
+  font-size:12px;
+  color:var(--text-muted);
+  flex-basis:100%;
+}
+
+.api-code{
+  padding:18px;
+  border-radius:var(--r);
+  background:#0a0d14;
+  border:1px solid var(--border);
+  font-family:'SF Mono',Monaco,Consolas,monospace;
+  font-size:12.5px;
+  line-height:1.9;
+  color:#e0e4eb;
+  direction:ltr;
+  text-align:left;
+  overflow-x:auto;
+  margin-bottom:16px;
+  position:relative;
+}
+.api-code .k{color:#c792ea;}
+.api-code .s{color:#c3e88d;}
+.api-code .c{color:#697098;font-style:italic;}
+.api-code .n{color:#f78c6c;}
+.api-code .v{color:#82aaff;}
+
+.api-tabs{
+  display:flex;gap:4px;
+  padding:4px;
+  background:var(--bg-card-2);
+  border-radius:var(--r-sm);
+  margin-bottom:12px;
+  flex-wrap:wrap;
+}
+.api-tab{
+  padding:8px 14px;
+  border-radius:8px;
+  border:0;background:transparent;
+  color:var(--text-muted);
+  font-family:inherit;font-size:12px;font-weight:700;
+  cursor:pointer;transition:all var(--dur);
+}
+.api-tab:hover{color:var(--text);}
+.api-tab.is-active{background:var(--accent);color:#fff;}
+
+.api-response{
+  padding:16px;
+  border-radius:var(--r);
+  background:var(--bg-card-2);
+  border:1px solid var(--border);
+  font-family:'SF Mono',Monaco,Consolas,monospace;
+  font-size:11.5px;
+  line-height:1.8;
+  direction:ltr;
+  text-align:left;
+  max-height:320px;
+  overflow:auto;
+  color:var(--text-2);
+}
+
+.api-limits{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+  gap:12px;
+  margin-top:16px;
+}
+.api-limit{
+  padding:14px;
+  border-radius:var(--r);
+  background:var(--bg-card-2);
+  border:1px solid var(--border);
+}
+.api-limit small{display:block;font-size:11px;color:var(--text-muted);margin-bottom:4px;}
+.api-limit strong{display:block;font-size:14px;font-weight:800;color:var(--text);}
+</style>
+</head>
+<body>
+
+<header class="api-header">
+  <a href="index.html" class="api-header-brand">
+    <img src="assets/logo.svg" alt="قیمتو">
+    <div>
+      <strong>قیمتو API</strong>
+      <small>مستندات توسعه‌دهندگان</small>
+    </div>
+  </a>
+  <div style="display:flex;gap:8px">
+    <a href="admin.html" class="btn btn-secondary btn-sm">
+      <span data-icon="shield"></span>
+      پنل مدیریت
+    </a>
+    <a href="index.html" class="btn btn-secondary btn-sm">
+      <span data-icon="external"></span>
+      بازگشت
+    </a>
+  </div>
+</header>
+
+<div class="api-container">
+
+  <!-- HERO -->
+  <div class="api-hero">
+    <h1>API قیمتو</h1>
+    <p>
+      دسترسی برنامه‌نویسی به داده‌های لحظه‌ای بازار ایران و جهان
+      — REST + WebSocket
+    </p>
+  </div>
+
+  <!-- BASE URL -->
+  <div class="api-section">
+    <h2>
+      <span data-icon="globe"></span>
+      Base URL
+    </h2>
+    <p>تمام درخواست‌ها باید به این آدرس ارسال شوند.</p>
+
+    <div class="api-code">
+      https://api.gheymato.ir/v1
+    </div>
+  </div>
+
+  <!-- AUTH -->
+  <div class="api-section">
+    <h2>
+      <span data-icon="lock"></span>
+      احراز هویت
+    </h2>
+    <p>
+      برای استفاده از API باید کلید دسترسی خود را در هدر <code>Authorization</code>
+      ارسال کنید. کلید خود را از
+      <a href="admin.html" style="color:var(--accent)">پنل مدیریت</a>
+      دریافت کنید.
+    </p>
+
+    <div class="api-code">
+      <span class="c">// Header</span><br>
+      <span class="k">Authorization:</span> <span class="s">Bearer gmk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</span>
+    </div>
+  </div>
+
+  <!-- ENDPOINTS -->
+  <div class="api-section">
+    <h2>
+      <span data-icon="code"></span>
+      Endpoints
+    </h2>
+    <p>لیست نقاط دسترسی موجود</p>
+
+    <div class="api-endpoint">
+      <span class="api-method">GET</span>
+      <span class="api-path">/symbols</span>
+      <span class="api-desc">دریافت لیست تمام نمادها با قیمت لحظه‌ای</span>
+    </div>
+
+    <div class="api-endpoint">
+      <span class="api-method">GET</span>
+      <span class="api-path">/symbols/:id</span>
+      <span class="api-desc">دریافت اطلاعات کامل یک نماد</span>
+    </div>
+
+    <div class="api-endpoint">
+      <span class="api-method">GET</span>
+      <span class="api-path">/history/:id?period=1D&amp;count=100</span>
+      <span class="api-desc">تاریخچه قیمت برای نمودار</span>
+    </div>
+
+    <div class="api-endpoint">
+      <span class="api-method">GET</span>
+      <span class="api-path">/tolerance</span>
+      <span class="api-desc">نمادهای نزدیک سقف و کف</span>
+    </div>
+
+    <div class="api-endpoint">
+      <span class="api-method ws">WS</span>
+      <span class="api-path">/stream</span>
+      <span class="api-desc">اتصال WebSocket برای دریافت لحظه‌ای</span>
+    </div>
+  </div>
+
+  <!-- EXAMPLES -->
+  <div class="api-section">
+    <h2>
+      <span data-icon="file"></span>
+      نمونه کد
+    </h2>
+
+    <div class="api-tabs">
+      <button class="api-tab is-active" data-lang="javascript">JavaScript</button>
+      <button class="api-tab" data-lang="python">Python</button>
+      <button class="api-tab" data-lang="curl">cURL</button>
+      <button class="api-tab" data-lang="php">PHP</button>
+    </div>
+
+    <div class="api-code" data-lang-content="javascript">
+<span class="c">// دریافت همه نمادها</span><br>
+<span class="k">const</span> API_KEY = <span class="s">'gmk_live_xxxxxxxx'</span>;<br><br>
+
+<span class="k">const</span> res = <span class="k">await</span> <span class="n">fetch</span>(<span class="s">'https://api.gheymato.ir/v1/symbols'</span>, {<br>
+&nbsp;&nbsp;headers: {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="s">'Authorization'</span>: <span class="s">`Bearer ${API_KEY}`</span><br>
+&nbsp;&nbsp;}<br>
+});<br><br>
+
+<span class="k">const</span> data = <span class="k">await</span> res.<span class="n">json</span>();<br>
+console.<span class="n">log</span>(data.gold18);<br>
+<span class="c">// → { price: 2357490000, changePercent: 1.54, ... }</span>
+    </div>
+
+    <div class="api-code" data-lang-content="python" hidden>
+<span class="k">import</span> requests<br><br>
+
+API_KEY = <span class="s">'gmk_live_xxxxxxxx'</span><br><br>
+
+headers = {<br>
+&nbsp;&nbsp;<span class="s">'Authorization'</span>: <span class="s">f'Bearer {API_KEY}'</span><br>
+}<br><br>
+
+res = requests.<span class="n">get</span>(<br>
+&nbsp;&nbsp;<span class="s">'https://api.gheymato.ir/v1/symbols'</span>,<br>
+&nbsp;&nbsp;headers=headers<br>
+)<br>
+data = res.<span class="n">json</span>()<br><br>
+
+<span class="n">print</span>(data[<span class="s">'gold18'</span>][<span class="s">'price'</span>])
+    </div>
+
+    <div class="api-code" data-lang-content="curl" hidden>
+curl -X GET <span class="s">"https://api.gheymato.ir/v1/symbols"</span> \<br>
+&nbsp;&nbsp;-H <span class="s">"Authorization: Bearer gmk_live_xxxxxxxx"</span>
+    </div>
+
+    <div class="api-code" data-lang-content="php" hidden>
+<span class="v">&lt;?php</span><br><br>
+
+$API_KEY = <span class="s">'gmk_live_xxxxxxxx'</span>;<br><br>
+
+$ch = <span class="n">curl_init</span>();<br>
+<span class="n">curl_setopt</span>($ch, CURLOPT_URL, <span class="s">'https://api.gheymato.ir/v1/symbols'</span>);<br>
+<span class="n">curl_setopt</span>($ch, CURLOPT_HTTPHEADER, [<br>
+&nbsp;&nbsp;<span class="s">'Authorization: Bearer '</span> . $API_KEY<br>
+]);<br>
+<span class="n">curl_setopt</span>($ch, CURLOPT_RETURNTRANSFER, <span class="k">true</span>);<br><br>
+
+$response = <span class="n">curl_exec</span>($ch);<br>
+$data = <span class="n">json_decode</span>($response, <span class="k">true</span>);<br><br>
+
+<span class="n">echo</span> $data[<span class="s">'gold18'</span>][<span class="s">'price'</span>];
+    </div>
+  </div>
+
+  <!-- RESPONSE -->
+  <div class="api-section">
+    <h2>
+      <span data-icon="info"></span>
+      نمونه پاسخ
+    </h2>
+
+    <div class="api-response">
+{<br>
+&nbsp;&nbsp;<span class="k">"gold18"</span>: {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"id"</span>: <span class="s">"gold18"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"name"</span>: <span class="s">"طلای ۱۸ عیار"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"code"</span>: <span class="s">"GOLD18"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"price"</span>: <span class="n">2357490000</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"high"</span>: <span class="n">2393970000</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"low"</span>: <span class="n">2346480000</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"changePercent"</span>: <span class="n">1.54</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"direction"</span>: <span class="s">"low"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"time"</span>: <span class="s">"۱۵:۰۴:۵۸"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"timestamp"</span>: <span class="s">"2026-09-23 15:04:58"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"currency"</span>: <span class="s">"rial"</span><br>
+&nbsp;&nbsp;},<br>
+&nbsp;&nbsp;<span class="k">"price_dollar_rl"</span>: {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"id"</span>: <span class="s">"dollar"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"name"</span>: <span class="s">"دلار آمریکا"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"code"</span>: <span class="s">"USD"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"price"</span>: <span class="n">23100000</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"changePercent"</span>: <span class="n">0.95</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"currency"</span>: <span class="s">"rial"</span><br>
+&nbsp;&nbsp;}<br>
+}
+    </div>
+  </div>
+
+  <!-- LIMITS -->
+  <div class="api-section">
+    <h2>
+      <span data-icon="alert"></span>
+      محدودیت‌ها
+    </h2>
+    <p>استفاده منصفانه از API</p>
+
+    <div class="api-limits">
+      <div class="api-limit">
+        <small>Rate Limit</small>
+        <strong>۶۰ درخواست / دقیقه</strong>
+      </div>
+      <div class="api-limit">
+        <small>Bulk API</small>
+        <strong>تا ۵۰ نماد در درخواست</strong>
+      </div>
+      <div class="api-limit">
+        <small>WebSocket</small>
+        <strong>۱۰ اتصال هم‌زمان</strong>
+      </div>
+      <div class="api-limit">
+        <small>Cache TTL</small>
+        <strong>۱۰ ثانیه</strong>
+      </div>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div class="api-section" style="text-align:center">
+    <h2 style="justify-content:center">
+      <span data-icon="zap"></span>
+      همین حالا شروع کنید
+    </h2>
+    <p>کلید API خود را از پنل مدیریت دریافت کنید.</p>
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:16px;flex-wrap:wrap">
+      <a href="admin.html" class="btn btn-primary btn-lg">
+        <span data-icon="code"></span>
+        دریافت کلید API
+      </a>
+      <a href="index.html" class="btn btn-secondary btn-lg">
+        <span data-icon="external"></span>
+        مشاهده اپلیکیشن
+      </a>
+    </div>
+  </div>
+
+</div>
+
+<script src="js/icons.js"></script>
+<script>
+(function(){
+  window.Icons.hydrate();
+
+  document.querySelectorAll('[data-lang]').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const lang = tab.dataset.lang;
+      document.querySelectorAll('[data-lang]').forEach(t => {
+        t.classList.toggle('is-active', t === tab);
+      });
+      document.querySelectorAll('[data-lang-content]').forEach(el => {
+        el.hidden = el.dataset.langContent !== lang;
+      });
+    });
+  });
+})();
+</script>
+</body>
+</html>

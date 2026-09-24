@@ -1,0 +1,6 @@
+New Text Document.txt 
+*.txt 
+tools/*.txt 
+.DS_Store 
+Thumbs.db 
+node_modules/ 

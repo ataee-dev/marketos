@@ -1,0 +1,458 @@
+/* ============================================================
+   قیمتو 4.0 — TV.CSS
+   حالت TV حرفه‌ای با زیرنویس و ۸ چیدمان
+============================================================ */
+
+.tv{
+  position:fixed;inset:0;z-index:300;
+  background:var(--bg);
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+.tv[hidden]{display:none}
+
+/* ============================================================
+   TV HEADER
+============================================================ */
+.tv-head{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:16px;
+  padding:16px 24px;
+  background:linear-gradient(135deg,rgba(16,185,129,.15),transparent);
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+  z-index:10;
+}
+.tv-brand{display:flex;align-items:center;gap:12px}
+.tv-brand img{
+  width:40px;height:40px;border-radius:12px;
+  box-shadow:0 8px 20px var(--accent-glow);
+  background:rgba(255,255,255,.05);padding:5px;
+}
+.tv-brand strong{display:block;font-size:16px;font-weight:900;color:var(--accent)}
+.tv-brand small{display:block;font-size:11px;color:var(--muted);margin-top:2px}
+
+.tv-ctrl{display:flex;gap:8px}
+.tv-ctrl .icon-btn{
+  width:42px;height:42px;border-radius:11px;
+  background:var(--card);border:1px solid var(--border-2);
+  color:var(--text-2);cursor:pointer;
+  display:grid;place-items:center;
+  transition:all var(--dur);flex-shrink:0;
+}
+.tv-ctrl .icon-btn:active{
+  background:var(--accent-soft);color:var(--accent);
+  border-color:var(--accent);transform:scale(.92);
+}
+.tv-ctrl .icon-btn svg{
+  width:20px;height:20px;stroke-width:1.85;
+  fill:none;stroke:currentColor;
+  stroke-linecap:round;stroke-linejoin:round;
+}
+
+/* ============================================================
+   TV BODY
+============================================================ */
+.tv-body{
+  flex:1;min-height:0;
+  display:flex;align-items:center;justify-content:center;
+  position:relative;overflow:hidden;
+  padding:24px;
+}
+
+/* ============================================================
+   TV TICKER (زیرنویس پایین)
+============================================================ */
+.tv-ticker{
+  position:absolute;
+  bottom:0;left:0;right:0;
+  height:44px;
+  background:linear-gradient(180deg,rgba(16,26,23,.95),rgba(16,26,23,1));
+  border-top:1px solid var(--border);
+  overflow:hidden;
+  z-index:20;
+  display:flex;
+  align-items:center;
+}
+body:not(.dark) .tv-ticker{
+  background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(255,255,255,1));
+}
+.tv-ticker-track{
+  display:flex;
+  gap:32px;
+  padding:0 24px;
+  animation:tickerScroll 60s linear infinite;
+  white-space:nowrap;
+  will-change:transform;
+}
+@keyframes tickerScroll{
+  from{transform:translateX(0)}
+  to{transform:translateX(-100%)}
+}
+.tv-ticker-item{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:13px;font-weight:600;
+}
+.tv-ticker-item .name{color:var(--text-2)}
+.tv-ticker-item .price{
+  color:var(--text);font-weight:800;
+  direction:ltr;font-variant-numeric:tabular-nums;
+}
+.tv-ticker-item .chg{
+  font-weight:800;direction:ltr;
+  padding:2px 8px;border-radius:6px;
+}
+.tv-ticker-item .chg.up{background:var(--up-soft);color:var(--up)}
+.tv-ticker-item .chg.down{background:var(--down-soft);color:var(--down)}
+
+/* ============================================================
+   TV LAYOUTS
+============================================================ */
+
+/* ---- CARD (تک کارت بزرگ) ---- */
+.tv-card{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:16px;text-align:center;width:100%;
+  animation:tvFadeIn .6s var(--ease);
+}
+@keyframes tvFadeIn{
+  from{opacity:0;transform:scale(.95)}
+  to{opacity:1;transform:scale(1)}
+}
+.tv-icon{
+  width:80px;height:80px;border-radius:24px;
+  display:grid;place-items:center;
+  background:var(--accent-soft);color:var(--accent);
+  margin-bottom:8px;overflow:hidden;
+}
+.tv-icon svg{width:40px;height:40px}
+.tv-icon img{width:100%;height:100%;object-fit:cover;border-radius:inherit}
+.tv-name{
+  font-size:24px;color:var(--muted);
+  display:flex;align-items:center;gap:12px;font-weight:700;
+}
+.tv-price{
+  font-size:clamp(48px,10vw,140px);
+  font-weight:900;letter-spacing:-6px;
+  line-height:1;direction:ltr;
+  color:var(--text);font-variant-numeric:tabular-nums;
+  margin:16px 0;
+}
+.tv-change{
+  font-size:28px;font-weight:800;direction:ltr;
+  display:inline-flex;align-items:center;gap:8px;
+  padding:10px 20px;border-radius:var(--r-full);
+}
+.tv-change.up{background:var(--up-soft);color:var(--up)}
+.tv-change.down{background:var(--down-soft);color:var(--down)}
+.tv-mini-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);
+  gap:12px;width:min(900px,90vw);margin-top:24px;
+}
+.tv-mini-card{
+  padding:12px;border-radius:12px;
+  background:var(--card);border:1px solid var(--border);
+  text-align:start;cursor:pointer;transition:all var(--dur);
+}
+.tv-mini-card:active{transform:scale(.95);border-color:var(--accent)}
+.tv-mini-name{
+  display:flex;align-items:center;gap:6px;
+  font-size:11px;font-weight:700;color:var(--text-2);
+  margin-bottom:6px;
+}
+.tv-mini-price{
+  font-size:14px;font-weight:800;
+  direction:ltr;text-align:right;color:var(--text);
+  margin-bottom:4px;
+}
+.tv-mini-chg{font-size:10px;font-weight:800;direction:ltr}
+.tv-mini-chg.up{color:var(--up)}.tv-mini-chg.down{color:var(--down)}
+
+/* ---- TABLE (جدول بورسی) ---- */
+.tv-table{
+  width:min(1400px,95vw);
+  height:100%;
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--r-xl);overflow:hidden;
+  display:flex;flex-direction:column;
+}
+.tv-table-head{
+  display:grid;
+  grid-template-columns:60px 2fr 1.5fr 1fr 1fr 1fr 1fr;
+  gap:16px;
+  padding:16px 24px;
+  background:linear-gradient(135deg,rgba(16,185,129,.15),rgba(5,150,105,.05));
+  font-size:12px;font-weight:800;
+  color:var(--muted);letter-spacing:.5px;
+  text-transform:uppercase;
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+  direction:ltr;
+}
+.tv-table-head > div:first-child{text-align:center}
+.tv-table-body{
+  flex:1;overflow-y:auto;
+}
+.tv-table-row{
+  display:grid;
+  grid-template-columns:60px 2fr 1.5fr 1fr 1fr 1fr 1fr;
+  gap:16px;
+  padding:14px 24px;
+  border-bottom:1px solid var(--border);
+  align-items:center;
+  font-size:14px;
+  transition:all var(--dur);
+  cursor:pointer;
+}
+.tv-table-row:active{background:var(--accent-soft)}
+.tv-table-row:last-child{border-bottom:0}
+.tv-table-rank{
+  font-size:16px;font-weight:900;
+  color:var(--muted);text-align:center;
+  font-variant-numeric:tabular-nums;
+}
+.tv-table-name{
+  display:flex;align-items:center;gap:12px;
+  font-weight:700;color:var(--text);
+}
+.tv-table-icon{
+  width:36px;height:36px;border-radius:10px;
+  display:grid;place-items:center;
+  background:var(--card-2);color:var(--accent);
+  flex-shrink:0;overflow:hidden;
+}
+.tv-table-icon svg{width:18px;height:18px}
+.tv-table-icon img{width:100%;height:100%;object-fit:cover;border-radius:inherit}
+.tv-table-price,.tv-table-high,.tv-table-low{
+  font-weight:800;direction:ltr;text-align:end;
+  font-variant-numeric:tabular-nums;
+  color:var(--text);
+}
+.tv-table-chg{
+  font-weight:800;direction:ltr;text-align:end;
+}
+.tv-table-chg.up{color:var(--up)}
+.tv-table-chg.down{color:var(--down)}
+.tv-table-time{
+  font-size:12px;color:var(--muted);
+  direction:ltr;text-align:end;
+  font-variant-numeric:tabular-nums;
+}
+
+/* ---- GRID 2x2 ---- */
+.tv-grid{
+  display:grid;grid-template-columns:repeat(2,1fr);
+  grid-template-rows:repeat(2,1fr);
+  gap:16px;width:min(1200px,95vw);
+  height:min(700px,75vh);
+}
+.tv-grid-card{
+  padding:24px;border-radius:var(--r-xl);
+  background:linear-gradient(135deg,var(--card),var(--card-2));
+  border:1px solid var(--border);
+  display:flex;flex-direction:column;justify-content:space-between;
+  cursor:pointer;transition:all var(--dur);
+  overflow:hidden;position:relative;
+}
+.tv-grid-card:active{transform:scale(.98);border-color:var(--accent)}
+.tv-grid-head{
+  display:flex;align-items:center;gap:12px;
+  font-size:16px;font-weight:800;
+}
+.tv-grid-icon{
+  width:44px;height:44px;border-radius:12px;
+  display:grid;place-items:center;
+  background:var(--card-2);color:var(--accent);
+  overflow:hidden;
+}
+.tv-grid-icon svg{width:22px;height:22px}
+.tv-grid-icon img{width:100%;height:100%;object-fit:cover;border-radius:inherit}
+.tv-grid-price{
+  font-size:32px;font-weight:900;
+  letter-spacing:-1px;direction:ltr;
+  text-align:right;color:var(--text);
+  font-variant-numeric:tabular-nums;
+}
+.tv-grid-chg{
+  font-size:16px;font-weight:800;direction:ltr;
+  text-align:right;
+}
+.tv-grid-chg.up{color:var(--up)}
+.tv-grid-chg.down{color:var(--down)}
+
+/* ---- GRID 3x2 ---- */
+.tv-grid-3x2{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  grid-template-rows:repeat(2,1fr);
+  gap:14px;width:min(1400px,95vw);
+  height:min(700px,75vh);
+}
+
+/* ---- GRID 4x2 ---- */
+.tv-grid-4x2{
+  display:grid;grid-template-columns:repeat(4,1fr);
+  grid-template-rows:repeat(2,1fr);
+  gap:12px;width:min(1600px,95vw);
+  height:min(700px,75vh);
+}
+.tv-grid-4x2 .tv-grid-card{padding:18px}
+.tv-grid-4x2 .tv-grid-icon{width:36px;height:36px}
+.tv-grid-4x2 .tv-grid-icon svg{width:18px;height:18px}
+.tv-grid-4x2 .tv-grid-head{font-size:13px}
+.tv-grid-4x2 .tv-grid-price{font-size:22px}
+.tv-grid-4x2 .tv-grid-chg{font-size:13px}
+
+/* ---- FOCUS ---- */
+.tv-focus{
+  text-align:center;width:100%;
+  animation:tvFadeIn .6s var(--ease);
+}
+.tv-focus-icon{
+  width:100px;height:100px;border-radius:30px;
+  display:grid;place-items:center;
+  background:var(--accent-soft);color:var(--accent);
+  margin:0 auto 24px;overflow:hidden;
+}
+.tv-focus-icon svg{width:50px;height:50px}
+.tv-focus-icon img{width:100%;height:100%;object-fit:cover;border-radius:inherit}
+.tv-focus-name{
+  font-size:32px;color:var(--muted);
+  font-weight:700;display:flex;align-items:center;
+  justify-content:center;gap:14px;margin-bottom:24px;
+}
+.tv-focus-price{
+  font-size:clamp(80px,16vw,200px);
+  font-weight:900;letter-spacing:-8px;
+  line-height:1;direction:ltr;
+  color:var(--text);font-variant-numeric:tabular-nums;
+  margin-bottom:24px;
+}
+.tv-focus-chg{
+  font-size:36px;font-weight:800;direction:ltr;
+  display:inline-flex;align-items:center;gap:12px;
+  padding:14px 28px;border-radius:var(--r-full);
+}
+.tv-focus-chg.up{background:var(--up-soft);color:var(--up)}
+.tv-focus-chg.down{background:var(--down-soft);color:var(--down)}
+
+/* ---- HEATMAP ---- */
+.tv-heatmap{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+  gap:8px;width:100%;height:100%;
+  overflow:auto;
+}
+.tv-heat-cell{
+  padding:14px;border-radius:12px;
+  display:flex;flex-direction:column;justify-content:space-between;
+  min-height:100px;cursor:pointer;
+  transition:all var(--dur);
+  position:relative;overflow:hidden;
+}
+.tv-heat-cell:active{transform:scale(.96)}
+.tv-heat-cell.up{
+  background:linear-gradient(135deg,rgba(16,209,124,.25),rgba(16,209,124,.08));
+  border:1px solid rgba(16,209,124,.3);
+}
+.tv-heat-cell.down{
+  background:linear-gradient(135deg,rgba(248,85,85,.25),rgba(248,85,85,.08));
+  border:1px solid rgba(248,85,85,.3);
+}
+.tv-heat-cell.neutral{
+  background:var(--card);border:1px solid var(--border);
+}
+.tv-heat-name{
+  font-size:12px;font-weight:700;
+  color:var(--text);line-height:1.3;
+}
+.tv-heat-price{
+  font-size:15px;font-weight:900;
+  direction:ltr;text-align:right;
+  font-variant-numeric:tabular-nums;
+}
+.tv-heat-chg{
+  font-size:12px;font-weight:800;
+  direction:ltr;text-align:right;
+}
+.tv-heat-chg.up{color:var(--up)}
+.tv-heat-chg.down{color:var(--down)}
+
+/* ---- COMPACT (کارت‌های متراکم) ---- */
+.tv-compact{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+  gap:12px;width:100%;height:100%;
+  overflow:auto;padding:4px;
+}
+.tv-compact-card{
+  padding:16px;border-radius:16px;
+  background:var(--card);border:1px solid var(--border);
+  display:flex;flex-direction:column;gap:10px;
+  cursor:pointer;transition:all var(--dur);
+}
+.tv-compact-card:active{transform:scale(.97);border-color:var(--accent)}
+.tv-compact-head{
+  display:flex;align-items:center;gap:10px;
+}
+.tv-compact-icon{
+  width:34px;height:34px;border-radius:10px;
+  display:grid;place-items:center;
+  background:var(--accent-soft);color:var(--accent);
+  overflow:hidden;flex-shrink:0;
+}
+.tv-compact-icon svg{width:17px;height:17px}
+.tv-compact-icon img{width:100%;height:100%;object-fit:cover;border-radius:inherit}
+.tv-compact-name{
+  font-size:12.5px;font-weight:700;
+  color:var(--text);flex:1;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.tv-compact-price{
+  font-size:18px;font-weight:900;
+  direction:ltr;text-align:right;
+  color:var(--text);
+  font-variant-numeric:tabular-nums;
+}
+.tv-compact-chg{
+  font-size:12px;font-weight:800;
+  direction:ltr;text-align:right;
+}
+.tv-compact-chg.up{color:var(--up)}
+.tv-compact-chg.down{color:var(--down)}
+
+/* ============================================================
+   TV PROGRESS BAR
+============================================================ */
+.tv-bar{
+  position:absolute;bottom:0;left:0;right:0;
+  height:3px;background:rgba(255,255,255,.05);
+  z-index:30;
+}
+.tv-bar i{
+  display:block;height:100%;
+  background:var(--accent);
+  width:0;transition:width .1s linear;
+  box-shadow:0 0 12px var(--accent);
+}
+
+/* ============================================================
+   RESPONSIVE
+============================================================ */
+@media(max-width:900px){
+  .tv-body{padding:12px}
+  .tv-price{font-size:48px;letter-spacing:-2px}
+  .tv-focus-price{font-size:60px;letter-spacing:-2px}
+  .tv-mini-grid{grid-template-columns:repeat(2,1fr)}
+  .tv-grid,.tv-grid-3x2,.tv-grid-4x2{
+    grid-template-columns:1fr;
+    height:auto;
+  }
+  .tv-grid-price{font-size:24px}
+  .tv-table-head,.tv-table-row{
+    grid-template-columns:40px 2fr 1fr 1fr;
+    padding:10px 14px;font-size:12px;gap:8px;
+  }
+  .tv-table-head > div:nth-child(n+5),
+  .tv-table-row > div:nth-child(n+5){display:none}
+  .tv-ticker-item{font-size:11px}
+}
