@@ -1,6 +1,6 @@
 /**
  * قیمتو 5.4 — Symbols
- * ۱۰۰ نماد مهم TGJU
+ * ۱۰۵ نماد مهم TGJU
  */
 
 export const SYMBOLS = [
@@ -47,6 +47,9 @@ export const SYMBOLS = [
   'commodity_cotton', 'commodity_rough_rice',
   'commodity_oats', 'commodity_lumber',
 
+  // ═══ شاخص (۴) ═══
+  'bourse', 'dow_jones_us', 'nasdaq_us', 's_p_500_us',
+
   // ═══ توکن طلا (۵) ═══
   'tether_gold_xaut', 'crypto_paxg_gold', 'crypto_ugold_inc',
   'crypto_gold_kau', 'crypto_gold_dao'
@@ -54,24 +57,23 @@ export const SYMBOLS = [
 
 /**
  * ✅ نمادهای دائمی برای نمودار (هر ۱۵ دقیقه ذخیره می‌شن)
- * این‌ها در data/history/YYYY-MM-DD.json ذخیره می‌شن
  */
 export const HISTORY_SYMBOLS = [
-  // طلا
+  // طلا (۷)
   'geram18', 'geram24', 'mesghal', 'sekeb', 'sekee', 'nim', 'rob',
-  // ارز
+  // ارز (۷)
   'price_dollar_rl', 'price_eur', 'price_gbp', 'price_aed',
   'price_try', 'price_cny', 'price_jpy',
-  // فلزات
+  // فلزات (۴)
   'silver', 'platinum', 'palladium', 'copper',
-  // انرژی
+  // انرژی (۳)
   'oil', 'oil_brent', 'energy_natural_gas',
-  // کریپتو
+  // کریپتو (۳)
   'crypto-bitcoin', 'crypto-ethereum', 'crypto-solana',
-  // کالا
+  // کالا (۲)
   'commodity_us_wheat', 'commodity_corn',
-  // شاخص
+  // شاخص (۴)
   'bourse', 'dow_jones_us', 'nasdaq_us', 's_p_500_us',
-  // توکن طلا
+  // توکن طلا (۱)
   'tether_gold_xaut'
 ];

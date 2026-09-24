@@ -1,8 +1,8 @@
 /**
  * قیمتو 5.4 — TGJU Scraper
  * ✅ هر ۵ دقیقه: latest.json (overwrite)
- * ✅ هر ۵ دقیقه: temp/*.json (پاک بعد از ۱۰ دقیقه)
  * ✅ هر ۱۵ دقیقه: history/*.json (دائمی)
+ * ❌ بدون temp
  */
 
 import fs from 'node:fs/promises';
@@ -14,7 +14,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const DATA_DIR = path.join(ROOT, 'data');
 const HISTORY_DIR = path.join(DATA_DIR, 'history');
-const TEMP_DIR = path.join(DATA_DIR, 'temp');
 
 /* ============================================================
    CONFIG
@@ -26,9 +25,8 @@ const TGJU_ENDPOINTS = [
 ];
 
 const CONFIG = {
-  TEMP_KEEP_MINUTES: 10,     // نگه‌داری temp به مدت ۱۰ دقیقه
   HISTORY_INTERVAL: 15,      // هر ۱۵ دقیقه یک نقطه تاریخچه
-  MAX_HISTORY_POINTS: 100,   // حداکثر نقطه در روز (۱۵×۲۴ ≈ ۹۶)
+  MAX_HISTORY_POINTS: 100,   // حداکثر ۱۰۰ نقطه در روز
   HISTORY_KEEP_DAYS: 365     // نگه‌داری ۱ سال
 };
 
@@ -64,26 +62,24 @@ function tehranDate() {
   return t.toISOString().slice(0, 10);
 }
 
-function tehranTime(short = false) {
+function tehranTime() {
   const now = new Date();
   const tehranOffset = 3.5 * 60 * 60 * 1000;
   const t = new Date(now.getTime() + tehranOffset);
   const hh = String(t.getUTCHours()).padStart(2, '0');
   const mm = String(t.getUTCMinutes()).padStart(2, '0');
-  if (short) return hh + mm;
   const ss = String(t.getUTCSeconds()).padStart(2, '0');
   return hh + ':' + mm + ':' + ss;
 }
 
 /**
- * تشخیص اینکه آیا الان زمان ثبت تاریخچه ۱۵ دقیقه‌ای هست
+ * تشخیص زمان تاریخچه: وقتی دقیقه مضرب ۱۵ باشه (0, 15, 30, 45)
  */
 function isHistoryTime() {
   const now = new Date();
   const tehranOffset = 3.5 * 60 * 60 * 1000;
   const t = new Date(now.getTime() + tehranOffset);
   const minutes = t.getUTCMinutes();
-  // اگه دقیقه مضرب ۱۵ باشه (0, 15, 30, 45) یا ±2 دقیقه
   return minutes % 15 <= 2;
 }
 
@@ -93,7 +89,6 @@ function isHistoryTime() {
 async function fetchWithTimeout(url, timeout = 10000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
-
   try {
     const res = await fetch(url, {
       signal: controller.signal,
@@ -137,7 +132,6 @@ async function fetchTGJU() {
 async function ensureDirs() {
   await fs.mkdir(DATA_DIR, { recursive: true });
   await fs.mkdir(HISTORY_DIR, { recursive: true });
-  await fs.mkdir(TEMP_DIR, { recursive: true });
 }
 
 /* ============================================================
@@ -166,50 +160,6 @@ async function saveLatest(json) {
   await fs.writeFile(filePath, JSON.stringify(latest, null, 2), 'utf-8');
   console.log(`[Save] ✅ latest.json — ${latest.count}/${latest.symbols}`);
   return latest;
-}
-
-/* ============================================================
-   SAVE: temp/ (هر ۵ دقیقه، پاک بعد از ۱۰ دقیقه)
-============================================================ */
-async function saveTemp(latest) {
-  const date = tehranDate();
-  const time = tehranTime(true); // HHMM
-  const filename = `${date}-${time}.json`;
-  const filePath = path.join(TEMP_DIR, filename);
-
-  const tempData = {
-    date,
-    time,
-    created: new Date().toISOString(),
-    data: latest.data
-  };
-
-  await fs.writeFile(filePath, JSON.stringify(tempData), 'utf-8');
-  console.log(`[Save] ✅ temp/${filename}`);
-}
-
-async function cleanupTemp() {
-  try {
-    const files = await fs.readdir(TEMP_DIR);
-    const cutoff = Date.now() - (CONFIG.TEMP_KEEP_MINUTES * 60 * 1000);
-    let deleted = 0;
-
-    for (const file of files) {
-      if (!file.endsWith('.json')) continue;
-      const filePath = path.join(TEMP_DIR, file);
-      const stat = await fs.stat(filePath);
-      if (stat.mtimeMs < cutoff) {
-        await fs.unlink(filePath);
-        deleted++;
-      }
-    }
-
-    if (deleted > 0) {
-      console.log(`[Cleanup] 🗑️ ${deleted} temp files removed`);
-    }
-  } catch (err) {
-    console.warn('[Cleanup] ⚠️', err.message);
-  }
 }
 
 /* ============================================================
@@ -243,10 +193,10 @@ async function appendHistory(latest) {
       history.symbols[sym] = [];
     }
 
-    // چک کن آخرین نقطه بیشتر از ۱۲ دقیقه پیش نبوده باشه
+    // چک کن آخرین نقطه بیشتر از ۱۲ دقیقه پیش نبوده
     const lastPoint = history.symbols[sym][history.symbols[sym].length - 1];
     if (lastPoint && (now - lastPoint.t) < 12 * 60 * 1000) {
-      continue; // خیلی زوده، skip
+      continue;
     }
 
     history.symbols[sym].push({
@@ -268,22 +218,20 @@ async function appendHistory(latest) {
   );
 
   await fs.writeFile(filePath, JSON.stringify(history), 'utf-8');
-  console.log(`[Save] ✅ history/${date}.json — ${added} new points (total: ${history.totalPoints})`);
+  console.log(`[Save] ✅ history/${date}.json — +${added} points (total: ${history.totalPoints})`);
 }
 
 async function cleanupOldHistory() {
   try {
     const files = await fs.readdir(HISTORY_DIR);
     const cutoff = Date.now() - (CONFIG.HISTORY_KEEP_DAYS * 24 * 60 * 60 * 1000);
-
     for (const file of files) {
       if (!file.endsWith('.json')) continue;
       const dateStr = file.replace('.json', '');
       const fileDate = new Date(dateStr + 'T00:00:00Z').getTime();
-
       if (fileDate < cutoff) {
         await fs.unlink(path.join(HISTORY_DIR, file));
-        console.log(`[Cleanup] 🗑️ ${file} (too old)`);
+        console.log(`[Cleanup] 🗑️ ${file}`);
       }
     }
   } catch (err) {
@@ -332,22 +280,15 @@ async function main() {
   try {
     await ensureDirs();
 
-    // ۱. دریافت داده از TGJU
     const json = await fetchTGJU();
     if (!json || !json.current) throw new Error('Invalid structure');
 
     console.log(`[Data] 📊 ${Object.keys(json.current).length} symbols from TGJU`);
 
-    // ۲. ذخیره latest.json (هر بار)
+    // ۱. ذخیره latest (هر بار)
     const latest = await saveLatest(json);
 
-    // ۳. ذخیره temp (هر بار)
-    await saveTemp(latest);
-
-    // ۴. پاکسازی temp قدیمی (بعد از ۱۰ دقیقه)
-    await cleanupTemp();
-
-    // ۵. ذخیره history (فقط در بازه‌های ۱۵ دقیقه‌ای)
+    // ۲. ذخیره history (فقط در بازه‌های ۱۵ دقیقه)
     if (isHistoryTime()) {
       await appendHistory(latest);
       await cleanupOldHistory();
