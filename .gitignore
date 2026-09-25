@@ -41,9 +41,6 @@ New Text Document.txt
 tools/New Text Document.txt
 *.txt
 
-# ─── پوشه‌های خالی ───
-assets/banners/
-assets/images/
 
 # ─── امنیت ───
 .env
