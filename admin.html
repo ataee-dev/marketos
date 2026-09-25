@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Ù…Ø¯ÛŒØ±ÛŒØª â€” Ù‚ÛŒÙ…ØªÙˆ</title>
+<title>مدیریت — قیمتو</title>
 <link rel="icon" type="image/svg+xml" href="assets/logo.png">
 <link rel="stylesheet" href="css/app.css">
 <style>
@@ -26,33 +26,33 @@
   <div style="display:flex;align-items:center;gap:10px">
     <img src="assets/logo.png" alt="">
     <div>
-      <strong style="display:block;font-size:15px;font-weight:900">Ù‚ÛŒÙ…ØªÙˆ</strong>
-      <small style="font-size:10.5px;opacity:.85">Ù¾Ù†Ù„ Ù…Ø¯ÛŒØ±ÛŒØª</small>
+      <strong style="display:block;font-size:15px;font-weight:900">قیمتو</strong>
+      <small style="font-size:10.5px;opacity:.85">پنل مدیریت</small>
     </div>
   </div>
-  <a href="index.html" class="btn btn-ghost" style="background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.2)">Ø¨Ø§Ø²Ú¯Ø´Øª Ø¨Ù‡ Ø§Ù¾</a>
+  <a href="index.html" class="btn btn-ghost" style="background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.2)">بازگشت به اپ</a>
 </div>
 
 <div class="admin-wrap">
 
   <div class="stat-grid">
-    <div class="stat"><small>ÙˆØ¶Ø¹ÛŒØª API</small><strong data-a-status>â€”</strong></div>
-    <div class="stat"><small>Ù†Ù…Ø§Ø¯Ù‡Ø§ÛŒ Ø¯Ø±ÛŒØ§ÙØªÛŒ</small><strong data-a-count>â€”</strong></div>
-    <div class="stat"><small>Ø¢Ø®Ø±ÛŒÙ† Ø¯Ø±ÛŒØ§ÙØª</small><strong data-a-time>â€”</strong></div>
-    <div class="stat"><small>Ø®Ø·Ø§ÛŒ Ø¢Ø®Ø±</small><strong data-a-err style="font-size:13px">â€”</strong></div>
+    <div class="stat"><small>وضعیت API</small><strong data-a-status>—</strong></div>
+    <div class="stat"><small>نمادهای دریافتی</small><strong data-a-count>—</strong></div>
+    <div class="stat"><small>آخرین دریافت</small><strong data-a-time>—</strong></div>
+    <div class="stat"><small>خطای آخر</small><strong data-a-err style="font-size:13px">—</strong></div>
   </div>
 
   <div class="card">
-    <h3>Ø¹Ù…Ù„ÛŒØ§Øª Ø³Ø±ÛŒØ¹</h3>
+    <h3>عملیات سریع</h3>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <button class="btn btn-primary" data-a-refresh>Ø¨Ø±ÙˆØ²Ø±Ø³Ø§Ù†ÛŒ Ø¯Ø§Ø¯Ù‡</button>
-      <button class="btn btn-ghost" data-a-test>ØªØ³Øª API</button>
-      <button class="btn btn-ghost" data-a-export>Ø¯Ø§Ù†Ù„ÙˆØ¯ Ø¯Ø§Ø¯Ù‡â€ŒÙ‡Ø§</button>
+      <button class="btn btn-primary" data-a-refresh>بروزرسانی داده</button>
+      <button class="btn btn-ghost" data-a-test>تست API</button>
+      <button class="btn btn-ghost" data-a-export>دانلود داده‌ها</button>
     </div>
   </div>
 
   <div class="card">
-    <h3>Ù„ÛŒØ³Øª Ù†Ù…Ø§Ø¯Ù‡Ø§</h3>
+    <h3>لیست نمادها</h3>
     <div data-a-list></div>
   </div>
 
@@ -69,10 +69,10 @@
     const count = Object.keys(API.getAll()).length;
     const t = API.getLastFetch();
 
-    $('[data-a-status]').textContent = API.isFallback() ? 'Fallback' : (API.getLastError() ? 'Ø®Ø·Ø§' : 'ÙØ¹Ø§Ù„');
+    $('[data-a-status]').textContent = API.isFallback() ? 'Fallback' : (API.getLastError() ? 'خطا' : 'فعال');
     $('[data-a-count]').textContent = count + ' / ' + DATA.ASSETS.length;
-    $('[data-a-time]').textContent = t ? U.time(t) : 'â€”';
-    $('[data-a-err]').textContent = API.getLastError() || 'â€”';
+    $('[data-a-time]').textContent = t ? U.time(t) : '—';
+    $('[data-a-err]').textContent = API.getLastError() || '—';
   }
 
   function renderList(){
@@ -82,10 +82,10 @@
       const l = API.getById(a.id);
       const has = l && l.price != null;
       return `<div class="row">
-        <div><strong style="font-size:13px">${a.name}</strong><small style="display:block;color:var(--muted);font-size:11px">${a.code} Â· ${a.cat}</small></div>
+        <div><strong style="font-size:13px">${a.name}</strong><small style="display:block;color:var(--muted);font-size:11px">${a.code} · ${a.cat}</small></div>
         <div style="text-align:end">
-          <strong style="display:block;font-size:13px;direction:ltr">${has ? U.price(a, l.price) : 'â€”'}</strong>
-          <small style="color:var(--muted)">${has ? (l.changePercent>=0?'â–²':'â–¼') + ' ' + Math.abs(l.changePercent).toFixed(2) + '%' : 'â€”'}</small>
+          <strong style="display:block;font-size:13px;direction:ltr">${has ? U.price(a, l.price) : '—'}</strong>
+          <small style="color:var(--muted)">${has ? (l.changePercent>=0?'▲':'▼') + ' ' + Math.abs(l.changePercent).toFixed(2) + '%' : '—'}</small>
         </div>
       </div>`;
     }).join('');
@@ -98,8 +98,8 @@
     if(e.target.closest('[data-a-test]')){
       fetch('https://call2.tgju.org/ajax.json?_=' + Date.now())
         .then(r => r.json())
-        .then(j => alert('âœ“ ' + Object.keys(j.current || {}).length + ' Ù†Ù…Ø§Ø¯'))
-        .catch(err => alert('âœ— ' + err.message));
+        .then(j => alert('✓ ' + Object.keys(j.current || {}).length + ' نماد'))
+        .catch(err => alert('✗ ' + err.message));
     }
     if(e.target.closest('[data-a-export]')){
       const data = { cfg: CFG._c, fav: Storage.fav.get(), alerts: Storage.alerts.get(), pf: Storage.pf.get(), date: new Date().toISOString() };

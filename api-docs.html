@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Ù…Ø³ØªÙ†Ø¯Ø§Øª API â€” Ù‚ÛŒÙ…ØªÙˆ</title>
+<title>مستندات API — قیمتو</title>
 <link rel="icon" type="image/svg+xml" href="assets/logo.png">
 <link rel="stylesheet" href="css/reset.css">
 <link rel="stylesheet" href="css/variables.css">
@@ -182,20 +182,20 @@
 
 <header class="api-header">
   <a href="index.html" class="api-header-brand">
-    <img src="assets/logo.png" alt="Ù‚ÛŒÙ…ØªÙˆ">
+    <img src="assets/logo.png" alt="قیمتو">
     <div>
-      <strong>Ù‚ÛŒÙ…ØªÙˆ API</strong>
-      <small>Ù…Ø³ØªÙ†Ø¯Ø§Øª ØªÙˆØ³Ø¹Ù‡â€ŒØ¯Ù‡Ù†Ø¯Ú¯Ø§Ù†</small>
+      <strong>قیمتو API</strong>
+      <small>مستندات توسعه‌دهندگان</small>
     </div>
   </a>
   <div style="display:flex;gap:8px">
     <a href="admin.html" class="btn btn-secondary btn-sm">
       <span data-icon="shield"></span>
-      Ù¾Ù†Ù„ Ù…Ø¯ÛŒØ±ÛŒØª
+      پنل مدیریت
     </a>
     <a href="index.html" class="btn btn-secondary btn-sm">
       <span data-icon="external"></span>
-      Ø¨Ø§Ø²Ú¯Ø´Øª
+      بازگشت
     </a>
   </div>
 </header>
@@ -204,10 +204,10 @@
 
   <!-- HERO -->
   <div class="api-hero">
-    <h1>API Ù‚ÛŒÙ…ØªÙˆ</h1>
+    <h1>API قیمتو</h1>
     <p>
-      Ø¯Ø³ØªØ±Ø³ÛŒ Ø¨Ø±Ù†Ø§Ù…Ù‡â€ŒÙ†ÙˆÛŒØ³ÛŒ Ø¨Ù‡ Ø¯Ø§Ø¯Ù‡â€ŒÙ‡Ø§ÛŒ Ù„Ø­Ø¸Ù‡â€ŒØ§ÛŒ Ø¨Ø§Ø²Ø§Ø± Ø§ÛŒØ±Ø§Ù† Ùˆ Ø¬Ù‡Ø§Ù†
-      â€” REST + WebSocket
+      دسترسی برنامه‌نویسی به داده‌های لحظه‌ای بازار ایران و جهان
+      — REST + WebSocket
     </p>
   </div>
 
@@ -217,7 +217,7 @@
       <span data-icon="globe"></span>
       Base URL
     </h2>
-    <p>ØªÙ…Ø§Ù… Ø¯Ø±Ø®ÙˆØ§Ø³Øªâ€ŒÙ‡Ø§ Ø¨Ø§ÛŒØ¯ Ø¨Ù‡ Ø§ÛŒÙ† Ø¢Ø¯Ø±Ø³ Ø§Ø±Ø³Ø§Ù„ Ø´ÙˆÙ†Ø¯.</p>
+    <p>تمام درخواست‌ها باید به این آدرس ارسال شوند.</p>
 
     <div class="api-code">
       https://api.gheymato.ir/v1
@@ -228,13 +228,13 @@
   <div class="api-section">
     <h2>
       <span data-icon="lock"></span>
-      Ø§Ø­Ø±Ø§Ø² Ù‡ÙˆÛŒØª
+      احراز هویت
     </h2>
     <p>
-      Ø¨Ø±Ø§ÛŒ Ø§Ø³ØªÙØ§Ø¯Ù‡ Ø§Ø² API Ø¨Ø§ÛŒØ¯ Ú©Ù„ÛŒØ¯ Ø¯Ø³ØªØ±Ø³ÛŒ Ø®ÙˆØ¯ Ø±Ø§ Ø¯Ø± Ù‡Ø¯Ø± <code>Authorization</code>
-      Ø§Ø±Ø³Ø§Ù„ Ú©Ù†ÛŒØ¯. Ú©Ù„ÛŒØ¯ Ø®ÙˆØ¯ Ø±Ø§ Ø§Ø²
-      <a href="admin.html" style="color:var(--accent)">Ù¾Ù†Ù„ Ù…Ø¯ÛŒØ±ÛŒØª</a>
-      Ø¯Ø±ÛŒØ§ÙØª Ú©Ù†ÛŒØ¯.
+      برای استفاده از API باید کلید دسترسی خود را در هدر <code>Authorization</code>
+      ارسال کنید. کلید خود را از
+      <a href="admin.html" style="color:var(--accent)">پنل مدیریت</a>
+      دریافت کنید.
     </p>
 
     <div class="api-code">
@@ -249,36 +249,36 @@
       <span data-icon="code"></span>
       Endpoints
     </h2>
-    <p>Ù„ÛŒØ³Øª Ù†Ù‚Ø§Ø· Ø¯Ø³ØªØ±Ø³ÛŒ Ù…ÙˆØ¬ÙˆØ¯</p>
+    <p>لیست نقاط دسترسی موجود</p>
 
     <div class="api-endpoint">
       <span class="api-method">GET</span>
       <span class="api-path">/symbols</span>
-      <span class="api-desc">Ø¯Ø±ÛŒØ§ÙØª Ù„ÛŒØ³Øª ØªÙ…Ø§Ù… Ù†Ù…Ø§Ø¯Ù‡Ø§ Ø¨Ø§ Ù‚ÛŒÙ…Øª Ù„Ø­Ø¸Ù‡â€ŒØ§ÛŒ</span>
+      <span class="api-desc">دریافت لیست تمام نمادها با قیمت لحظه‌ای</span>
     </div>
 
     <div class="api-endpoint">
       <span class="api-method">GET</span>
       <span class="api-path">/symbols/:id</span>
-      <span class="api-desc">Ø¯Ø±ÛŒØ§ÙØª Ø§Ø·Ù„Ø§Ø¹Ø§Øª Ú©Ø§Ù…Ù„ ÛŒÚ© Ù†Ù…Ø§Ø¯</span>
+      <span class="api-desc">دریافت اطلاعات کامل یک نماد</span>
     </div>
 
     <div class="api-endpoint">
       <span class="api-method">GET</span>
       <span class="api-path">/history/:id?period=1D&amp;count=100</span>
-      <span class="api-desc">ØªØ§Ø±ÛŒØ®Ú†Ù‡ Ù‚ÛŒÙ…Øª Ø¨Ø±Ø§ÛŒ Ù†Ù…ÙˆØ¯Ø§Ø±</span>
+      <span class="api-desc">تاریخچه قیمت برای نمودار</span>
     </div>
 
     <div class="api-endpoint">
       <span class="api-method">GET</span>
       <span class="api-path">/tolerance</span>
-      <span class="api-desc">Ù†Ù…Ø§Ø¯Ù‡Ø§ÛŒ Ù†Ø²Ø¯ÛŒÚ© Ø³Ù‚Ù Ùˆ Ú©Ù</span>
+      <span class="api-desc">نمادهای نزدیک سقف و کف</span>
     </div>
 
     <div class="api-endpoint">
       <span class="api-method ws">WS</span>
       <span class="api-path">/stream</span>
-      <span class="api-desc">Ø§ØªØµØ§Ù„ WebSocket Ø¨Ø±Ø§ÛŒ Ø¯Ø±ÛŒØ§ÙØª Ù„Ø­Ø¸Ù‡â€ŒØ§ÛŒ</span>
+      <span class="api-desc">اتصال WebSocket برای دریافت لحظه‌ای</span>
     </div>
   </div>
 
@@ -286,7 +286,7 @@
   <div class="api-section">
     <h2>
       <span data-icon="file"></span>
-      Ù†Ù…ÙˆÙ†Ù‡ Ú©Ø¯
+      نمونه کد
     </h2>
 
     <div class="api-tabs">
@@ -297,7 +297,7 @@
     </div>
 
     <div class="api-code" data-lang-content="javascript">
-<span class="c">// Ø¯Ø±ÛŒØ§ÙØª Ù‡Ù…Ù‡ Ù†Ù…Ø§Ø¯Ù‡Ø§</span><br>
+<span class="c">// دریافت همه نمادها</span><br>
 <span class="k">const</span> API_KEY = <span class="s">'gmk_live_xxxxxxxx'</span>;<br><br>
 
 <span class="k">const</span> res = <span class="k">await</span> <span class="n">fetch</span>(<span class="s">'https://api.gheymato.ir/v1/symbols'</span>, {<br>
@@ -308,7 +308,7 @@
 
 <span class="k">const</span> data = <span class="k">await</span> res.<span class="n">json</span>();<br>
 console.<span class="n">log</span>(data.gold18);<br>
-<span class="c">// â†’ { price: 2357490000, changePercent: 1.54, ... }</span>
+<span class="c">// → { price: 2357490000, changePercent: 1.54, ... }</span>
     </div>
 
     <div class="api-code" data-lang-content="python" hidden>
@@ -357,27 +357,27 @@ $data = <span class="n">json_decode</span>($response, <span class="k">true</span
   <div class="api-section">
     <h2>
       <span data-icon="info"></span>
-      Ù†Ù…ÙˆÙ†Ù‡ Ù¾Ø§Ø³Ø®
+      نمونه پاسخ
     </h2>
 
     <div class="api-response">
 {<br>
 &nbsp;&nbsp;<span class="k">"gold18"</span>: {<br>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"id"</span>: <span class="s">"gold18"</span>,<br>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"name"</span>: <span class="s">"Ø·Ù„Ø§ÛŒ Û±Û¸ Ø¹ÛŒØ§Ø±"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"name"</span>: <span class="s">"طلای ۱۸ عیار"</span>,<br>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"code"</span>: <span class="s">"GOLD18"</span>,<br>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"price"</span>: <span class="n">2357490000</span>,<br>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"high"</span>: <span class="n">2393970000</span>,<br>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"low"</span>: <span class="n">2346480000</span>,<br>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"changePercent"</span>: <span class="n">1.54</span>,<br>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"direction"</span>: <span class="s">"low"</span>,<br>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"time"</span>: <span class="s">"Û±Ûµ:Û°Û´:ÛµÛ¸"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"time"</span>: <span class="s">"۱۵:۰۴:۵۸"</span>,<br>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"timestamp"</span>: <span class="s">"2026-09-23 15:04:58"</span>,<br>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"currency"</span>: <span class="s">"rial"</span><br>
 &nbsp;&nbsp;},<br>
 &nbsp;&nbsp;<span class="k">"price_dollar_rl"</span>: {<br>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"id"</span>: <span class="s">"dollar"</span>,<br>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"name"</span>: <span class="s">"Ø¯Ù„Ø§Ø± Ø¢Ù…Ø±ÛŒÚ©Ø§"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"name"</span>: <span class="s">"دلار آمریکا"</span>,<br>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"code"</span>: <span class="s">"USD"</span>,<br>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"price"</span>: <span class="n">23100000</span>,<br>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"changePercent"</span>: <span class="n">0.95</span>,<br>
@@ -391,26 +391,26 @@ $data = <span class="n">json_decode</span>($response, <span class="k">true</span
   <div class="api-section">
     <h2>
       <span data-icon="alert"></span>
-      Ù…Ø­Ø¯ÙˆØ¯ÛŒØªâ€ŒÙ‡Ø§
+      محدودیت‌ها
     </h2>
-    <p>Ø§Ø³ØªÙØ§Ø¯Ù‡ Ù…Ù†ØµÙØ§Ù†Ù‡ Ø§Ø² API</p>
+    <p>استفاده منصفانه از API</p>
 
     <div class="api-limits">
       <div class="api-limit">
         <small>Rate Limit</small>
-        <strong>Û¶Û° Ø¯Ø±Ø®ÙˆØ§Ø³Øª / Ø¯Ù‚ÛŒÙ‚Ù‡</strong>
+        <strong>۶۰ درخواست / دقیقه</strong>
       </div>
       <div class="api-limit">
         <small>Bulk API</small>
-        <strong>ØªØ§ ÛµÛ° Ù†Ù…Ø§Ø¯ Ø¯Ø± Ø¯Ø±Ø®ÙˆØ§Ø³Øª</strong>
+        <strong>تا ۵۰ نماد در درخواست</strong>
       </div>
       <div class="api-limit">
         <small>WebSocket</small>
-        <strong>Û±Û° Ø§ØªØµØ§Ù„ Ù‡Ù…â€ŒØ²Ù…Ø§Ù†</strong>
+        <strong>۱۰ اتصال هم‌زمان</strong>
       </div>
       <div class="api-limit">
         <small>Cache TTL</small>
-        <strong>Û±Û° Ø«Ø§Ù†ÛŒÙ‡</strong>
+        <strong>۱۰ ثانیه</strong>
       </div>
     </div>
   </div>
@@ -419,17 +419,17 @@ $data = <span class="n">json_decode</span>($response, <span class="k">true</span
   <div class="api-section" style="text-align:center">
     <h2 style="justify-content:center">
       <span data-icon="zap"></span>
-      Ù‡Ù…ÛŒÙ† Ø­Ø§Ù„Ø§ Ø´Ø±ÙˆØ¹ Ú©Ù†ÛŒØ¯
+      همین حالا شروع کنید
     </h2>
-    <p>Ú©Ù„ÛŒØ¯ API Ø®ÙˆØ¯ Ø±Ø§ Ø§Ø² Ù¾Ù†Ù„ Ù…Ø¯ÛŒØ±ÛŒØª Ø¯Ø±ÛŒØ§ÙØª Ú©Ù†ÛŒØ¯.</p>
+    <p>کلید API خود را از پنل مدیریت دریافت کنید.</p>
     <div style="display:flex;gap:10px;justify-content:center;margin-top:16px;flex-wrap:wrap">
       <a href="admin.html" class="btn btn-primary btn-lg">
         <span data-icon="code"></span>
-        Ø¯Ø±ÛŒØ§ÙØª Ú©Ù„ÛŒØ¯ API
+        دریافت کلید API
       </a>
       <a href="index.html" class="btn btn-secondary btn-lg">
         <span data-icon="external"></span>
-        Ù…Ø´Ø§Ù‡Ø¯Ù‡ Ø§Ù¾Ù„ÛŒÚ©ÛŒØ´Ù†
+        مشاهده اپلیکیشن
       </a>
     </div>
   </div>

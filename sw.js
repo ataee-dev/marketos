@@ -1,10 +1,10 @@
-﻿const CACHE = 'gheymato-v3';
+const CACHE = 'gheymato-v3';
 
 const CORE = [
   './',
   './index.html',
   './manifest.json',
-  './assets/logo.png',
+  './assets/logo.svg',
   './css/app.css',
   './js/core.js',
   './js/api.js',
