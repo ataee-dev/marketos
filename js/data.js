@@ -1,8 +1,8 @@
 /**
- * قیمتو 5.5 — DATA
- * ✅ ۱۰۷ نماد هماهنگ با scraper/symbols.js
- * ✅ یکسان با data/latest.json
- * ✅ فقط نمادهایی که واقعاً داده دارن
+ * قیمتو 6.0 — DATA
+ * ✅ ۱۰۷ نماد
+ * ✅ واحدهای دقیق (گرم/اونس/بشکه/گالن/بوشل/پوند/تن)
+ * ✅ هماهنگ با scraper و TGJU
  */
 window.DATA = (function(){
 'use strict';
@@ -23,20 +23,20 @@ const ASSETS = [
   /* ══════════════════════════════════════════════════════════
      طلا و سکه (۱۵ نماد)
   ══════════════════════════════════════════════════════════ */
-  {id:'gold18',      tgju:'geram18',              name:'طلای ۱۸ عیار',   short:'طلای ۱۸',    code:'GOLD18',  cat:'gold', ptype:'rial', unit:'گرم',  dec:0, popular:true,  icon:'gold'},
-  {id:'gold24',      tgju:'geram24',              name:'طلای ۲۴ عیار',   short:'طلای ۲۴',    code:'GOLD24',  cat:'gold', ptype:'rial', unit:'گرم',  dec:0, popular:true,  icon:'gold'},
-  {id:'gold17',      tgju:'gold_17',              name:'طلای ۱۷ عیار',   short:'طلای ۱۷',    code:'GOLD17',  cat:'gold', ptype:'rial', unit:'گرم',  dec:0, icon:'gold'},
-  {id:'mesghal',     tgju:'mesghal',              name:'مثقال طلا',      short:'مثقال',      code:'MESGHAL', cat:'gold', ptype:'rial', unit:'عدد',  dec:0, popular:true,  icon:'gold'},
-  {id:'gold_melted', tgju:'gold_melted_wholesale',name:'آبشده عمده',     short:'آبشده عمده', code:'MELTED',  cat:'gold', ptype:'rial', unit:'گرم',  dec:0, popular:true,  icon:'gold'},
-  {id:'gold_transfer',tgju:'gold_melted_transfer',name:'آبشده حواله',    short:'آبشده حواله',code:'MELT-T',  cat:'gold', ptype:'rial', unit:'گرم',  dec:0, icon:'gold'},
-  {id:'gold_mini',   tgju:'gold_mini_size',       name:'طلای مینی ۷۴۰',  short:'مینی ۷۴۰',   code:'MINI740', cat:'gold', ptype:'rial', unit:'گرم',  dec:0, icon:'gold'},
-  {id:'gold_740k',   tgju:'gold_740k',            name:'طلای ۷۴۰ عیار',  short:'طلای ۷۴۰',   code:'GOLD740', cat:'gold', ptype:'rial', unit:'گرم',  dec:0, icon:'gold'},
-  {id:'ounce',       tgju:'ons',                  name:'انس طلای جهانی', short:'انس طلا',    code:'XAU',     cat:'gold', ptype:'usd',  unit:'اونس', dec:2, popular:true,  icon:'gold'},
-  {id:'coin',        tgju:'sekeb',                name:'سکه امامی',      short:'سکه امامی',  code:'COIN',    cat:'gold', ptype:'rial', unit:'عدد',  dec:0, popular:true,  icon:'coin'},
-  {id:'coin_bahar',  tgju:'sekee',                name:'سکه بهار آزادی', short:'بهار آزادی', code:'BAHAR',   cat:'gold', ptype:'rial', unit:'عدد',  dec:0, popular:true,  icon:'coin'},
-  {id:'nim',         tgju:'nim',                  name:'نیم سکه',        short:'نیم سکه',    code:'HALF',    cat:'gold', ptype:'rial', unit:'عدد',  dec:0, popular:true,  icon:'coin'},
-  {id:'rob',         tgju:'rob',                  name:'ربع سکه',        short:'ربع سکه',    code:'QUARTER', cat:'gold', ptype:'rial', unit:'عدد',  dec:0, icon:'coin'},
-  {id:'gerami',      tgju:'gerami',               name:'سکه گرمی',       short:'گرمی',       code:'GERAMI',  cat:'gold', ptype:'rial', unit:'عدد',  dec:0, icon:'coin'},
+  {id:'gold18',      tgju:'geram18',              name:'طلای ۱۸ عیار',   short:'طلای ۱۸',    code:'GOLD18',  cat:'gold', ptype:'rial', unit:'گرم',    dec:0, popular:true,  icon:'gold'},
+  {id:'gold24',      tgju:'geram24',              name:'طلای ۲۴ عیار',   short:'طلای ۲۴',    code:'GOLD24',  cat:'gold', ptype:'rial', unit:'گرم',    dec:0, popular:true,  icon:'gold'},
+  {id:'gold17',      tgju:'gold_17',              name:'طلای ۱۷ عیار',   short:'طلای ۱۷',    code:'GOLD17',  cat:'gold', ptype:'rial', unit:'گرم',    dec:0, icon:'gold'},
+  {id:'mesghal',     tgju:'mesghal',              name:'مثقال طلا',      short:'مثقال',      code:'MESGHAL', cat:'gold', ptype:'rial', unit:'مثقال',  dec:0, popular:true,  icon:'gold'},
+  {id:'gold_melted', tgju:'gold_melted_wholesale',name:'آبشده عمده',     short:'آبشده عمده', code:'MELTED',  cat:'gold', ptype:'rial', unit:'گرم',    dec:0, popular:true,  icon:'gold'},
+  {id:'gold_transfer',tgju:'gold_melted_transfer',name:'آبشده حواله',    short:'آبشده حواله',code:'MELT-T',  cat:'gold', ptype:'rial', unit:'گرم',    dec:0, icon:'gold'},
+  {id:'gold_mini',   tgju:'gold_mini_size',       name:'طلای مینی ۷۴۰',  short:'مینی ۷۴۰',   code:'MINI740', cat:'gold', ptype:'rial', unit:'گرم',    dec:0, icon:'gold'},
+  {id:'gold_740k',   tgju:'gold_740k',            name:'طلای ۷۴۰ عیار',  short:'طلای ۷۴۰',   code:'GOLD740', cat:'gold', ptype:'rial', unit:'گرم',    dec:0, icon:'gold'},
+  {id:'ounce',       tgju:'ons',                  name:'انس طلای جهانی', short:'انس طلا',    code:'XAU',     cat:'gold', ptype:'usd',  unit:'اونس',   dec:2, popular:true,  icon:'gold'},
+  {id:'coin',        tgju:'sekeb',                name:'سکه امامی',      short:'سکه امامی',  code:'COIN',    cat:'gold', ptype:'rial', unit:'عدد',    dec:0, popular:true,  icon:'coin'},
+  {id:'coin_bahar',  tgju:'sekee',                name:'سکه بهار آزادی', short:'بهار آزادی', code:'BAHAR',   cat:'gold', ptype:'rial', unit:'عدد',    dec:0, popular:true,  icon:'coin'},
+  {id:'nim',         tgju:'nim',                  name:'نیم سکه',        short:'نیم سکه',    code:'HALF',    cat:'gold', ptype:'rial', unit:'عدد',    dec:0, popular:true,  icon:'coin'},
+  {id:'rob',         tgju:'rob',                  name:'ربع سکه',        short:'ربع سکه',    code:'QUARTER', cat:'gold', ptype:'rial', unit:'عدد',    dec:0, icon:'coin'},
+  {id:'gerami',      tgju:'gerami',               name:'سکه گرمی',       short:'گرمی',       code:'GERAMI',  cat:'gold', ptype:'rial', unit:'عدد',    dec:0, icon:'coin'},
 
   /* ══════════════════════════════════════════════════════════
      ارز (۳۵ نماد)
@@ -80,30 +80,30 @@ const ASSETS = [
   /* ══════════════════════════════════════════════════════════
      فلزات (۱۲ نماد)
   ══════════════════════════════════════════════════════════ */
-  {id:'silver',     tgju:'silver',        name:'نقره (انس)',  short:'نقره',      code:'XAG', cat:'metal', ptype:'usd', unit:'اونس', dec:2, popular:true, icon:'silver'},
-  {id:'silver_999', tgju:'silver_999',    name:'نقره ۹۹۹',    short:'نقره ۹۹۹',  code:'AG999',cat:'metal', ptype:'rial', unit:'گرم',  dec:0, icon:'silver'},
-  {id:'silver_925', tgju:'silver_925',    name:'نقره ۹۲۵',    short:'نقره ۹۲۵',  code:'AG925',cat:'metal', ptype:'rial', unit:'گرم',  dec:0, icon:'silver'},
-  {id:'platinum',   tgju:'platinum',      name:'پلاتین',       short:'پلاتین',    code:'XPT', cat:'metal', ptype:'usd',  unit:'اونس', dec:2, icon:'platinum'},
-  {id:'palladium',  tgju:'palladium',     name:'پالادیوم',     short:'پالادیوم',  code:'XPD', cat:'metal', ptype:'usd',  unit:'اونس', dec:2, icon:'palladium'},
-  {id:'copper',     tgju:'copper',        name:'مس',           short:'مس',        code:'XCU', cat:'metal', ptype:'usd',  unit:'تن',   dec:2, icon:'copper'},
-  {id:'aluminium',  tgju:'aluminium',     name:'آلومینیوم',    short:'آلومینیوم', code:'ALU', cat:'metal', ptype:'usd',  unit:'تن',   dec:2, icon:'aluminium'},
-  {id:'nickel',     tgju:'nickel',        name:'نیکل',         short:'نیکل',      code:'NIC', cat:'metal', ptype:'usd',  unit:'تن',   dec:2, icon:'diamond'},
-  {id:'zinc',       tgju:'zinc',          name:'روی',          short:'روی',       code:'ZNC', cat:'metal', ptype:'usd',  unit:'تن',   dec:2, icon:'diamond'},
-  {id:'lead',       tgju:'lead',          name:'سرب',          short:'سرب',       code:'LED', cat:'metal', ptype:'usd',  unit:'تن',   dec:2, icon:'diamond'},
-  {id:'cobalt',     tgju:'cobalt',        name:'کبالت',        short:'کبالت',     code:'COB', cat:'metal', ptype:'usd',  unit:'تن',   dec:2, icon:'diamond'},
-  {id:'tin',        tgju:'base_global_tin',name:'قلع',         short:'قلع',       code:'TIN', cat:'metal', ptype:'usd',  unit:'تن',   dec:2, icon:'diamond'},
+  {id:'silver',     tgju:'silver',        name:'نقره',        short:'نقره',      code:'XAG', cat:'metal', ptype:'usd', unit:'اونس',   dec:2, popular:true, icon:'silver'},
+  {id:'silver_999', tgju:'silver_999',    name:'نقره ۹۹۹',    short:'نقره ۹۹۹',  code:'AG999',cat:'metal', ptype:'rial', unit:'گرم',    dec:0, icon:'silver'},
+  {id:'silver_925', tgju:'silver_925',    name:'نقره ۹۲۵',    short:'نقره ۹۲۵',  code:'AG925',cat:'metal', ptype:'rial', unit:'گرم',    dec:0, icon:'silver'},
+  {id:'platinum',   tgju:'platinum',      name:'پلاتین',       short:'پلاتین',    code:'XPT', cat:'metal', ptype:'usd', unit:'اونس',   dec:2, icon:'platinum'},
+  {id:'palladium',  tgju:'palladium',     name:'پالادیوم',     short:'پالادیوم',  code:'XPD', cat:'metal', ptype:'usd', unit:'اونس',   dec:2, icon:'palladium'},
+  {id:'copper',     tgju:'copper',        name:'مس',           short:'مس',        code:'XCU', cat:'metal', ptype:'usd', unit:'تن',     dec:2, icon:'copper'},
+  {id:'aluminium',  tgju:'aluminium',     name:'آلومینیوم',    short:'آلومینیوم', code:'ALU', cat:'metal', ptype:'usd', unit:'تن',     dec:2, icon:'aluminium'},
+  {id:'nickel',     tgju:'nickel',        name:'نیکل',         short:'نیکل',      code:'NIC', cat:'metal', ptype:'usd', unit:'تن',     dec:2, icon:'diamond'},
+  {id:'zinc',       tgju:'zinc',          name:'روی',          short:'روی',       code:'ZNC', cat:'metal', ptype:'usd', unit:'تن',     dec:2, icon:'diamond'},
+  {id:'lead',       tgju:'lead',          name:'سرب',          short:'سرب',       code:'LED', cat:'metal', ptype:'usd', unit:'تن',     dec:2, icon:'diamond'},
+  {id:'cobalt',     tgju:'cobalt',        name:'کبالت',        short:'کبالت',     code:'COB', cat:'metal', ptype:'usd', unit:'تن',     dec:2, icon:'diamond'},
+  {id:'tin',        tgju:'base_global_tin',name:'قلع',         short:'قلع',       code:'TIN', cat:'metal', ptype:'usd', unit:'تن',     dec:2, icon:'diamond'},
 
   /* ══════════════════════════════════════════════════════════
      انرژی (۸ نماد)
   ══════════════════════════════════════════════════════════ */
-  {id:'oil',        tgju:'oil',                   name:'نفت WTI',   short:'WTI',    code:'WTI',   cat:'energy', ptype:'usd', unit:'بشکه',  dec:2, popular:true, icon:'oil'},
-  {id:'oil_brent',  tgju:'oil_brent',             name:'نفت برنت',  short:'برنت',   code:'BRENT', cat:'energy', ptype:'usd', unit:'بشکه',  dec:3, popular:true, icon:'brent'},
-  {id:'gas',        tgju:'energy_natural_gas',    name:'گاز طبیعی', short:'گاز',    code:'NG',    cat:'energy', ptype:'usd', unit:'MMBtu', dec:3, icon:'gas'},
-  {id:'gasoline',   tgju:'energy_gasoline_rbob',  name:'بنزین',     short:'بنزین',  code:'RBOB',  cat:'energy', ptype:'usd', unit:'گالن',  dec:3, icon:'gas'},
-  {id:'oil_opec',   tgju:'oil_opec',              name:'سبد اوپک',  short:'اوپک',   code:'OPEC',  cat:'energy', ptype:'usd', unit:'بشکه',  dec:2, icon:'oil'},
-  {id:'oil_urals',  tgju:'energy_urals',          name:'نفت اورال', short:'اورال',  code:'URALS', cat:'energy', ptype:'usd', unit:'بشکه',  dec:2, icon:'oil'},
-  {id:'oil_azeri',  tgju:'energy_azeri_light',    name:'نفت آذری',  short:'آذری',   code:'AZERI', cat:'energy', ptype:'usd', unit:'بشکه',  dec:2, icon:'oil'},
-  {id:'methanol',   tgju:'energy_methanol',       name:'متانول',    short:'متانول', code:'MET',   cat:'energy', ptype:'usd', unit:'تن',    dec:2, icon:'oil'},
+  {id:'oil',        tgju:'oil',                   name:'نفت WTI',   short:'WTI',    code:'WTI',   cat:'energy', ptype:'usd', unit:'بشکه',   dec:2, popular:true, icon:'oil'},
+  {id:'oil_brent',  tgju:'oil_brent',             name:'نفت برنت',  short:'برنت',   code:'BRENT', cat:'energy', ptype:'usd', unit:'بشکه',   dec:3, popular:true, icon:'brent'},
+  {id:'gas',        tgju:'energy_natural_gas',    name:'گاز طبیعی', short:'گاز',    code:'NG',    cat:'energy', ptype:'usd', unit:'MMBtu',  dec:3, icon:'gas'},
+  {id:'gasoline',   tgju:'energy_gasoline_rbob',  name:'بنزین',     short:'بنزین',  code:'RBOB',  cat:'energy', ptype:'usd', unit:'گالن',   dec:3, icon:'gas'},
+  {id:'oil_opec',   tgju:'oil_opec',              name:'سبد اوپک',  short:'اوپک',   code:'OPEC',  cat:'energy', ptype:'usd', unit:'بشکه',   dec:2, icon:'oil'},
+  {id:'oil_urals',  tgju:'energy_urals',          name:'نفت اورال', short:'اورال',  code:'URALS', cat:'energy', ptype:'usd', unit:'بشکه',   dec:2, icon:'oil'},
+  {id:'oil_azeri',  tgju:'energy_azeri_light',    name:'نفت آذری',  short:'آذری',   code:'AZERI', cat:'energy', ptype:'usd', unit:'بشکه',   dec:2, icon:'oil'},
+  {id:'methanol',   tgju:'energy_methanol',       name:'متانول',    short:'متانول', code:'MET',   cat:'energy', ptype:'usd', unit:'تن',     dec:2, icon:'oil'},
 
   /* ══════════════════════════════════════════════════════════
      کریپتو (۲۰ نماد)
@@ -132,24 +132,24 @@ const ASSETS = [
   /* ══════════════════════════════════════════════════════════
      کالا (۱۰ نماد)
   ══════════════════════════════════════════════════════════ */
-  {id:'wheat',    tgju:'commodity_us_wheat',     name:'گندم',    short:'گندم',    code:'WHEAT',  cat:'commodity', ptype:'usd', unit:'بوشل', dec:2, icon:'wheat'},
-  {id:'corn',     tgju:'commodity_corn',         name:'ذرت',     short:'ذرت',     code:'CORN',   cat:'commodity', ptype:'usd', unit:'بوشل', dec:2, icon:'corn'},
-  {id:'soybeans', tgju:'commodity_soybeans',     name:'سویا',    short:'سویا',    code:'SOY',    cat:'commodity', ptype:'usd', unit:'بوشل', dec:2, icon:'corn'},
-  {id:'sugar',    tgju:'commodity_us_sugar_no11',name:'شکر',     short:'شکر',     code:'SUGAR',  cat:'commodity', ptype:'usd', unit:'پوند', dec:2, icon:'sugar'},
-  {id:'coffee',   tgju:'commodity_us_coffee_c',  name:'قهوه',    short:'قهوه',    code:'COFFEE', cat:'commodity', ptype:'usd', unit:'پوند', dec:2, icon:'coffee'},
-  {id:'cocoa',    tgju:'commodity_us_cocoa',     name:'کاکائو',  short:'کاکائو',  code:'COCOA',  cat:'commodity', ptype:'usd', unit:'تن',   dec:2, icon:'coffee'},
-  {id:'cotton',   tgju:'commodity_cotton',       name:'پنبه',    short:'پنبه',    code:'COTTON', cat:'commodity', ptype:'usd', unit:'پوند', dec:2, icon:'sugar'},
-  {id:'rice',     tgju:'commodity_rough_rice',   name:'برنج',    short:'برنج',    code:'RICE',   cat:'commodity', ptype:'usd', unit:'cwt',  dec:2, icon:'wheat'},
-  {id:'oats',     tgju:'commodity_oats',         name:'جو دوسر', short:'جو',      code:'OATS',   cat:'commodity', ptype:'usd', unit:'بوشل', dec:2, icon:'wheat'},
-  {id:'lumber',   tgju:'commodity_lumber',       name:'الوار',   short:'الوار',   code:'LUMBER', cat:'commodity', ptype:'usd', unit:'MBF',  dec:2, icon:'briefcase'},
+  {id:'wheat',    tgju:'commodity_us_wheat',     name:'گندم',    short:'گندم',    code:'WHEAT',  cat:'commodity', ptype:'usd', unit:'بوشل',   dec:2, icon:'wheat'},
+  {id:'corn',     tgju:'commodity_corn',         name:'ذرت',     short:'ذرت',     code:'CORN',   cat:'commodity', ptype:'usd', unit:'بوشل',   dec:2, icon:'corn'},
+  {id:'soybeans', tgju:'commodity_soybeans',     name:'سویا',    short:'سویا',    code:'SOY',    cat:'commodity', ptype:'usd', unit:'بوشل',   dec:2, icon:'corn'},
+  {id:'sugar',    tgju:'commodity_us_sugar_no11',name:'شکر',     short:'شکر',     code:'SUGAR',  cat:'commodity', ptype:'usd', unit:'پوند',   dec:2, icon:'sugar'},
+  {id:'coffee',   tgju:'commodity_us_coffee_c',  name:'قهوه',    short:'قهوه',    code:'COFFEE', cat:'commodity', ptype:'usd', unit:'پوند',   dec:2, icon:'coffee'},
+  {id:'cocoa',    tgju:'commodity_us_cocoa',     name:'کاکائو',  short:'کاکائو',  code:'COCOA',  cat:'commodity', ptype:'usd', unit:'تن',     dec:2, icon:'coffee'},
+  {id:'cotton',   tgju:'commodity_cotton',       name:'پنبه',    short:'پنبه',    code:'COTTON', cat:'commodity', ptype:'usd', unit:'پوند',   dec:2, icon:'sugar'},
+  {id:'rice',     tgju:'commodity_rough_rice',   name:'برنج',    short:'برنج',    code:'RICE',   cat:'commodity', ptype:'usd', unit:'cwt',    dec:2, icon:'wheat'},
+  {id:'oats',     tgju:'commodity_oats',         name:'جو دوسر', short:'جو',      code:'OATS',   cat:'commodity', ptype:'usd', unit:'بوشل',   dec:2, icon:'wheat'},
+  {id:'lumber',   tgju:'commodity_lumber',       name:'الوار',   short:'الوار',   code:'LUMBER', cat:'commodity', ptype:'usd', unit:'MBF',    dec:2, icon:'briefcase'},
 
   /* ══════════════════════════════════════════════════════════
      شاخص‌ها (۴ نماد)
   ══════════════════════════════════════════════════════════ */
-  {id:'bourse',   tgju:'bourse',        name:'بورس تهران', short:'بورس تهران',code:'TSE', cat:'index', ptype:'rial', unit:'واحد', dec:0, popular:true, icon:'barChart'},
-  {id:'dowjones', tgju:'dow_jones_us',  name:'داو جونز',   short:'داو جونز',  code:'DJI', cat:'index', ptype:'usd',  unit:'واحد', dec:2, icon:'barChart'},
-  {id:'nasdaq',   tgju:'nasdaq_us',     name:'نزدک',       short:'نزدک',      code:'IXIC',cat:'index', ptype:'usd',  unit:'واحد', dec:2, icon:'barChart'},
-  {id:'sp500',    tgju:'s_p_500_us',    name:'S&P 500',    short:'S&P 500',   code:'SPX', cat:'index', ptype:'usd',  unit:'واحد', dec:2, icon:'barChart'},
+  {id:'bourse',   tgju:'bourse',        name:'بورس تهران', short:'بورس تهران',code:'TSE', cat:'index', ptype:'rial', unit:'واحد',   dec:0, popular:true, icon:'barChart'},
+  {id:'dowjones', tgju:'dow_jones_us',  name:'داو جونز',   short:'داو جونز',  code:'DJI', cat:'index', ptype:'usd',  unit:'واحد',   dec:2, icon:'barChart'},
+  {id:'nasdaq',   tgju:'nasdaq_us',     name:'نزدک',       short:'نزدک',      code:'IXIC',cat:'index', ptype:'usd',  unit:'واحد',   dec:2, icon:'barChart'},
+  {id:'sp500',    tgju:'s_p_500_us',    name:'S&P 500',    short:'S&P 500',   code:'SPX', cat:'index', ptype:'usd',  unit:'واحد',   dec:2, icon:'barChart'},
 
   /* ══════════════════════════════════════════════════════════
      توکن طلا (۵ نماد)

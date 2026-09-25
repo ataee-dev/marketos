@@ -1,22 +1,31 @@
 /**
- * قیمتو 5.7 — API
- * ✅ خواندن از GitHub
- * ✅ getHistory با پشتیبانی از روز دلخواه
+ * قیمتو 5.9 — API
+ * ✅ خواندن از GitHub Pages
+ * ✅ annual-history.json (۳۰ روز کامل با o/h/l/p/d)
+ * ✅ history/ روزانه (پشتیبان)
+ * ✅ getPriceAt برای بازه‌های زمانی
  * ✅ cache هوشمند
- * ✅ fallback کامل
+ * ✅ بدون CORS
  */
 window.API = (function(){
 'use strict';
 
+/* ============================================================
+   CONFIG
+============================================================ */
 const CONFIG = {
   DATA_BASE: 'https://ataee-dev.github.io/marketos/data',
   RAW_BASE: 'https://raw.githubusercontent.com/ataee-dev/marketos/main/data',
-  cacheTTL: 30000,
-  poll: 60000,
+  cacheTTL: 30000,           // ۳۰ ثانیه برای latest
+  annualCacheTTL: 5 * 60000, // ۵ دقیقه برای annual
+  poll: 60000,               // ۶۰ ثانیه polling
   timeout: 8000,
   retries: 2
 };
 
+/* ============================================================
+   STATE
+============================================================ */
 let raw = null;
 let norm = {};
 let lastFetch = 0;
@@ -27,9 +36,20 @@ let timer = null;
 let subs = new Set();
 let currentSource = 'primary';
 
+// کش annual-history
+let annualCache = null;
+let annualCacheTime = 0;
+
+// کش history روزانه
 const HISTORY_CACHE = new Map();
 const HISTORY_TTL = 5 * 60 * 1000;
 
+// کش منفی — فایل‌های ناموجود
+const NEGATIVE_CACHE = new Set();
+
+/* ============================================================
+   HELPERS
+============================================================ */
 function cleanNum(v){
   if(v == null || v === '') return null;
   const n = Number(v);
@@ -52,7 +72,24 @@ function normalize(key, item){
   };
 }
 
-const LCKEY = 'gheymato.last.v8';
+/**
+ * تبدیل تاریخ میلادی (2026/09/24) به timestamp
+ */
+function parseGregorianDate(gd){
+  if(!gd) return null;
+  const parts = String(gd).split('/');
+  if(parts.length !== 3) return null;
+  const y = parseInt(parts[0]);
+  const m = parseInt(parts[1]) - 1;
+  const d = parseInt(parts[2]);
+  if(isNaN(y) || isNaN(m) || isNaN(d)) return null;
+  return new Date(y, m, d).getTime();
+}
+
+/* ============================================================
+   LOCAL CACHE
+============================================================ */
+const LCKEY = 'gheymato.last.v9';
 
 function saveLocal(){
   try {
@@ -78,6 +115,9 @@ function loadLocal(){
   } catch(e){ return false; }
 }
 
+/* ============================================================
+   FETCH
+============================================================ */
 async function fetchJSON(url, attempt){
   attempt = attempt || 0;
   try {
@@ -105,6 +145,9 @@ async function fetchJSON(url, attempt){
   }
 }
 
+/**
+ * دریافت latest.json
+ */
 async function fetchLatest(){
   const url = CONFIG.DATA_BASE + '/latest.json?_=' + Date.now();
   try {
@@ -120,7 +163,34 @@ async function fetchLatest(){
   }
 }
 
+/**
+ * دریافت annual-history.json (با cache)
+ */
+async function fetchAnnual(){
+  // کش در حافظه
+  if(annualCache && (Date.now() - annualCacheTime) < CONFIG.annualCacheTTL){
+    return annualCache;
+  }
+
+  const url = CONFIG.DATA_BASE + '/annual-history.json';
+  try {
+    const json = await fetchJSON(url);
+    annualCache = json;
+    annualCacheTime = Date.now();
+    console.log('[API] ✅ annual-history loaded: ' + Object.keys(json.symbols || {}).length + ' symbols');
+    return json;
+  } catch(err){
+    console.warn('[API] annual-history failed:', err.message);
+    return null;
+  }
+}
+
+/**
+ * دریافت history روزانه (پشتیبان)
+ */
 async function fetchHistory(date){
+  if(NEGATIVE_CACHE.has(date)) return null;
+
   const cached = HISTORY_CACHE.get(date);
   if(cached && (Date.now() - cached.t) < HISTORY_TTL){
     return cached.data;
@@ -138,11 +208,15 @@ async function fetchHistory(date){
       HISTORY_CACHE.set(date, { data: json, t: Date.now() });
       return json;
     } catch(e){
+      NEGATIVE_CACHE.add(date);
       return null;
     }
   }
 }
 
+/* ============================================================
+   MAIN FETCH (latest)
+============================================================ */
 async function fetchData(force){
   force = force || false;
   const now = Date.now();
@@ -196,6 +270,9 @@ async function fetchData(force){
   }
 }
 
+/* ============================================================
+   ACCESSORS
+============================================================ */
 function get(k){ return norm[k] || null; }
 
 function getById(id){
@@ -226,6 +303,8 @@ function start(ms){
   const interval = ms || CONFIG.poll;
   if(loadLocal()) notify();
   fetchData().catch(function(){});
+  // پیش‌بارگذاری annual
+  fetchAnnual().catch(function(){});
   timer = setInterval(function(){
     if(document.hidden) return;
     fetchData().catch(function(){});
@@ -237,6 +316,9 @@ function stop(){
   if(timer){ clearInterval(timer); timer = null; }
 }
 
+/* ============================================================
+   HISTORY
+============================================================ */
 function today(){
   const now = new Date();
   const tehranOffset = 3.5 * 60 * 60 * 1000;
@@ -245,19 +327,55 @@ function today(){
 }
 
 /**
- * تاریخچه یک نماد — کامل
- * @param {Object} asset — نماد از DATA
- * @param {number} days — تعداد روز (پیش‌فرض ۱)
- * @returns {Promise<Array>} — آرایه از {t, p, dp}
+ * تاریخچه یک نماد
+ * اول از annual-history.json (۳۰ روز کامل)
+ * بعد از history/ روزانه (پشتیبان)
+ * 
+ * @param {Object} asset
+ * @param {number} days - تعداد روز (پیش‌فرض ۳۰)
+ * @returns {Promise<Array>} - آرایه {t, p, h, l, o, d, dp, pd, gd}
  */
 async function getHistory(asset, days){
   if(!asset) return [];
-  days = Math.max(1, Math.ceil(days || 1));
+  days = Math.max(1, Math.ceil(days || 30));
 
+  // ═══ تلاش اول: annual-history.json ═══
+  try {
+    const annual = await fetchAnnual();
+    
+    if(annual && annual.symbols && annual.symbols[asset.tgju]){
+      const symbolData = annual.symbols[asset.tgju];
+      
+      // تبدیل به فرمت استاندارد
+      const converted = symbolData.map(item => ({
+        t: parseGregorianDate(item.gd) || Date.now(),
+        p: item.p,
+        h: item.h,
+        l: item.l,
+        o: item.o,
+        d: item.d,
+        dp: item.dp,
+        pd: item.pd,
+        gd: item.gd
+      })).filter(x => x.p != null);
+      
+      // مرتب‌سازی صعودی (قدیمی‌ترین اول)
+      converted.sort((a, b) => a.t - b.t);
+      
+      if(converted.length >= 2){
+        // برگرداندن days روز آخر
+        return converted.slice(-days);
+      }
+    }
+  } catch(err){
+    console.warn('[API] annual history failed:', err.message);
+  }
+
+  // ═══ تلاش دوم: history/ روزانه ═══
   const dates = [];
   const now = new Date();
 
-  for(let i = 0; i < days; i++){
+  for(let i = 0; i < Math.min(days, 30); i++){
     const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
     const tehranOffset = 3.5 * 60 * 60 * 1000;
     const tehranTime = new Date(d.getTime() + tehranOffset);
@@ -272,7 +390,11 @@ async function getHistory(asset, days){
 
     const points = history.symbols[asset.tgju];
     if(points && points.length){
-      allPoints.push(...points);
+      allPoints.push(...points.map(p => ({
+        t: p.t,
+        p: p.p,
+        dp: p.dp
+      })));
     }
   }
 
@@ -280,11 +402,49 @@ async function getHistory(asset, days){
   return allPoints;
 }
 
+/**
+ * فقط قیمت‌ها (برای نمودار)
+ */
 async function getHistoryPrices(asset, days){
   const history = await getHistory(asset, days);
   return history.map(h => h.p);
 }
 
+/**
+ * پیدا کردن نزدیک‌ترین قیمت به یک زمان مشخص
+ * @param {Object} asset
+ * @param {number} msAgo - چند میلی‌ثانیه قبل
+ * @returns {Promise<Object|null>} - {t, p, d, dp, ...}
+ */
+async function getPriceAt(asset, msAgo){
+  // بازه مورد نیاز (چند روز)
+  const days = Math.max(1, Math.ceil(msAgo / (24 * 60 * 60 * 1000)) + 1);
+  const history = await getHistory(asset, days);
+  
+  if(!history || !history.length) return null;
+
+  const targetTime = Date.now() - msAgo;
+  let closest = null;
+  let minDiff = Infinity;
+
+  for(const point of history){
+    const diff = Math.abs(point.t - targetTime);
+    if(diff < minDiff){
+      minDiff = diff;
+      closest = point;
+    }
+  }
+
+  // فقط اگر نزدیک باشه (حداکثر ۳ روز اختلاف)
+  if(closest && minDiff < 3 * 24 * 60 * 60 * 1000){
+    return closest;
+  }
+  return null;
+}
+
+/**
+ * تاریخچه ساده (cache-based) — برای sparkline
+ */
 function history(asset, count, period){
   const live = getById(asset.id);
   const base = live && live.price != null ? live.price : 1000;
@@ -294,6 +454,7 @@ function history(asset, count, period){
     return real.map(h => h.p);
   }
 
+  // fallback: داده مصنوعی
   const seed = (asset.id + (period || '1D')).split('').reduce(function(a, c){
     return a + c.charCodeAt(0);
   }, 0);
@@ -324,35 +485,9 @@ async function preloadTodayHistory(){
   console.log('[API] ✅ تاریخچه امروز preload شد');
 }
 
-/**
- * پیدا کردن قیمت در یک زمان مشخص
- * @param {Object} asset
- * @param {number} msAgo — چند میلی‌ثانیه قبل
- */
-async function getPriceAt(asset, msAgo){
-  const days = Math.max(1, Math.ceil(msAgo / (24 * 60 * 60 * 1000)) + 1);
-  const history = await getHistory(asset, days);
-  if(!history || !history.length) return null;
-
-  const target = Date.now() - msAgo;
-  let closest = null;
-  let minDiff = Infinity;
-
-  for(const p of history){
-    const diff = Math.abs(p.t - target);
-    if(diff < minDiff){
-      minDiff = diff;
-      closest = p;
-    }
-  }
-
-  // فقط اگه نزدیک باشه (حداکثر ۳ روز اختلاف)
-  if(closest && minDiff < 3 * 24 * 60 * 60 * 1000){
-    return closest;
-  }
-  return null;
-}
-
+/* ============================================================
+   FALLBACK
+============================================================ */
 function makeFallback(){
   const now = Date.now();
   const t = new Date(now).toLocaleTimeString('fa-IR', { hour:'2-digit', minute:'2-digit' });
@@ -405,6 +540,9 @@ function makeFallback(){
   };
 }
 
+/* ============================================================
+   EXPORT
+============================================================ */
 return {
   CFG: CONFIG,
   fetchData: fetchData,
@@ -422,8 +560,13 @@ return {
   getHistory: getHistory,
   getHistoryPrices: getHistoryPrices,
   getPriceAt: getPriceAt,
+  fetchAnnual: fetchAnnual,
   preloadTodayHistory: preloadTodayHistory,
-  clearHistoryCache: function(){ HISTORY_CACHE.clear(); }
+  clearHistoryCache: function(){
+    HISTORY_CACHE.clear();
+    annualCache = null;
+    annualCacheTime = 0;
+  }
 };
 
 })();
