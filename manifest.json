@@ -12,8 +12,8 @@
   "dir": "rtl",
   "categories": ["finance", "business", "news"],
   "icons": [
-    {"src": "assets/logo.png", "sizes": "any", "type": "image/svg+xml", "purpose": "any"},
-    {"src": "assets/logo.png", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable"}
+    {"src": "assets/logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"},
+    {"src": "assets/logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable"}
   ],
   "shortcuts": [
     {"name": "بازارها", "short_name": "بازار", "url": "./#markets"},
