@@ -12,12 +12,49 @@
   "dir": "rtl",
   "categories": ["finance", "business", "news"],
   "icons": [
-    {"src": "assets/logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"},
-    {"src": "assets/logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable"}
+    {
+      "src": "assets/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ],
   "shortcuts": [
-    {"name": "بازارها", "short_name": "بازار", "url": "./#markets"},
-    {"name": "نمودار", "short_name": "نمودار", "url": "./#chart"},
-    {"name": "حالت TV", "short_name": "TV", "url": "./#tv"}
+    {
+      "name": "بازارها",
+      "short_name": "بازار",
+      "url": "./#markets",
+      "icons": [
+        {"src": "assets/logo.png", "sizes": "192x192", "type": "image/png"}
+      ]
+    },
+    {
+      "name": "نمودار",
+      "short_name": "نمودار",
+      "url": "./#chart",
+      "icons": [
+        {"src": "assets/logo.png", "sizes": "192x192", "type": "image/png"}
+      ]
+    },
+    {
+      "name": "حالت TV",
+      "short_name": "TV",
+      "url": "./#tv",
+      "icons": [
+        {"src": "assets/logo.png", "sizes": "192x192", "type": "image/png"}
+      ]
+    }
   ]
 }
