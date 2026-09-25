@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="قیمتو">
 <title>قیمتو — پایش زنده بازار</title>
-<link rel="icon" type="image/svg+xml" href="assets/logo.png">
+<link rel="icon" type="image/png" href="assets/logo.png">
 <link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="css/app.css">
 </head>
@@ -65,6 +65,7 @@
       <button class="nav-link" data-tool="conv"><span data-icon="exchange"></span>مبدل ارز</button>
       <button class="nav-link" data-tool="crypto-conv"><span data-icon="bitcoin"></span>مبدل کریپتو</button>
       <button class="nav-link" data-tool="unit-conv"><span data-icon="swap"></span>مبدل واحد</button>
+      <button class="nav-link" data-tool="volume-conv"><span data-icon="swap"></span>مبدل حجم</button>
       <button class="nav-link" data-tool="portfolio"><span data-icon="briefcase"></span>پرتفوی من</button>
       <button class="nav-link" data-tool="alerts"><span data-icon="bell"></span>هشدار قیمت</button>
       <button class="nav-link" data-tool="notes"><span data-icon="note"></span>یادداشت‌ها</button>
@@ -91,6 +92,7 @@
   <!-- ═══════════════ MAIN ═══════════════ -->
   <main class="main">
 
+    <!-- HEADER -->
     <header class="app-header">
       <button class="hdr-btn" data-menu aria-label="منو">
         <span data-icon="menu"></span>
@@ -107,6 +109,7 @@
       </button>
     </header>
 
+    <!-- HEADER TICKER -->
     <div class="hdr-ticker" data-hdr-ticker>
       <div class="hdr-ticker-track" data-hdr-ticker-track></div>
     </div>
@@ -116,7 +119,7 @@
       <!-- ═══════════════ HOME ═══════════════ -->
       <section class="page is-active" data-page="home">
 
-        <!-- Portfolio Card (بانکی) -->
+        <!-- Portfolio Card -->
         <div class="sec-head">
           <div class="sec-title"><span data-icon="briefcase"></span>پرتفوی من</div>
           <button class="link" data-tool="portfolio">مدیریت<span data-icon="arrowLeft"></span></button>
@@ -168,7 +171,11 @@
             <button data-period="1M">۱م</button>
           </div>
         </div>
-        <div class="panel"><canvas data-home-chart></canvas></div>
+        <div class="panel">
+          <div class="chart-canvas-wrap" style="height:220px">
+            <canvas data-home-chart></canvas>
+          </div>
+        </div>
       </section>
 
       <!-- ═══════════════ MARKETS ═══════════════ -->
@@ -180,8 +187,15 @@
 
         <div class="sec-head">
           <div class="sec-title"><span data-icon="barChart"></span>همه بازارها</div>
-          <span class="muted" data-count>—</span>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span class="muted" data-count>—</span>
+            <div class="view-toggle">
+              <button data-view="grid" class="is-active" title="کارتی"><span data-icon="grid"></span></button>
+              <button data-view="heat" title="نقشه"><span data-icon="activity"></span></button>
+            </div>
+          </div>
         </div>
+
         <div class="chips" data-filters>
           <button class="chip is-active" data-filter="all">همه</button>
           <button class="chip" data-filter="gold">طلا و سکه</button>
@@ -193,24 +207,28 @@
           <button class="chip" data-filter="index">شاخص</button>
           <button class="chip" data-filter="goldCrypto">توکن طلا</button>
         </div>
+
         <div class="grid-assets" data-market-grid></div>
+        <div class="heat-grid" data-market-heat style="display:none"></div>
       </section>
 
-      <!-- ═══════════════ CHART با سوالات TGJU ═══════════════ -->
+      <!-- ═══════════════ CHART ═══════════════ -->
       <section class="page" data-page="chart">
 
         <div class="banner-single">
           <img src="assets/banners/banner-chart.jpg" alt="نمودار" loading="lazy">
         </div>
 
-        <!-- هدر نماد -->
+        <!-- Header نماد -->
         <div class="chart-header">
-          <div class="chart-header-icon" data-c-icon>—</div>
+          <div class="chart-header-icon" data-c-icon></div>
           <div class="chart-header-info">
             <strong data-c-name>—</strong>
             <small data-c-code>—</small>
           </div>
-          <button type="button" class="icon-btn chart-fav" data-c-fav>★</button>
+          <button type="button" class="chart-fav" data-c-fav aria-label="علاقه‌مندی">
+            <span data-icon="star"></span>
+          </button>
         </div>
 
         <!-- قیمت اصلی -->
@@ -238,10 +256,13 @@
           </div>
         </div>
 
-        <!-- سوالات کامل (مثل TGJU) -->
+        <!-- سوالات TGJU -->
         <div class="chart-questions-full">
           <div class="chart-q-header">
-            <span class="chart-q-title">سوالات متداول</span>
+            <span class="chart-q-title">
+              <span data-icon="info"></span>
+              سوالات متداول
+            </span>
             <span class="chart-q-date" data-c-questions-date>—</span>
           </div>
           <div class="chart-q-list" data-c-questions></div>
@@ -250,7 +271,10 @@
         <!-- تحلیل حباب -->
         <div class="bubble-analysis" data-bubble-analysis hidden>
           <div class="bubble-header">
-            <span class="bubble-title">📊 تحلیل حباب</span>
+            <span class="bubble-title">
+              <span data-icon="diamond"></span>
+              تحلیل حباب
+            </span>
           </div>
           <div class="bubble-body" data-bubble-body></div>
         </div>
@@ -272,7 +296,11 @@
           <div class="vs">VS</div>
           <select class="select" data-cmp="b"></select>
         </div>
-        <div class="panel"><canvas data-cmp-chart style="height:280px"></canvas></div>
+        <div class="panel">
+          <div class="chart-canvas-wrap" style="height:280px">
+            <canvas data-cmp-chart></canvas>
+          </div>
+        </div>
         <div class="cmp-stats" data-cmp-stats></div>
       </section>
 
@@ -295,7 +323,6 @@
           <div class="sec-title"><span data-icon="settings"></span>تنظیمات</div>
         </div>
 
-        <!-- پروفایل کاربر -->
         <div class="set-card">
           <h3>پروفایل</h3>
           <div class="set-row">
