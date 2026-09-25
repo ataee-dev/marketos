@@ -1,7 +1,7 @@
-{
-  "name": "قیمتو — پایش زنده بازار",
-  "short_name": "قیمتو",
-  "description": "نمایش لحظه‌ای قیمت طلا، ارز، فلزات، کریپتو و بازارهای جهانی",
+﻿{
+  "name": "Ù‚ÛŒÙ…ØªÙˆ â€” Ù¾Ø§ÛŒØ´ Ø²Ù†Ø¯Ù‡ Ø¨Ø§Ø²Ø§Ø±",
+  "short_name": "Ù‚ÛŒÙ…ØªÙˆ",
+  "description": "Ù†Ù…Ø§ÛŒØ´ Ù„Ø­Ø¸Ù‡â€ŒØ§ÛŒ Ù‚ÛŒÙ…Øª Ø·Ù„Ø§ØŒ Ø§Ø±Ø²ØŒ ÙÙ„Ø²Ø§ØªØŒ Ú©Ø±ÛŒÙ¾ØªÙˆ Ùˆ Ø¨Ø§Ø²Ø§Ø±Ù‡Ø§ÛŒ Ø¬Ù‡Ø§Ù†ÛŒ",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -12,12 +12,12 @@
   "dir": "rtl",
   "categories": ["finance", "business", "news"],
   "icons": [
-    {"src": "assets/logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"},
-    {"src": "assets/logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable"}
+    {"src": "assets/logo.png", "sizes": "any", "type": "image/svg+xml", "purpose": "any"},
+    {"src": "assets/logo.png", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable"}
   ],
   "shortcuts": [
-    {"name": "بازارها", "short_name": "بازار", "url": "./#markets"},
-    {"name": "نمودار", "short_name": "نمودار", "url": "./#chart"},
-    {"name": "حالت TV", "short_name": "TV", "url": "./#tv"}
+    {"name": "Ø¨Ø§Ø²Ø§Ø±Ù‡Ø§", "short_name": "Ø¨Ø§Ø²Ø§Ø±", "url": "./#markets"},
+    {"name": "Ù†Ù…ÙˆØ¯Ø§Ø±", "short_name": "Ù†Ù…ÙˆØ¯Ø§Ø±", "url": "./#chart"},
+    {"name": "Ø­Ø§Ù„Øª TV", "short_name": "TV", "url": "./#tv"}
   ]
 }
