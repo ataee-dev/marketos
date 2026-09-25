@@ -1638,8 +1638,8 @@ body.sidebar-open .sidebar { transform: translateX(0); }
 }
 
 .chart-header-icon {
-  width: 48px;
-  height: 48px;
+  width: 52px;
+  height: 52px;
   border-radius: 14px;
   background: var(--card-2);
   display: flex;
@@ -1657,8 +1657,8 @@ body.sidebar-open .sidebar { transform: translateX(0); }
 }
 
 .chart-header-icon svg {
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   stroke-width: 2;
   color: var(--accent);
 }
@@ -1689,8 +1689,8 @@ body.sidebar-open .sidebar { transform: translateX(0); }
 }
 
 .chart-fav {
-  width: 40px;
-  height: 40px;
+  width: 42px;
+  height: 42px;
   border-radius: 12px;
   background: var(--card-2);
   border: 1px solid var(--border);
@@ -1701,12 +1701,18 @@ body.sidebar-open .sidebar { transform: translateX(0); }
   justify-content: center;
   transition: transform .18s var(--ease), color .2s;
   flex-shrink: 0;
+  padding: 0;
 }
 .chart-fav:active { transform: scale(.9); }
 .chart-fav.is-fav {
   color: var(--warn);
   background: var(--warn-soft);
   border-color: rgba(245, 158, 11, 0.3);
+}
+.chart-fav svg {
+  width: 22px;
+  height: 22px;
+  stroke-width: 2;
 }
 
 /* ═══════════════ 38. CHART MAIN (قیمت بزرگ) ═══════════════ */
@@ -1722,7 +1728,7 @@ body.sidebar-open .sidebar { transform: translateX(0); }
 }
 
 .chart-price {
-  font-size: 32px;
+  font-size: 34px;
   font-weight: 900;
   color: var(--text);
   direction: ltr;
@@ -1756,6 +1762,7 @@ body.sidebar-open .sidebar { transform: translateX(0); }
   color: var(--text-muted);
   font-weight: 600;
   margin-top: 6px;
+  flex-wrap: wrap;
 }
 .chart-main-meta span {
   display: inline-flex;
@@ -1770,13 +1777,34 @@ body.sidebar-open .sidebar { transform: translateX(0); }
   width: 100%;
 }
 
-/* ═══════════════ 40. CHART QUESTIONS FULL (سوالات TGJU) ═══════════════ */
+/* ─── Tooltip نمودار ─── */
+.chart-tooltip {
+  position: fixed;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(10, 19, 16, 0.95);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .15s ease;
+  z-index: 1000;
+  direction: ltr;
+  white-space: nowrap;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  font-family: 'Dana', sans-serif;
+}
+
+/* ═══════════════ 40. CHART QUESTIONS FULL ═══════════════ */
 .chart-questions-full {
   margin: 16px 0;
-  padding: 16px;
   border-radius: 16px;
   background: var(--card);
   border: 1px solid var(--border);
+  overflow: hidden;
   animation: cardSlideIn .35s var(--ease) backwards;
   animation-delay: .1s;
 }
@@ -1786,19 +1814,22 @@ body.sidebar-open .sidebar { transform: translateX(0); }
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding-bottom: 12px;
-  margin-bottom: 12px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), transparent);
   border-bottom: 1px solid var(--border);
 }
 
 .chart-q-title {
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 900;
   color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .chart-q-date {
-  font-size: 11.5px;
+  font-size: 11px;
   color: var(--text-muted);
   font-weight: 600;
   direction: ltr;
@@ -1806,6 +1837,7 @@ body.sidebar-open .sidebar { transform: translateX(0); }
 }
 
 .chart-q-list {
+  padding: 12px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1813,14 +1845,19 @@ body.sidebar-open .sidebar { transform: translateX(0); }
 
 .chart-q-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
   padding: 12px 14px;
   border-radius: 13px;
   background: var(--card-2);
   border: 1px solid var(--border);
-  transition: background .2s var(--ease-smooth);
+  transition: transform .15s var(--ease), background .2s;
   animation: slideUp .3s var(--ease) backwards;
+}
+
+.chart-q-item:active {
+  transform: scale(.98);
+  background: var(--card);
 }
 
 .chart-q-item:nth-child(1) { animation-delay: .04s; }
@@ -1838,24 +1875,41 @@ body.sidebar-open .sidebar { transform: translateX(0); }
 .chart-q-item:nth-child(13) { animation-delay: .28s; }
 .chart-q-item:nth-child(14) { animation-delay: .30s; }
 .chart-q-item:nth-child(15) { animation-delay: .32s; }
-.chart-q-item:nth-child(16) { animation-delay: .34s; }
-.chart-q-item:nth-child(17) { animation-delay: .36s; }
-.chart-q-item:nth-child(18) { animation-delay: .38s; }
-.chart-q-item:nth-child(19) { animation-delay: .40s; }
-.chart-q-item:nth-child(20) { animation-delay: .42s; }
 
 .chart-q-num {
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
-  background: var(--accent-soft);
-  color: var(--accent);
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 900;
   flex-shrink: 0;
+}
+
+.chart-q-num svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
+}
+
+.chart-q-num.bubble-icon {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+.chart-q-num.compare-icon {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+}
+.chart-q-num.trophy-icon {
+  background: linear-gradient(135deg, #eab308, #ca8a04);
+}
+.chart-q-num.clock-icon {
+  background: linear-gradient(135deg, #06b6d4, #0891b2);
+}
+.chart-q-num.calendar-icon {
+  background: linear-gradient(135deg, #ec4899, #db2777);
 }
 
 .chart-q-body {
@@ -1869,30 +1923,42 @@ body.sidebar-open .sidebar { transform: translateX(0); }
   color: var(--text-2);
   font-weight: 600;
   line-height: 1.6;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .chart-q-answer {
-  display: block;
-  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
   font-weight: 900;
   color: var(--text);
   direction: ltr;
-  text-align: right;
   font-variant-numeric: tabular-nums;
-  word-break: break-word;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
 }
 
-.chart-q-answer.up { color: var(--up); }
-.chart-q-answer.down { color: var(--down); }
-.chart-q-answer.neutral { color: var(--text); }
+.chart-q-answer.up {
+  color: var(--up);
+  background: var(--up-soft);
+}
+.chart-q-answer.down {
+  color: var(--down);
+  background: var(--down-soft);
+}
+.chart-q-answer.neutral {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.04);
+}
 
 .chart-q-date-tiny {
   display: block;
   font-size: 10px;
   color: var(--text-muted);
   font-weight: 500;
-  margin-top: 2px;
+  margin-top: 4px;
   direction: rtl;
   text-align: right;
 }
@@ -1900,10 +1966,10 @@ body.sidebar-open .sidebar { transform: translateX(0); }
 /* ═══════════════ 41. BUBBLE ANALYSIS (تحلیل حباب) ═══════════════ */
 .bubble-analysis {
   margin: 16px 0;
-  padding: 18px;
   border-radius: 16px;
   background: linear-gradient(160deg, rgba(200, 151, 74, 0.08), var(--card));
   border: 1px solid rgba(200, 151, 74, 0.25);
+  overflow: hidden;
   animation: cardSlideIn .35s var(--ease) backwards;
   animation-delay: .15s;
 }
@@ -1914,8 +1980,8 @@ body.sidebar-open .sidebar { transform: translateX(0); }
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 14px;
-  padding-bottom: 10px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, rgba(200, 151, 74, 0.12), transparent);
   border-bottom: 1px solid rgba(200, 151, 74, 0.2);
 }
 
@@ -1925,10 +1991,11 @@ body.sidebar-open .sidebar { transform: translateX(0); }
   color: var(--gold);
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .bubble-body {
+  padding: 14px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -2027,6 +2094,206 @@ body.sidebar-open .sidebar { transform: translateX(0); }
   margin-top: 16px;
 }
 
+/* ═══════════════ 43. HEATMAP GRID (بازارها) ═══════════════ */
+.heat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.heat-cell {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: 14px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform .18s var(--ease);
+  border: 1.5px solid transparent;
+}
+
+.heat-cell:active {
+  transform: scale(.95);
+}
+
+.heat-cell.up {
+  background: linear-gradient(160deg, rgba(16, 185, 129, 0.28), rgba(16, 185, 129, 0.08));
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.heat-cell.down {
+  background: linear-gradient(160deg, rgba(239, 68, 68, 0.28), rgba(239, 68, 68, 0.08));
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+.heat-cell.neutral {
+  background: linear-gradient(160deg, var(--card-2), var(--card));
+  border-color: var(--border);
+}
+
+.heat-cell-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.heat-cell-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.heat-cell-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 4px;
+}
+
+.heat-cell-icon svg {
+  width: 14px;
+  height: 14px;
+  color: #fff;
+  stroke-width: 2;
+}
+
+.heat-cell-name {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: right;
+  flex: 1;
+}
+
+.heat-cell-price {
+  font-size: 11.5px;
+  font-weight: 900;
+  color: var(--text);
+  direction: ltr;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.heat-cell-chg {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  font-size: 9.5px;
+  font-weight: 900;
+  direction: ltr;
+  background: rgba(0, 0, 0, 0.25);
+  color: #fff;
+  align-self: flex-end;
+}
+
+.heat-cell.up .heat-cell-chg { background: rgba(16, 185, 129, 0.4); }
+.heat-cell.down .heat-cell-chg { background: rgba(239, 68, 68, 0.4); }
+
+/* ─── View Toggle ─── */
+.view-toggle {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--card-2);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.view-toggle button {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .15s;
+  padding: 0;
+}
+
+.view-toggle button svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
+}
+
+.view-toggle button.is-active {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* ═══════════════ 44. CHART TOOLTIP FIX ═══════════════ */
+.chart-canvas-wrap canvas {
+  cursor: crosshair;
+}
+
+/* ═══════════════ 45. RESPONSIVE — Chart ═══════════════ */
+@media (max-width: 480px) {
+  .chart-price {
+    font-size: 26px;
+  }
+  .chart-header-icon {
+    width: 44px;
+    height: 44px;
+  }
+  .chart-header-info strong {
+    font-size: 14px;
+  }
+  .chart-canvas-wrap {
+    height: 220px;
+  }
+  .chart-q-item {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+  .chart-q-num {
+    width: 26px;
+    height: 26px;
+    font-size: 12px;
+  }
+  .chart-q-question {
+    font-size: 11.5px;
+  }
+  .chart-q-answer {
+    font-size: 12.5px;
+  }
+  .bubble-analysis {
+    padding: 0;
+  }
+  .heat-grid {
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 6px;
+  }
+  .heat-cell {
+    padding: 8px;
+    border-radius: 12px;
+  }
+  .heat-cell-price {
+    font-size: 10.5px;
+  }
+}
 /* ═══════════════════════════════════════════════════════════
    43. TV MODE — کامل داخل app.css
 ═══════════════════════════════════════════════════════════ */
