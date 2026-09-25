@@ -266,7 +266,7 @@ function renderBankCard(){
     <div class="bank-card ${isEmpty ? 'is-empty' : ''}" data-tool="portfolio">
       <div class="bank-card-top">
         <div class="bank-card-brand">
-          <img src="assets/logo.svg" alt="قیمتو">
+          <img src="assets/logo.png" alt="قیمتو">
           <div class="bank-card-brand-text">
             <strong>قیمتو</strong>
             <small>${isEmpty ? 'پرتفوی خالی' : window.U.num(list.length) + ' دارایی'}</small>
