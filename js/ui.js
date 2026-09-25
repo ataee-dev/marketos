@@ -1,2448 +1,2934 @@
-/**
- * قیمتو 6.0 — UI (کامل)
- * ✅ کارت بانکی پرتفوی
- * ✅ ۲۰ سوال TGJU
- * ✅ تحلیل حباب طلا
- * ✅ سیستم واحد هوشمند (تومان/ریال)
- * ✅ واحدهای حجمی
- * ✅ جستجوی inline
- */
-window.UI = (function(){
-'use strict';
-
-const $ = s => document.querySelector(s);
-const $$ = s => Array.from(document.querySelectorAll(s));
-
-let filter = 'all';
-let search = '';
-let currentPage = 'home';
-let activeChartId = 'gold18';
-
-const PAGES = ['home', 'markets', 'chart', 'compare', 'favorites', 'settings'];
-
 /* ============================================================
-   ICON HELPERS
+   قیمتو 6.0 — APP CSS (کامل و نهایی)
+   دیزاین iOS-like + انیمیشن‌های نرم
+   بدون hover + بدون پرش + اسپلش بدون باکس
 ============================================================ */
-const CAT_COLOR = {
-  gold: 'gold', currency: 'blue', metal: 'purple',
-  energy: 'orange', crypto: 'orange', commodity: 'green',
-  index: 'cyan', goldCrypto: 'gold', ratio: 'purple'
-};
 
-function assetIcon(asset){
-  if(!asset) return '';
-  if(window.Icons && window.Icons.assetSVG) return window.Icons.assetSVG(asset);
-  return window.Icons ? window.Icons.get('barChart') : '';
+/* ═══════════════ 1. RESET ═══════════════ */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 
-function catColor(asset){ return CAT_COLOR[asset.cat] || 'gold'; }
-
-/* ============================================================
-   UNIT SYSTEM — تومان/ریال
-============================================================ */
-function getUnit(){
-  return window.CFG.get('currency') || 'toman';
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
 }
 
-function userToBase(value){
-  if(value == null || isNaN(value)) return null;
-  const unit = getUnit();
-  return unit === 'toman' ? value * 10 : value;
+body {
+  font-family: 'Dana', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  background: var(--bg);
+  color: var(--text);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior-y: none;
 }
 
-function baseToUser(value){
-  if(value == null || isNaN(value)) return null;
-  const unit = getUnit();
-  return unit === 'toman' ? value / 10 : value;
+button, input, select, textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  border: 0;
+  background: none;
+  outline: none;
 }
 
-function unitLabel(){
-  return getUnit() === 'toman' ? 'تومان' : 'ریال';
+button { cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+img, svg { display: block; max-width: 100%; }
+ul, ol { list-style: none; }
+
+/* ═══════════════ 2. FONT FACE ═══════════════ */
+@font-face {
+  font-family: 'Dana';
+  src: url('../assets/fonts/dana-regular.woff') format('woff');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Dana';
+  src: url('../assets/fonts/dana-medium.woff') format('woff');
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Dana';
+  src: url('../assets/fonts/dana-demibold.woff') format('woff');
+  font-weight: 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Dana';
+  src: url('../assets/fonts/dana-bold.woff') format('woff');
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Dana';
+  src: url('../assets/fonts/dana-black.woff') format('woff');
+  font-weight: 900;
+  font-display: swap;
 }
 
-/**
- * برچسب واحد کامل — مثال: "تومان/گرم" یا "$/بشکه"
- */
-function fullUnitLabel(asset){
-  if(!asset) return '';
-  const unit = asset.unit || '';
-  if(asset.ptype === 'usd'){
-    return unit ? '$/' + unit : '$';
+/* ═══════════════ 3. VARIABLES ═══════════════ */
+:root {
+  --bg: #0a1310;
+  --bg-glass: rgba(10, 19, 16, .82);
+  --bg-card: #131f1b;
+  --bg-card-2: #1a2a25;
+  --card: #131f1b;
+  --card-2: #1a2a25;
+  --card-hover: #1e2c27;
+
+  --text: #e8f0ec;
+  --text-2: #b8c5bf;
+  --text-muted: #7a8a83;
+  --muted: #7a8a83;
+  --dim: #4a5a54;
+
+  --border: rgba(255, 255, 255, .07);
+  --border-2: rgba(255, 255, 255, .12);
+
+  --accent: #10b981;
+  --accent-2: #059669;
+  --accent-soft: rgba(16, 185, 129, .12);
+  --up: #10b981;
+  --up-soft: rgba(16, 185, 129, .12);
+  --down: #ef4444;
+  --down-soft: rgba(239, 68, 68, .12);
+  --warn: #f59e0b;
+  --warn-soft: rgba(245, 158, 11, .12);
+  --gold: #c8974a;
+  --gold-soft: rgba(200, 151, 74, .14);
+
+  --r-xs: 6px;
+  --r-sm: 10px;
+  --r: 14px;
+  --r-lg: 18px;
+  --r-xl: 24px;
+  --r-full: 999px;
+
+  --ease: cubic-bezier(.22, 1, .36, 1);
+  --ease-smooth: cubic-bezier(.4, 0, .2, 1);
+  --ease-ios: cubic-bezier(.32, .72, 0, 1);
+  --dur: .22s;
+  --dur-slow: .4s;
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, .15);
+  --shadow: 0 4px 20px rgba(0, 0, 0, .25);
+  --shadow-lg: 0 8px 40px rgba(0, 0, 0, .4);
+  --shadow-xl: 0 20px 60px rgba(0, 0, 0, .5);
+
+  --safe-top: env(safe-area-inset-top, 0);
+  --safe-bottom: env(safe-area-inset-bottom, 0);
+}
+
+body:not(.dark) {
+  --bg: #f5f7f6;
+  --bg-glass: rgba(245, 247, 246, .85);
+  --bg-card: #ffffff;
+  --bg-card-2: #f0f4f2;
+  --card: #ffffff;
+  --card-2: #f0f4f2;
+  --card-hover: #f8faf9;
+  --text: #0a1310;
+  --text-2: #2a3a34;
+  --text-muted: #5a6a63;
+  --muted: #5a6a63;
+  --dim: #8a9a93;
+  --border: rgba(0, 0, 0, .08);
+  --border-2: rgba(0, 0, 0, .12);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, .05);
+  --shadow: 0 4px 20px rgba(0, 0, 0, .08);
+  --shadow-lg: 0 8px 40px rgba(0, 0, 0, .15);
+  --shadow-xl: 0 20px 60px rgba(0, 0, 0, .2);
+}
+
+/* ═══════════════ 4. SCROLLBAR (فقط desktop) ═══════════════ */
+@media (min-width: 1024px) {
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border-2);
+    border-radius: 3px;
   }
-  const money = unitLabel();
-  return unit ? money + '/' + unit : money;
-}
-
-/**
- * نمایش قیمت با واحد پول
- */
-function formatPrice(asset, rialValue){
-  if(rialValue == null || isNaN(rialValue)) return '—';
-  
-  if(asset && asset.ptype === 'usd'){
-    const dec = asset.dec != null ? asset.dec : 2;
-    return '$' + window.U.num(rialValue, dec);
-  }
-  
-  const val = baseToUser(rialValue);
-  const abs = Math.abs(val);
-  const d = abs < 10 ? 4 : (abs < 1000 ? 2 : 0);
-  return window.U.num(val, d) + ' ' + unitLabel();
-}
-
-/**
- * نمایش قیمت با واحد کامل (تومان/گرم)
- */
-function formatPriceWithUnit(asset, rialValue){
-  if(rialValue == null) return '—';
-  const price = formatPrice(asset, rialValue);
-  const unit = asset && asset.unit ? ' / ' + asset.unit : '';
-  return price + unit;
-}
-
-/* ============================================================
-   CARD HTML
-============================================================ */
-function marketCardHTML(asset){
-  const live = API.getById(asset.id);
-  const price = live && live.price != null ? live.price : null;
-  const cp = live ? live.changePercent : null;
-  const up = (cp || 0) >= 0;
-  const color = catColor(asset);
-  const isFav = Storage.fav.get().includes(asset.id);
-  const noPrice = price == null;
-
-  return `
-    <article class="m-card ${noPrice ? 'm-card-empty' : ''}" data-card-id="${asset.id}" role="button" tabindex="0">
-      <div class="m-card-head">
-        <div class="m-card-icon ${color}">${assetIcon(asset)}</div>
-        <div class="m-card-info">
-          <strong>${U.esc(asset.short || asset.name)}</strong>
-          <small>${asset.code}</small>
-        </div>
-        <button type="button" class="icon-btn" data-fav-toggle="${asset.id}"
-          style="width:24px;height:24px;color:${isFav?'var(--warn)':'var(--dim)'};font-size:14px;flex-shrink:0;padding:0;background:none;border:0">
-          ${Icons.get('star')}
-        </button>
-      </div>
-      <div class="m-card-price">${noPrice ? '—' : formatPrice(asset, price)}</div>
-      ${cp != null && !noPrice ? `
-        <span class="m-card-change ${up?'up':'down'}">
-          ${up?'▲':'▼'} ${Math.abs(cp).toFixed(2)}٪
-        </span>
-      ` : noPrice ? `
-        <span class="m-card-change muted">بدون داده</span>
-      ` : ''}
-    </article>
-  `;
-}
-
-/* ============================================================
-   HOME RENDERS
-============================================================ */
-function renderFeatured(){
-  const c = $('[data-featured]');
-  if(!c) return;
-  const list = window.DATA.FEATURED.map(id => window.DATA.find(id)).filter(Boolean);
-  c.innerHTML = list.map(marketCardHTML).join('');
-}
-
-function renderMostUsed(){
-  const c = $('[data-most]');
-  if(!c) return;
-  const list = window.DATA.MOST_USED.map(id => window.DATA.find(id)).filter(Boolean);
-  c.innerHTML = list.map(marketCardHTML).join('');
-}
-
-function renderCats(){
-  const c = $('[data-cats]');
-  if(!c) return;
-  const counts = window.DATA.countByCat();
-
-  c.innerHTML = Object.entries(window.DATA.CATEGORIES).map(([k, cat]) => `
-    <button class="cat-chip" data-filter-jump="${k}" type="button">
-      <span class="cat-chip-icon">${window.Icons.get(cat.icon)}</span>
-      <span>${cat.label}</span>
-      <small style="opacity:.6">${counts[k] || 0}</small>
-    </button>
-  `).join('');
-
-  c.querySelectorAll('[data-filter-jump]').forEach(btn => {
-    btn.addEventListener('click', e => {
-      e.preventDefault();
-      e.stopPropagation();
-      filter = btn.dataset.filterJump;
-      $$('[data-filters] .chip').forEach(b => {
-        b.classList.toggle('is-active', b.dataset.filter === filter);
-      });
-      go('markets');
-    });
-  });
-}
-
-function renderTools(){
-  const c = $('[data-tools]');
-  if(!c) return;
-
-  const tools = [
-    { id:'gold',        name:'محاسبه‌گر طلا',   icon:'calculator' },
-    { id:'coin',        name:'محاسبه‌گر سکه',   icon:'coins' },
-    { id:'ounce',       name:'محاسبه‌گر انس',   icon:'diamond' },
-    { id:'silver',      name:'محاسبه‌گر نقره',  icon:'diamond' },
-    { id:'conv',        name:'مبدل ارز',        icon:'exchange' },
-    { id:'crypto-conv', name:'مبدل کریپتو',     icon:'bitcoin' },
-    { id:'unit-conv',   name:'مبدل واحد',       icon:'swap' },
-    { id:'volume-conv', name:'مبدل حجم',        icon:'swap' },
-    { id:'portfolio',   name:'پرتفوی من',       icon:'briefcase' },
-    { id:'alerts',      name:'هشدار قیمت',      icon:'bell' },
-    { id:'notes',       name:'یادداشت‌ها',       icon:'note' },
-    { id:'profit',      name:'محاسبه سود',      icon:'trendingUp' },
-    { id:'zakat',       name:'محاسبه زکات',     icon:'check' },
-    { id:'avg',         name:'میانگین خرید',    icon:'barChart' },
-    { id:'tv',          name:'حالت TV',         icon:'tv' },
-    { id:'fullscreen',  name:'تمام‌صفحه',       icon:'external' },
-    { id:'export',      name:'خروجی داده',      icon:'download' }
-  ];
-
-  c.innerHTML = tools.map(t => `
-    <button type="button" class="tool-chip" data-tool="${t.id}">
-      <span class="tool-chip-icon">${window.Icons.get(t.icon)}</span>
-      <span class="tool-chip-name">${t.name}</span>
-    </button>
-  `).join('');
-}
-
-/* ============================================================
-   BANK CARD — کارت پرتفوی شبیه کارت بانکی
-============================================================ */
-function getUserName(){
-  return window.Storage.get('gheymato.username', '') || 'کاربر مهمان';
-}
-
-function saveUserName(name){
-  window.Storage.set('gheymato.username', name || '');
-}
-
-function renderBankCard(){
-  const wrap = $('[data-portfolio-card]');
-  if(!wrap) return;
-
-  const list = window.Storage.pf.get();
-  const userName = getUserName();
-  const isEmpty = !list.length;
-
-  let totalBuy = 0, totalNow = 0;
-
-  if(!isEmpty){
-    list.forEach(item => {
-      const a = window.DATA.find(item.id);
-      const l = window.API.getById(item.id);
-      if(!a) return;
-      const price = (l && l.price != null) ? l.price : item.buyPrice;
-      totalBuy += item.buyPrice * item.qty;
-      totalNow += price * item.qty;
-    });
-  }
-
-  const pl = totalNow - totalBuy;
-  const plPct = totalBuy > 0 ? (pl / totalBuy) * 100 : 0;
-  const up = pl >= 0;
-  const firstChar = userName.trim().charAt(0) || '👤';
-
-  let displayValue = '0 تومان';
-  let displayChange = '';
-  if(!isEmpty){
-    const unitText = unitLabel();
-    const val = baseToUser(totalNow);
-    displayValue = window.U.num(val, 0) + ' ' + unitText;
-    displayChange = `
-      <span class="bank-card-change">
-        ${up ? '▲' : '▼'} ${up ? '+' : ''}${plPct.toFixed(2)}%
-      </span>
-    `;
-  }
-
-  wrap.innerHTML = `
-    <div class="bank-card ${isEmpty ? 'is-empty' : ''}" data-tool="portfolio">
-      <div class="bank-card-top">
-        <div class="bank-card-brand">
-          <img src="assets/logo.png" alt="قیمتو">
-          <div class="bank-card-brand-text">
-            <strong>قیمتو</strong>
-            <small>${isEmpty ? 'پرتفوی خالی' : window.U.num(list.length) + ' دارایی'}</small>
-          </div>
-        </div>
-        <div class="bank-card-chip"></div>
-      </div>
-
-      <div class="bank-card-center">
-        <span class="bank-card-label">ارزش کل پرتفوی</span>
-        <span class="bank-card-value">${displayValue}</span>
-        ${displayChange}
-      </div>
-
-      <div class="bank-card-bottom">
-        <div class="bank-card-user">
-          <div class="bank-card-avatar">${firstChar}</div>
-          <div class="bank-card-user-info">
-            <strong>${window.U.esc(userName)}</strong>
-            <small>${isEmpty ? 'برای شروع دارایی اضافه کنید' : 'دارایی‌های شما'}</small>
-          </div>
-        </div>
-        <button type="button" class="bank-card-add" data-tool="portfolio" aria-label="افزودن">
-          ${window.Icons.get('plus')}
-        </button>
-      </div>
-    </div>
-  `;
-}
-
-/* ============================================================
-   MARKETS
-============================================================ */
-function renderMarkets(){
-  const g = $('[data-market-grid]');
-  if(!g) return;
-
-  let list = window.DATA.ASSETS;
-  if(filter !== 'all') list = list.filter(a => a.cat === filter);
-  if(search){
-    const q = search.toLowerCase();
-    list = list.filter(a =>
-      a.name.toLowerCase().includes(q) ||
-      a.code.toLowerCase().includes(q) ||
-      a.id.toLowerCase().includes(q)
-    );
-  }
-
-  const cnt = $('[data-count]');
-  if(cnt) cnt.textContent = list.length + ' نماد';
-
-  g.innerHTML = list.map(marketCardHTML).join('');
-}
-
-/* ============================================================
-   FAVORITES
-============================================================ */
-function renderFavs(){
-  const g = $('[data-fav-grid]');
-  const empty = $('[data-fav-empty]');
-  const cnt = $('[data-fav-count]');
-  if(!g) return;
-
-  const list = window.Storage.fav.get().map(id => window.DATA.find(id)).filter(Boolean);
-
-  if(cnt) cnt.textContent = list.length + ' مورد';
-  if(empty) empty.hidden = list.length > 0;
-
-  g.innerHTML = list.map(marketCardHTML).join('');
-}
-
-/* ============================================================
-   HEADER TICKER
-============================================================ */
-function renderHdrTicker(){
-  const track = $('[data-hdr-ticker-track]');
-  if(!track) return;
-
-  const ids = [
-    'gold18', 'coin', 'dollar', 'euro', 'ounce', 'mesghal',
-    'btc', 'eth', 'silver', 'oil_brent', 'bourse', 'usdt',
-    'gold24', 'coin_bahar', 'gbp', 'aed', 'crypto-solana'
-  ];
-
-  const items = ids.map(id => {
-    const a = window.DATA.find(id);
-    if(!a) return '';
-    const l = window.API.getById(id);
-    if(!l || l.price == null) return '';
-    const cp = l.changePercent || 0;
-    const up = cp >= 0;
-    return `
-      <div class="hdr-ticker-item">
-        <span class="name">${window.U.esc(a.short || a.name)}</span>
-        <span class="price">${formatPrice(a, l.price)}</span>
-        <span class="chg ${up?'up':'down'}">${up?'▲':'▼'} ${Math.abs(cp).toFixed(2)}%</span>
-      </div>
-    `;
-  }).filter(Boolean).join('');
-
-  track.innerHTML = items + items;
-}
-
-/* ============================================================
-   CHART PAGE — با ۲۰ سوال TGJU
-============================================================ */
-async function renderChartPage(){
-  const asset = window.DATA.find(activeChartId);
-  if(!asset) return;
-
-  const live = window.API.getById(asset.id);
-
-  const iconEl = $('[data-c-icon]');
-  if(iconEl) iconEl.innerHTML = assetIcon(asset);
-
-  const nameEl = $('[data-c-name]');
-  if(nameEl) nameEl.textContent = asset.name;
-
-  const codeEl = $('[data-c-code]');
-  if(codeEl) codeEl.textContent = asset.code;
-
-  const favEl = $('[data-c-fav]');
-  if(favEl){
-    const isFav = window.Storage.fav.get().includes(asset.id);
-    favEl.classList.toggle('is-fav', isFav);
-    favEl.dataset.favToggle = asset.id;
-    favEl.textContent = isFav ? '★' : '☆';
-  }
-
-  const priceEl = $('[data-c-price]');
-  if(priceEl){
-    priceEl.textContent = live && live.price != null ? formatPrice(asset, live.price) : '—';
-  }
-
-  const changeEl = $('[data-c-change]');
-  if(changeEl && live && live.changePercent != null){
-    const up = live.changePercent >= 0;
-    changeEl.textContent = (up ? '▲' : '▼') + ' ' + Math.abs(live.changePercent).toFixed(2) + '%';
-    changeEl.className = 'chart-change ' + (up ? 'up' : 'down');
-  } else if(changeEl){
-    changeEl.textContent = '—';
-    changeEl.className = 'chart-change';
-  }
-
-  const unitEl = $('[data-c-unit]');
-  if(unitEl) unitEl.textContent = fullUnitLabel(asset);
-
-  const timeEl = $('[data-c-time]');
-  if(timeEl) timeEl.textContent = live && live.time ? live.time : '—';
-
-  const canvas = $('[data-chart-canvas]');
-  if(canvas) drawChartAsync(canvas, asset);
-
-  await renderChartQuestions(asset, live);
-  renderBubbleAnalysis(asset, live);
-
-  const relEl = $('[data-c-related]');
-  if(relEl){
-    const related = window.DATA.byCat(asset.cat)
-      .filter(a => a.id !== asset.id)
-      .slice(0, 10);
-    relEl.innerHTML = related.map(marketCardHTML).join('');
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
   }
 }
 
-/* ============================================================
-   ۲۰ سوال TGJU
-============================================================ */
-async function renderChartQuestions(asset, live){
-  const listEl = $('[data-c-questions]');
-  const dateEl = $('[data-c-questions-date]');
-  if(!listEl) return;
-
-  const today = new Date().toLocaleDateString('fa-IR', {
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-  });
-  if(dateEl) dateEl.textContent = today;
-
-  if(!live || live.price == null){
-    listEl.innerHTML = '<div class="chart-q-item"><div class="chart-q-body"><span class="chart-q-answer">داده‌ای موجود نیست</span></div></div>';
-    return;
-  }
-
-  const current = live.price;
-  const high = live.high;
-  const low = live.low;
-  const open = live.open;
-  const changePct = live.changePercent || 0;
-  const unitText = asset.unit || '';
-
-  // دریافت تاریخچه ۳۰ روز
-  let history = [];
-  try {
-    if(window.API.getHistory){
-      history = await window.API.getHistory(asset, 30);
-    }
-  } catch(e){
-    console.warn('[Questions] history failed:', e.message);
-  }
-
-  const sortedHistory = (history || []).slice().sort((a, b) => a.t - b.t);
-
-  function findPriceAt(msAgo){
-    if(!sortedHistory.length) return null;
-    const target = Date.now() - msAgo;
-    let closest = null, minDiff = Infinity;
-    for(const p of sortedHistory){
-      const diff = Math.abs(p.t - target);
-      if(diff < minDiff){ minDiff = diff; closest = p; }
-    }
-    if(closest && minDiff < 3 * 24 * 60 * 60 * 1000){
-      return closest.p;
-    }
-    return null;
-  }
-
-  const hourAgo = 60 * 60 * 1000;
-  const dayAgo = 24 * 60 * 60 * 1000;
-  const weekAgo = 7 * dayAgo;
-  const monthAgo = 30 * dayAgo;
-  const sixMonthAgo = 180 * dayAgo;
-  const yearAgo = 365 * dayAgo;
-
-  function pctChange(from, to){
-    if(from == null || to == null || from === 0) return null;
-    return ((to - from) / from) * 100;
-  }
-
-  function changeItem(label, change){
-    const hasChange = change != null;
-    let cls = 'neutral';
-    if(hasChange){
-      cls = change >= 0 ? 'up' : 'down';
-    }
-    const changeText = hasChange 
-      ? `<span class="chart-q-answer ${cls}">${change >= 0 ? '▲' : '▼'} ${Math.abs(change).toFixed(2)}%</span>`
-      : `<span class="chart-q-answer neutral">—</span>`;
-
-    return `
-      <div class="chart-q-item">
-        <div class="chart-q-num">•</div>
-        <div class="chart-q-body">
-          <span class="chart-q-question">${label}</span>
-          ${changeText}
-        </div>
-      </div>
-    `;
-  }
-
-  function valueItem(label, value){
-    return `
-      <div class="chart-q-item">
-        <div class="chart-q-num">•</div>
-        <div class="chart-q-body">
-          <span class="chart-q-question">${label}</span>
-          <span class="chart-q-answer neutral">${value || '—'}</span>
-        </div>
-      </div>
-    `;
-  }
-
-  const priceHourAgo = findPriceAt(hourAgo);
-  const priceDayAgo = findPriceAt(dayAgo);
-  const priceWeekAgo = findPriceAt(weekAgo);
-  const priceMonthAgo = findPriceAt(monthAgo);
-  const price6MonthAgo = findPriceAt(sixMonthAgo);
-  const priceYearAgo = findPriceAt(yearAgo);
-  const threeMonthAgo = findPriceAt(90 * dayAgo);
-
-  const questions = [];
-  const u = unitText ? ' / ' + unitText : '';
-
-  // ۱. قیمت فعلی
-  const currentDisplay = asset.ptype === 'usd'
-    ? '$' + window.U.num(current, asset.dec || 2) + u
-    : window.U.num(baseToUser(current), 0) + ' ' + unitLabel() + u;
-
-  questions.push(valueItem(
-    `در حال حاضر قیمت ${asset.name} چقدر می‌باشد؟`,
-    currentDisplay
-  ));
-
-  // ۲. تغییر نسبت به دیروز
-  questions.push(changeItem(
-    `قیمت ${asset.name} نسبت به دیروز چقدر تغییر کرده است؟`,
-    priceDayAgo ? pctChange(priceDayAgo, current) : changePct
-  ));
-
-  // ۳. تغییر نسبت به ۱ ساعت قبل
-  if(priceHourAgo){
-    questions.push(changeItem(
-      `قیمت ${asset.name} نسبت به یک ساعت قبل چقدر تغییر کرده است؟`,
-      pctChange(priceHourAgo, current)
-    ));
-  }
-
-  // ۴. نرخ بازگشایی امروز
-  if(open != null){
-    questions.push(valueItem(
-      `نرخ بازگشایی ${asset.name} در روز جاری چقدر بوده است؟`,
-      formatPrice(asset, open) + u
-    ));
-  }
-
-  // ۵. پایین‌ترین امروز
-  if(low != null){
-    questions.push(valueItem(
-      `پایین‌ترین قیمتی که در بازار امروز برای ${asset.name} به ثبت رسیده چقدر بوده است؟`,
-      formatPrice(asset, low) + u
-    ));
-  }
-
-  // ۶. بالاترین امروز
-  if(high != null){
-    questions.push(valueItem(
-      `بالاترین قیمتی که در بازار امروز برای ${asset.name} به ثبت رسیده چقدر بوده است؟`,
-      formatPrice(asset, high) + u
-    ));
-  }
-
-  // ۷. تغییر یک هفته
-  if(priceWeekAgo){
-    questions.push(changeItem(
-      `قیمت ${asset.name} نسبت به یک هفته گذشته چقدر تغییر کرده است؟`,
-      pctChange(priceWeekAgo, current)
-    ));
-  }
-
-  // ۸. تغییر یک ماه
-  if(priceMonthAgo){
-    questions.push(changeItem(
-      `قیمت ${asset.name} نسبت به یک ماه گذشته چقدر تغییر کرده است؟`,
-      pctChange(priceMonthAgo, current)
-    ));
-  }
-
-  // ۹. تغییر ۶ ماه
-  if(price6MonthAgo){
-    questions.push(changeItem(
-      `قیمت ${asset.name} نسبت به ۶ ماه گذشته چقدر تغییر کرده است؟`,
-      pctChange(price6MonthAgo, current)
-    ));
-  }
-
-  // ۱۰. بالاترین تاکنون
-  if(sortedHistory.length > 0){
-    let highest = { p: 0, t: 0 };
-    for(const p of sortedHistory){
-      if(p.p > highest.p){ highest = p; }
-    }
-    if(highest.p > 0){
-      const dateStr = new Date(highest.t).toLocaleDateString('fa-IR');
-      questions.push(`
-        <div class="chart-q-item">
-          <div class="chart-q-num">🏆</div>
-          <div class="chart-q-body">
-            <span class="chart-q-question">بالاترین قیمت ${asset.name} تاکنون چقدر و در چه تاریخی بوده است؟</span>
-            <span class="chart-q-answer neutral">${formatPrice(asset, highest.p)}${u}</span>
-            <span class="chart-q-date-tiny">📅 ${dateStr}</span>
-          </div>
-        </div>
-      `);
-    }
-  }
-
-  // ۱۱. سود روزانه
-  if(priceDayAgo){
-    questions.push(changeItem(
-      `سود روزانه سرمایه‌گذاری در ${asset.name} چقدر برآورد می‌شود؟`,
-      pctChange(priceDayAgo, current)
-    ));
-  }
-
-  // ۱۲. سود یک هفته
-  if(priceWeekAgo){
-    questions.push(changeItem(
-      `سود یک هفته سرمایه‌گذاری در ${asset.name} چقدر بوده است؟`,
-      pctChange(priceWeekAgo, current)
-    ));
-  }
-
-  // ۱۳. سود یک ماهه
-  if(priceMonthAgo){
-    questions.push(changeItem(
-      `سود یک ماهه خرید ${asset.name} چقدر بوده است؟`,
-      pctChange(priceMonthAgo, current)
-    ));
-  }
-
-  // ۱۴. سود سه ماهه
-  if(threeMonthAgo){
-    questions.push(changeItem(
-      `سود سه ماهه سرمایه‌گذاری در ${asset.name} چقدر برآورد می‌شود؟`,
-      pctChange(threeMonthAgo, current)
-    ));
-  }
-
-  // ۱۵. سود شش ماهه
-  if(price6MonthAgo){
-    questions.push(changeItem(
-      `سود شش ماهه سرمایه‌گذاری در ${asset.name} چقدر برآورد می‌شود؟`,
-      pctChange(price6MonthAgo, current)
-    ));
-  }
-
-  // ۱۶. سود سالانه
-  if(priceYearAgo){
-    questions.push(changeItem(
-      `سود سالانه سرمایه‌گذاری در ${asset.name} چقدر بوده است؟`,
-      pctChange(priceYearAgo, current)
-    ));
-  }
-
-  // ۱۷-۲۰. مقایسه با نمادهای دیگه
-  const comparisons = [
-    { id: 'coin',   name: 'سکه امامی' },
-    { id: 'dollar', name: 'دلار' },
-    { id: 'btc',    name: 'بیت‌کوین' },
-    { id: 'eth',    name: 'اتریوم' },
-    { id: 'sol',    name: 'سولانا' },
-    { id: 'gold18', name: 'طلای ۱۸ عیار' }
-  ];
-
-  for(const c of comparisons){
-    if(asset.id === c.id) continue;
-    if(questions.length >= 25) break;
-
-    const comp = await compareWith(c.id, monthAgo, current, priceMonthAgo);
-    if(comp){
-      questions.push(comparisonItem(
-        `آیا در یک ماه اخیر، سرمایه‌گذاری در ${asset.name} نسبت به ${c.name} سودمندتر بوده یا خیر؟`,
-        comp
-      ));
-    }
-  }
-
-  listEl.innerHTML = questions.join('');
+.mobile-nav::-webkit-scrollbar,
+.hdr-ticker::-webkit-scrollbar,
+.scroll-row::-webkit-scrollbar,
+.chips::-webkit-scrollbar,
+.pills::-webkit-scrollbar,
+.tv-ticker::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+.mobile-nav,
+.hdr-ticker,
+.scroll-row,
+.chips,
+.pills,
+.tv-ticker {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 
-/**
- * مقایسه با نماد دیگه
- */
-async function compareWith(assetId, msAgo, myCurrent, myPast){
-  try {
-    if(myPast == null) return null;
-    
-    const a = window.DATA.find(assetId);
-    if(!a) return null;
-    
-    const hist = await window.API.getHistory(a, 30);
-    if(!hist || hist.length < 2) return null;
-    
-    const sorted = hist.slice().sort((x,y) => x.t - y.t);
-    const target = Date.now() - msAgo;
-    let closest = null, minDiff = Infinity;
-    for(const p of sorted){
-      const diff = Math.abs(p.t - target);
-      if(diff < minDiff){ minDiff = diff; closest = p; }
-    }
-    
-    if(!closest || !closest.p) return null;
-    
-    const last = sorted[sorted.length - 1].p;
-    const otherPast = closest.p;
-    
-    const myPct = ((myCurrent - myPast) / myPast) * 100;
-    const otherPct = ((last - otherPast) / otherPast) * 100;
-    
-    return {
-      name: a.short || a.name,
-      myPct,
-      otherPct,
-      better: myPct > otherPct
-    };
-  } catch(e){
-    return null;
-  }
+/* ═══════════════ 5. SPLASH — لوگو خالص و نرم ═══════════════ */
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: opacity .8s var(--ease-ios), visibility .8s;
+  will-change: opacity;
+}
+.splash.is-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 
-function comparisonItem(label, comp){
-  const cls = comp.better ? 'up' : 'down';
-  const icon = comp.better ? '✅' : '❌';
-  const text = comp.better ? 'بله' : 'خیر';
-  
-  return `
-    <div class="chart-q-item">
-      <div class="chart-q-num">⚖</div>
-      <div class="chart-q-body">
-        <span class="chart-q-question">${label}</span>
-        <span class="chart-q-answer ${cls}">
-          ${icon} ${text} — (شما: ${comp.myPct.toFixed(2)}% / ${comp.name}: ${comp.otherPct.toFixed(2)}%)
-        </span>
-      </div>
-    </div>
-  `;
+.splash-logo {
+  width: 140px;
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: splashFadeIn 1s var(--ease-ios) forwards;
+  opacity: 0;
+  transform: scale(0.92);
+}
+.splash-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  animation: splashGlow 3s ease-in-out infinite;
 }
 
-/* ============================================================
-   تحلیل حباب
-============================================================ */
-function renderBubbleAnalysis(asset, live){
-  const wrap = $('[data-bubble-analysis]');
-  const body = $('[data-bubble-body]');
-  if(!wrap || !body) return;
-
-  const isGold = asset.cat === 'gold' && (asset.tgju === 'geram18' || asset.tgju === 'geram24');
-  const isCoin = asset.id === 'coin' || asset.id === 'coin_bahar';
-  
-  if(!isGold && !isCoin){
-    wrap.hidden = true;
-    return;
-  }
-
-  if(!live || live.price == null){
-    wrap.hidden = true;
-    return;
-  }
-
-  const ounce = window.API.getById('ounce');
-  const dollar = window.API.getById('dollar');
-
-  if(!ounce || !dollar || ounce.price == null || dollar.price == null){
-    wrap.hidden = true;
-    return;
-  }
-
-  const ounceUSD = ounce.price;
-  const dollarRial = dollar.price;
-  const goldIran = live.price;
-
-  let karat = 18;
-  if(asset.tgju === 'geram24') karat = 24;
-  else if(isCoin) karat = 24;
-
-  const gramWorldRial = (ounceUSD / 31.1035) * dollarRial;
-  const gramWorldKarat = gramWorldRial * (karat / 24);
-
-  let worldValue, iranValue;
-  if(isCoin){
-    worldValue = gramWorldKarat * 8.133;
-    iranValue = goldIran;
-  } else {
-    worldValue = gramWorldKarat;
-    iranValue = goldIran;
-  }
-
-  const bubble = iranValue - worldValue;
-  const bubblePct = (bubble / worldValue) * 100;
-
-  const bubbleClass = bubblePct > 2 ? 'bubble-positive' : (bubblePct < -2 ? 'bubble-negative' : 'bubble-neutral');
-  const bubbleLabel = bubblePct > 2 ? 'حباب مثبت' : (bubblePct < -2 ? 'حباب منفی' : 'متعادل');
-
-  wrap.hidden = false;
-
-  body.innerHTML = `
-    <div class="bubble-row">
-      <span>انس جهانی طلا</span>
-      <strong>$${window.U.num(ounceUSD, 2)}</strong>
-    </div>
-    <div class="bubble-row">
-      <span>نرخ دلار</span>
-      <strong>${formatPrice({ptype:'rial'}, dollarRial)}</strong>
-    </div>
-    <div class="bubble-row">
-      <span>قیمت جهانی گرم ${karat} عیار</span>
-      <strong>${formatPrice({ptype:'rial'}, gramWorldKarat)}</strong>
-    </div>
-    <div class="bubble-row">
-      <span>قیمت ${isCoin ? 'سکه' : 'گرم'} در ایران</span>
-      <strong>${formatPrice({ptype:'rial'}, iranValue)}</strong>
-    </div>
-    <div class="bubble-row bubble-total">
-      <span>
-        ${bubbleLabel}
-        <span class="bubble-badge ${bubbleClass}" style="margin-right:8px">
-          ${bubblePct >= 0 ? '+' : ''}${bubblePct.toFixed(2)}%
-        </span>
-      </span>
-      <strong class="${bubbleClass}">
-        ${bubble >= 0 ? '+' : ''}${formatPrice({ptype:'rial'}, Math.abs(bubble))}
-      </strong>
-    </div>
-  `;
+.splash-loader-wrap {
+  position: absolute;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0;
+  animation: splashLoaderIn 1s var(--ease-ios) 0.6s forwards;
+}
+.splash-spinner {
+  width: 28px;
+  height: 28px;
+  border: 2.5px solid var(--border-2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
 }
 
-/* ============================================================
-   نمودار
-============================================================ */
-async function drawChartAsync(canvas, asset){
-  try {
-    let prices = null;
-
-    if(window.API.getHistoryPrices){
-      try {
-        prices = await window.API.getHistoryPrices(asset, 30);
-      } catch(e){}
-    }
-
-    if(!prices || prices.length < 5){
-      prices = window.API.history(asset, 60, window.CFG.get('chartPeriod') || '1D');
-    }
-
-    if(!prices || prices.length < 2) return;
-
-    const first = prices[0];
-    const last = prices[prices.length - 1];
-    const up = last >= first;
-    const color = up ? '#10b981' : '#ef4444';
-
-    window.Charts.drawLine(canvas, prices, {
-      padding: 20,
-      lineWidth: 2.5,
-      color: color
-    });
-  } catch(e){
-    console.warn('[Chart] Failed:', e.message);
-    const data = window.API.history(asset, 60, '1D');
-    window.Charts.drawLine(canvas, data, { padding: 20, lineWidth: 2.5 });
+@keyframes splashFadeIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes splashLoaderIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+@keyframes splashGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 20px rgba(16, 185, 129, 0.15));
+    transform: scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 40px rgba(16, 185, 129, 0.4));
+    transform: scale(1.03);
   }
 }
-
-/* ============================================================
-   COMPARE
-============================================================ */
-function renderCompare(){
-  const sA = $('[data-cmp="a"]');
-  const sB = $('[data-cmp="b"]');
-  if(!sA || !sB) return;
-
-  if(!sA.options.length){
-    window.DATA.ASSETS.forEach(a => {
-      sA.add(new Option(a.name, a.id));
-      sB.add(new Option(a.name, a.id));
-    });
-    sA.value = 'gold18';
-    sB.value = 'dollar';
-  }
-
-  const A = window.DATA.find(sA.value);
-  const B = window.DATA.find(sB.value);
-  if(!A || !B) return;
-
-  const c = $('[data-cmp-chart]');
-  if(c) window.Charts.drawCompare(c, window.API.history(A, 60, '1D'), window.API.history(B, 60, '1D'));
-
-  const st = $('[data-cmp-stats]');
-  if(st){
-    const lA = window.API.getById(A.id);
-    const lB = window.API.getById(B.id);
-    st.innerHTML = `
-      <div style="padding:16px;border-radius:14px;background:var(--card);border:1px solid var(--border)">
-        <small style="display:block;font-size:11.5px;color:var(--muted);margin-bottom:6px;font-weight:600">${window.U.esc(A.name)}</small>
-        <strong style="display:block;font-size:16px;font-weight:800;direction:ltr">${lA ? formatPrice(A, lA.price) : '—'}</strong>
-      </div>
-      <div style="padding:16px;border-radius:14px;background:var(--card);border:1px solid var(--border)">
-        <small style="display:block;font-size:11.5px;color:var(--muted);margin-bottom:6px;font-weight:600">تغییر ${A.code}</small>
-        <strong style="display:block;font-size:16px;font-weight:800;direction:ltr;color:${(lA?.changePercent || 0) >= 0 ? 'var(--up)' : 'var(--down)'}">
-          ${(lA?.changePercent || 0) >= 0 ? '+' : ''}${(lA?.changePercent || 0).toFixed(2)}%
-        </strong>
-      </div>
-      <div style="padding:16px;border-radius:14px;background:var(--card);border:1px solid var(--border)">
-        <small style="display:block;font-size:11.5px;color:var(--muted);margin-bottom:6px;font-weight:600">${window.U.esc(B.name)}</small>
-        <strong style="display:block;font-size:16px;font-weight:800;direction:ltr">${lB ? formatPrice(B, lB.price) : '—'}</strong>
-      </div>
-      <div style="padding:16px;border-radius:14px;background:var(--card);border:1px solid var(--border)">
-        <small style="display:block;font-size:11.5px;color:var(--muted);margin-bottom:6px;font-weight:600">تغییر ${B.code}</small>
-        <strong style="display:block;font-size:16px;font-weight:800;direction:ltr;color:${(lB?.changePercent || 0) >= 0 ? 'var(--up)' : 'var(--down)'}">
-          ${(lB?.changePercent || 0) >= 0 ? '+' : ''}${(lB?.changePercent || 0).toFixed(2)}%
-        </strong>
-      </div>
-    `;
-  }
-
-  sA.onchange = renderCompare;
-  sB.onchange = renderCompare;
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .4; }
 }
 
-function renderHomeChart(){
-  const c = $('[data-home-chart]');
-  if(!c) return;
-  const asset = window.DATA.find('gold18');
-  if(!asset) return;
-  drawChartAsync(c, asset);
+/* ═══════════════ 6. OFFLINE ═══════════════ */
+.offline-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 30px;
+  text-align: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .3s, visibility .3s;
+}
+.offline-screen.is-active { opacity: 1; visibility: visible; }
+.offline-icon { width: 80px; height: 80px; color: var(--text-muted); margin-bottom: 8px; }
+.offline-icon svg { width: 100%; height: 100%; stroke-width: 1.2; }
+.offline-screen h2 { font-size: 22px; font-weight: 900; color: var(--text); }
+.offline-screen p { font-size: 13.5px; color: var(--text-muted); max-width: 300px; line-height: 1.8; }
+.offline-screen button {
+  margin-top: 12px;
+  padding: 12px 32px;
+  border-radius: 14px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 800;
+  font-size: 14px;
+  transition: transform .15s var(--ease-ios);
+}
+.offline-screen button:active { transform: scale(.95); }
+
+/* ═══════════════ 7. LAYOUT ═══════════════ */
+.app {
+  display: flex;
+  min-height: 100vh;
+  min-height: 100dvh;
+  will-change: transform;
 }
 
-/* ============================================================
-   ROUTER
-============================================================ */
-function go(page){
-  if(!PAGES.includes(page)) page = 'home';
-  currentPage = page;
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(0, 0, 0, .5);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .35s var(--ease-ios), visibility .35s;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  will-change: opacity;
+}
+body.sidebar-open .backdrop { opacity: 1; visibility: visible; }
 
-  $$('.page').forEach(p => p.classList.toggle('is-active', p.dataset.page === page));
-  $$('[data-route]').forEach(b => b.classList.toggle('is-active', b.dataset.route === page));
+/* ═══════════════ 8. SIDEBAR (iOS-like) ═══════════════ */
+.sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 275px;
+  z-index: 50;
+  background: var(--bg-card);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform .4s var(--ease-ios);
+  overflow-y: auto;
+  box-shadow: -10px 0 40px rgba(0, 0, 0, 0.3);
+  will-change: transform;
+}
+body.sidebar-open .sidebar { transform: translateX(0); }
 
-  try { history.replaceState(null, '', '#' + page); } catch(e){}
+.sidebar-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 16px;
+  padding-top: calc(18px + var(--safe-top));
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.sidebar-head img {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--accent-soft);
+  padding: 8px;
+}
+.sidebar-head strong { display: block; font-size: 15px; font-weight: 900; color: var(--text); }
+.sidebar-head small { display: block; font-size: 10.5px; color: var(--text-muted); }
 
-  document.body.classList.remove('sidebar-open');
+.sidebar-nav { flex: 1; padding: 12px 10px; overflow-y: auto; }
 
-  if(page === 'home'){
-    renderBankCard();
-    renderFeatured();
-    renderMostUsed();
-    renderCats();
-    renderTools();
-    renderHomeChart();
-  }
-  if(page === 'markets') renderMarkets();
-  if(page === 'chart') renderChartPage();
-  if(page === 'compare') renderCompare();
-  if(page === 'favorites') renderFavs();
-
-  renderHdrTicker();
+.nav-group {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 14px 10px 6px;
+  opacity: .7;
 }
 
-/* ============================================================
-   MODAL / TOAST
-============================================================ */
-function openModal(title, bodyHTML){
-  const m = $('[data-modal]');
-  if(!m) return;
-  const titleEl = $('[data-modal-title]');
-  const bodyEl = $('[data-modal-body]');
-  if(titleEl) titleEl.innerHTML = title;
-  if(bodyEl) bodyEl.innerHTML = bodyHTML;
-  m.classList.add('is-open');
-  if(window.Icons && window.Icons.hydrate) window.Icons.hydrate(bodyEl);
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 12px;
+  border-radius: 11px;
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: right;
+  transition: background .25s var(--ease-ios), color .25s var(--ease-ios), transform .15s var(--ease-ios);
+  position: relative;
+}
+.nav-link svg { width: 18px; height: 18px; flex-shrink: 0; stroke-width: 1.75; }
+.nav-link:active {
+  background: var(--card-2);
+  transform: scale(.98);
+}
+.nav-link.is-active {
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 
-function closeModal(){
-  const m = $('[data-modal]');
-  if(m) m.classList.remove('is-open');
+.sidebar-foot {
+  padding: 12px 16px;
+  padding-bottom: calc(12px + var(--safe-bottom));
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.foot-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  color: var(--text-2);
+  font-weight: 600;
+}
+.foot-status .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--up);
+  animation: pulse 2s infinite;
+}
+.sidebar-foot small { display: block; margin-top: 4px; font-size: 10px; color: var(--text-muted); }
+
+/* ═══════════════ 9. MAIN ═══════════════ */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 100vh;
 }
 
-function toast(msg, type = ''){
-  const t = $('[data-toast]');
-  if(!t) return;
-  t.textContent = msg;
-  t.className = 'toast is-show ' + type;
-  clearTimeout(t._t);
-  t._t = setTimeout(() => t.classList.remove('is-show'), 2400);
+/* ═══════════════ 10. APP HEADER ═══════════════ */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  height: 60px;
+  padding: 0 14px;
+  padding-top: var(--safe-top);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-glass);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
-/* ============================================================
-   TOOLS — محاسبه‌گرها
-============================================================ */
-function money(v){ return formatPrice({ptype:'rial'}, v); }
+.hdr-btn {
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  flex: 0 0 42px;
+  border-radius: 13px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: transform .18s var(--ease-ios), background .2s;
+}
+.hdr-btn:active { transform: scale(.92); background: var(--card-2); }
+.hdr-btn svg { width: 19px; height: 19px; stroke-width: 2; }
+.hdr-btn[data-loading="1"] svg { animation: spin 1s linear infinite; }
 
-function toolGold(){
-  const gold = window.API.getById('gold18');
-  if(!gold || gold.price == null){ toast('در حال دریافت قیمت...', 'warning'); return; }
-
-  openModal(`<span data-icon="calculator"></span> محاسبه‌گر طلا`, `
-    <div class="form-grid">
-      <div class="form-group">
-        <label>وزن (گرم)</label>
-        <input class="input" type="number" value="10" step="0.01" data-gw>
-      </div>
-      <div class="form-group">
-        <label>عیار</label>
-        <select class="select" data-gk>
-          <option value="18" selected>۱۸</option>
-          <option value="24">۲۴</option>
-          <option value="22">۲۲</option>
-          <option value="21">۲۱</option>
-          <option value="14">۱۴</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>اجرت ساخت (%)</label>
-        <input class="input" type="number" value="7" step="0.1" data-gwg>
-      </div>
-      <div class="form-group">
-        <label>سود فروشنده (%)</label>
-        <input class="input" type="number" value="5" step="0.1" data-gp>
-      </div>
-      <div class="form-group" style="grid-column:1/-1">
-        <label>مالیات (%)</label>
-        <input class="input" type="number" value="9" step="0.1" data-gt>
-      </div>
-    </div>
-    <div class="result-box" data-gold-out></div>
-  `);
-
-  function calc(){
-    const w = parseFloat($('[data-gw]')?.value) || 0;
-    const k = parseFloat($('[data-gk]')?.value) || 18;
-    const wg = parseFloat($('[data-gwg]')?.value) || 0;
-    const pr = parseFloat($('[data-gp]')?.value) || 0;
-    const tx = parseFloat($('[data-gt]')?.value) || 0;
-
-    const base = gold.price * (k / 18);
-    const val = w * base;
-    const wA = val * (wg / 100);
-    const pA = (val + wA) * (pr / 100);
-    const tA = (val + wA + pA) * (tx / 100);
-    const tot = val + wA + pA + tA;
-
-    const out = $('[data-gold-out]');
-    if(out) out.innerHTML = `
-      <div class="result-row"><span>ارزش طلا</span><strong>${money(val)}</strong></div>
-      <div class="result-row"><span>اجرت (${wg}%)</span><strong>${money(wA)}</strong></div>
-      <div class="result-row"><span>سود (${pr}%)</span><strong>${money(pA)}</strong></div>
-      <div class="result-row"><span>مالیات (${tx}%)</span><strong>${money(tA)}</strong></div>
-      <div class="result-row result-total"><span>مبلغ نهایی</span><strong>${money(tot)}</strong></div>
-    `;
-  }
-  $$('[data-gw],[data-gk],[data-gwg],[data-gp],[data-gt]').forEach(el => {
-    el.addEventListener('input', calc);
-    el.addEventListener('change', calc);
-  });
-  calc();
+/* ═══════════════ HEADER SEARCH ═══════════════ */
+.hdr-search-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
-function toolCoin(){
-  const sel = window.DATA.ASSETS.filter(a => ['coin','coin_bahar','nim','rob','gerami'].includes(a.id));
-  openModal(`<span data-icon="coins"></span> محاسبه‌گر سکه`, `
-    <div class="form-group">
-      <label>نوع سکه</label>
-      <select class="select" data-ct>
-        ${sel.map(a => `<option value="${a.id}">${a.name}</option>`).join('')}
-      </select>
-    </div>
-    <div class="form-group">
-      <label>تعداد</label>
-      <input class="input" type="number" value="1" min="1" data-cc>
-    </div>
-    <div class="result-box" data-coin-out></div>
-  `);
-
-  function calc(){
-    const id = $('[data-ct]')?.value;
-    const n = parseInt($('[data-cc]')?.value) || 1;
-    const live = window.API.getById(id);
-    const out = $('[data-coin-out]');
-    if(!live || live.price == null){
-      if(out) out.innerHTML = '<div class="result-row"><span>در حال دریافت...</span></div>';
-      return;
-    }
-    const tot = live.price * n;
-    if(out) out.innerHTML = `
-      <div class="result-row"><span>قیمت واحد</span><strong>${money(live.price)}</strong></div>
-      <div class="result-row"><span>تعداد</span><strong>${window.U.num(n)} عدد</strong></div>
-      <div class="result-row result-total"><span>ارزش کل</span><strong>${money(tot)}</strong></div>
-    `;
-  }
-  $$('[data-ct],[data-cc]').forEach(el => {
-    el.addEventListener('input', calc);
-    el.addEventListener('change', calc);
-  });
-  calc();
+.hdr-search {
+  height: 42px;
+  padding: 0 14px;
+  border-radius: 13px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: border-color .25s var(--ease-ios), box-shadow .25s var(--ease-ios);
+  overflow: hidden;
+}
+.hdr-search:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.hdr-search-icon {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.hdr-search-icon svg { width: 100%; height: 100%; stroke-width: 2; }
+.hdr-search input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  background: transparent;
+  border: 0;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13.5px;
+  outline: none;
+}
+.hdr-search input::placeholder {
+  color: var(--text-muted);
+  opacity: .75;
 }
 
-function toolOunce(){
-  const ounce = window.API.getById('ounce');
-  if(!ounce || ounce.price == null){ toast('در حال دریافت قیمت...', 'warning'); return; }
+/* ═══════════════ SEARCH DROPDOWN ═══════════════ */
+.hdr-search-results {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 100;
+  max-height: 60vh;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-xl);
+  overflow-y: auto;
+  padding: 6px;
+  animation: dropDownFade .25s var(--ease-ios);
+}
+.hdr-search-results[hidden] { display: none; }
 
-  openModal(`<span data-icon="diamond"></span> محاسبه‌گر انس`, `
-    <div class="form-grid">
-      <div class="form-group">
-        <label>تعداد انس</label>
-        <input class="input" type="number" value="1" step="0.01" data-oc>
-      </div>
-      <div class="form-group">
-        <label>عیار</label>
-        <select class="select" data-ok>
-          <option value="24">۲۴ عیار</option>
-          <option value="18" selected>۱۸ عیار</option>
-          <option value="21">۲۱ عیار</option>
-        </select>
-      </div>
-    </div>
-    <div class="result-box" data-ounce-out></div>
-  `);
-
-  function calc(){
-    const n = parseFloat($('[data-oc]')?.value) || 1;
-    const k = parseFloat($('[data-ok]')?.value) || 18;
-    const dollar = window.API.getById('dollar');
-    if(!dollar || dollar.price == null) return;
-
-    const totalUSD = ounce.price * n;
-    const totalRial = totalUSD * dollar.price;
-    const gramPrice = totalRial / 31.1035;
-    const gramK = gramPrice * (k / 24);
-
-    const out = $('[data-ounce-out]');
-    if(out) out.innerHTML = `
-      <div class="result-row"><span>ارزش دلاری</span><strong>$${window.U.num(totalUSD, 2)}</strong></div>
-      <div class="result-row"><span>ارزش ${unitLabel()}</span><strong>${money(totalRial)}</strong></div>
-      <div class="result-row"><span>هر گرم ۲۴ عیار</span><strong>${money(gramPrice)}</strong></div>
-      <div class="result-row result-total"><span>هر گرم ${k} عیار</span><strong>${money(gramK)}</strong></div>
-    `;
-  }
-  $$('[data-oc],[data-ok]').forEach(el => {
-    el.addEventListener('input', calc);
-    el.addEventListener('change', calc);
-  });
-  calc();
+@keyframes dropDownFade {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-function toolSilver(){
-  const silver = window.API.getById('silver');
-  if(!silver || silver.price == null){ toast('در حال دریافت قیمت...', 'warning'); return; }
-
-  openModal(`<span data-icon="diamond"></span> محاسبه‌گر نقره`, `
-    <div class="form-group">
-      <label>وزن (گرم)</label>
-      <input class="input" type="number" value="100" step="0.01" data-sv>
-    </div>
-    <div class="result-box" data-silver-out></div>
-  `);
-
-  function calc(){
-    const w = parseFloat($('[data-sv]')?.value) || 0;
-    const dollar = window.API.getById('dollar');
-    if(!dollar || dollar.price == null) return;
-    const pricePerGram = (silver.price * dollar.price) / 31.1035;
-    const total = w * pricePerGram;
-
-    const out = $('[data-silver-out]');
-    if(out) out.innerHTML = `
-      <div class="result-row"><span>هر گرم</span><strong>${money(pricePerGram)}</strong></div>
-      <div class="result-row result-total"><span>ارزش ${w} گرم</span><strong>${money(total)}</strong></div>
-    `;
-  }
-  $('[data-sv]')?.addEventListener('input', calc);
-  calc();
+.hdr-search-results .ms-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 11px;
+  cursor: pointer;
+  transition: background .15s var(--ease-ios);
+}
+.hdr-search-results .ms-item:active,
+.hdr-search-results .ms-item.is-active {
+  background: var(--card-2);
+}
+.hdr-search-results .ms-item-icon {
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--card-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.hdr-search-results .ms-item-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 5px;
+}
+.hdr-search-results .ms-item-icon svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2;
+  color: var(--accent);
+}
+.hdr-search-results .ms-item-info { flex: 1; min-width: 0; }
+.hdr-search-results .ms-item-info strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hdr-search-results .ms-item-info small {
+  display: block;
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+.hdr-search-results .ms-item-price {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--text);
+  direction: ltr;
+  white-space: nowrap;
+}
+.hdr-search-results .ms-empty {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12.5px;
 }
 
-function toolConv(){
-  const currencies = window.DATA.ASSETS.filter(a => a.cat === 'currency' || a.id === 'ounce' || a.id === 'gold18');
-  const opts = currencies.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
-
-  openModal(`<span data-icon="exchange"></span> مبدل ارز`, `
-    <div class="form-group">
-      <label>مقدار (${unitLabel()})</label>
-      <input class="input" type="number" value="1000000" data-va>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 48px 1fr;gap:10px;align-items:center">
-      <select class="select" data-vf>${opts}</select>
-      <button type="button" class="btn btn-primary" data-vs style="padding:10px;width:48px;height:48px;border-radius:14px">⇄</button>
-      <select class="select" data-vt>${opts}</select>
-    </div>
-    <div class="result-box" data-conv-out></div>
-  `);
-
-  const selF = $('[data-vf]');
-  const selT = $('[data-vt]');
-  if(selF) selF.value = 'dollar';
-  if(selT) selT.value = 'euro';
-
-  function calc(){
-    const userAmt = parseFloat($('[data-va]')?.value) || 0;
-    const amtBase = userToBase(userAmt);
-    const f = window.DATA.find($('[data-vf]')?.value);
-    const t = window.DATA.find($('[data-vt]')?.value);
-    if(!f || !t) return;
-    const lf = window.API.getById(f.id);
-    const lt = window.API.getById(t.id);
-    const out = $('[data-conv-out]');
-    if(!lf || !lt || lf.price == null || lt.price == null){
-      if(out) out.innerHTML = '<div class="result-row"><span>در حال دریافت...</span></div>';
-      return;
-    }
-    const res = (amtBase * lf.price) / lt.price;
-    if(out) out.innerHTML = `
-      <div class="result-row"><span>${window.U.num(userAmt, 2)} ${f.code}</span><strong>${window.U.num(res, 4)} ${t.code}</strong></div>
-      <div class="result-row"><span>نرخ تبدیل</span><strong>۱ ${f.code} = ${window.U.num(lf.price / lt.price, 4)} ${t.code}</strong></div>
-    `;
-  }
-  $$('[data-va],[data-vf],[data-vt]').forEach(el => {
-    el.addEventListener('input', calc);
-    el.addEventListener('change', calc);
-  });
-  $('[data-vs]')?.addEventListener('click', e => {
-    e.preventDefault();
-    e.stopPropagation();
-    const a = selF.value;
-    selF.value = selT.value;
-    selT.value = a;
-    calc();
-  });
-  calc();
+/* ═══════════════ 11. HEADER TICKER ═══════════════ */
+.hdr-ticker {
+  height: 34px;
+  overflow: hidden;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+.hdr-ticker-track {
+  display: inline-flex;
+  gap: 32px;
+  padding: 0 14px;
+  animation: hdrTickerScroll 120s linear infinite;
+  white-space: nowrap;
+  will-change: transform;
+}
+@keyframes hdrTickerScroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.hdr-ticker-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.hdr-ticker-item .name {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.hdr-ticker-item .price {
+  color: var(--text);
+  font-weight: 800;
+  direction: ltr;
+}
+.hdr-ticker-item .chg {
+  font-size: 10px;
+  font-weight: 800;
+  direction: ltr;
+  padding: 2px 6px;
+  border-radius: 5px;
+}
+.hdr-ticker-item .chg.up {
+  background: var(--up-soft);
+  color: var(--up);
+}
+.hdr-ticker-item .chg.down {
+  background: var(--down-soft);
+  color: var(--down);
 }
 
-function toolCryptoConv(){
-  const cryptos = window.DATA.ASSETS.filter(a => a.cat === 'crypto');
-  const opts = cryptos.map(a => `<option value="${a.id}">${a.name} (${a.code})</option>`).join('');
-
-  openModal(`<span data-icon="bitcoin"></span> مبدل کریپتو`, `
-    <div class="form-group">
-      <label>مقدار</label>
-      <input class="input" type="number" value="1" step="0.0001" data-cca>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 48px 1fr;gap:10px;align-items:center">
-      <select class="select" data-ccf>${opts}</select>
-      <button type="button" class="btn btn-primary" data-ccs style="padding:10px;width:48px;height:48px;border-radius:14px">⇄</button>
-      <select class="select" data-cct>${opts}</select>
-    </div>
-    <div class="result-box" data-crypto-out></div>
-  `);
-
-  const f = $('[data-ccf]');
-  const t = $('[data-cct]');
-  if(f) f.value = 'btc';
-  if(t) t.value = 'usdt';
-
-  function calc(){
-    const amt = parseFloat($('[data-cca]')?.value) || 0;
-    const from = window.DATA.find($('[data-ccf]')?.value);
-    const to = window.DATA.find($('[data-cct]')?.value);
-    if(!from || !to) return;
-    const lf = window.API.getById(from.id);
-    const lt = window.API.getById(to.id);
-    const out = $('[data-crypto-out]');
-    if(!lf || !lt || lf.price == null || lt.price == null){
-      if(out) out.innerHTML = '<div class="result-row"><span>در حال دریافت...</span></div>';
-      return;
-    }
-    const res = (amt * lf.price) / lt.price;
-    const usdVal = amt * lf.price;
-    const dollar = window.API.getById('dollar');
-    const tomanVal = dollar ? usdVal * dollar.price : 0;
-
-    if(out) out.innerHTML = `
-      <div class="result-row"><span>${window.U.num(amt, 4)} ${from.code}</span><strong>${window.U.num(res, 6)} ${to.code}</strong></div>
-      <div class="result-row"><span>ارزش دلاری</span><strong>$${window.U.num(usdVal, 2)}</strong></div>
-      ${tomanVal ? `<div class="result-row result-total"><span>ارزش ${unitLabel()}</span><strong>${money(tomanVal)}</strong></div>` : ''}
-    `;
-  }
-  $$('[data-cca],[data-ccf],[data-cct]').forEach(el => {
-    el.addEventListener('input', calc);
-    el.addEventListener('change', calc);
-  });
-  $('[data-ccs]')?.addEventListener('click', e => {
-    e.preventDefault();
-    e.stopPropagation();
-    const a = f.value;
-    f.value = t.value;
-    t.value = a;
-    calc();
-  });
-  calc();
+/* ═══════════════ 12. CONTENT ═══════════════ */
+.content {
+  flex: 1;
+  padding: 16px 14px 100px;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
-/* ============================================================
-   مبدل واحد — طول، وزن، حجم
-============================================================ */
-function toolUnitConv(){
-  openModal(`<span data-icon="swap"></span> مبدل واحد`, `
-    <div class="form-group">
-      <label>دسته</label>
-      <select class="select" data-ucat>
-        <option value="weight">وزن</option>
-        <option value="length">طول</option>
-        <option value="volume">حجم</option>
-        <option value="area">سطح</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label>مقدار</label>
-      <input class="input" type="number" value="1" step="0.01" data-ua>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 48px 1fr;gap:10px;align-items:center">
-      <select class="select" data-uf></select>
-      <button type="button" class="btn btn-primary" data-us style="padding:10px;width:48px;height:48px;border-radius:14px">⇄</button>
-      <select class="select" data-ut></select>
-    </div>
-    <div class="result-box" data-unit-out></div>
-  `);
-
-  const units = {
-    weight: {
-      label: 'وزن',
-      base: 'gram',
-      units: {
-        gram:    { name: 'گرم',        factor: 1 },
-        kg:      { name: 'کیلوگرم',    factor: 1000 },
-        mg:      { name: 'میلی‌گرم',   factor: 0.001 },
-        ton:     { name: 'تن',          factor: 1000000 },
-        mesghal: { name: 'مثقال',      factor: 4.6083 },
-        ounce:   { name: 'انس',         factor: 31.1035 },
-        pound:   { name: 'پوند',        factor: 453.592 },
-        carat:   { name: 'قیراط',      factor: 0.2 }
-      }
-    },
-    length: {
-      label: 'طول',
-      base: 'meter',
-      units: {
-        meter:   { name: 'متر',         factor: 1 },
-        cm:      { name: 'سانتی‌متر',   factor: 0.01 },
-        mm:      { name: 'میلی‌متر',   factor: 0.001 },
-        km:      { name: 'کیلومتر',    factor: 1000 },
-        inch:    { name: 'اینچ',        factor: 0.0254 },
-        foot:    { name: 'فوت',         factor: 0.3048 },
-        yard:    { name: 'یارد',        factor: 0.9144 },
-        mile:    { name: 'مایل',        factor: 1609.344 }
-      }
-    },
-    volume: {
-      label: 'حجم',
-      base: 'liter',
-      units: {
-        liter:       { name: 'لیتر',           factor: 1 },
-        ml:          { name: 'میلی‌لیتر',      factor: 0.001 },
-        m3:          { name: 'متر مکعب',       factor: 1000 },
-        gallon_us:   { name: 'گالن آمریکایی',  factor: 3.785411784 },
-        gallon_uk:   { name: 'گالن انگلیسی',   factor: 4.54609 },
-        barrel_oil:  { name: 'بشکه نفت',       factor: 158.987294928 },
-        barrel:      { name: 'بشکه',           factor: 119.240471196 },
-        cubic_inch:  { name: 'اینچ مکعب',      factor: 0.016387064 },
-        cubic_ft:    { name: 'فوت مکعب',       factor: 28.316846592 }
-      }
-    },
-    area: {
-      label: 'سطح',
-      base: 'm2',
-      units: {
-        m2:      { name: 'متر مربع',    factor: 1 },
-        cm2:     { name: 'سانتی‌متر مربع', factor: 0.0001 },
-        km2:     { name: 'کیلومتر مربع', factor: 1000000 },
-        hectare: { name: 'هکتار',       factor: 10000 },
-        ft2:     { name: 'فوت مربع',    factor: 0.092903 },
-        acre:    { name: 'جریب',        factor: 4046.86 }
-      }
-    }
-  };
-
-  function getLabels(catKey){
-    const cat = units[catKey];
-    return Object.entries(cat.units).map(([k, v]) =>
-      `<option value="${k}">${v.name}</option>`
-    ).join('');
-  }
-
-  function updateSelects(){
-    const catKey = $('[data-ucat]')?.value || 'weight';
-    const fSel = $('[data-uf]');
-    const tSel = $('[data-ut]');
-    if(!fSel || !tSel) return;
-    
-    const html = getLabels(catKey);
-    fSel.innerHTML = html;
-    tSel.innerHTML = html;
-    
-    // پیش‌فرض‌ها
-    if(catKey === 'weight'){
-      fSel.value = 'gram';
-      tSel.value = 'mesghal';
-    } else if(catKey === 'length'){
-      fSel.value = 'meter';
-      tSel.value = 'foot';
-    } else if(catKey === 'volume'){
-      fSel.value = 'liter';
-      tSel.value = 'gallon_us';
-    } else if(catKey === 'area'){
-      fSel.value = 'm2';
-      tSel.value = 'ft2';
-    }
-    calc();
-  }
-
-  function calc(){
-    const catKey = $('[data-ucat]')?.value || 'weight';
-    const cat = units[catKey];
-    const amt = parseFloat($('[data-ua]')?.value) || 0;
-    const from = $('[data-uf]')?.value;
-    const to = $('[data-ut]')?.value;
-    if(!from || !to || !cat.units[from] || !cat.units[to]) return;
-
-    const inBase = amt * cat.units[from].factor;
-    const res = inBase / cat.units[to].factor;
-
-    const out = $('[data-unit-out]');
-    if(out) out.innerHTML = `
-      <div class="result-row"><span>دسته</span><strong>${cat.label}</strong></div>
-      <div class="result-row"><span>مقدار ورودی</span><strong>${window.U.num(amt, 4)} ${cat.units[from].name}</strong></div>
-      <div class="result-row result-total"><span>معادل</span><strong>${window.U.num(res, 4)} ${cat.units[to].name}</strong></div>
-    `;
-  }
-
-  $('[data-ucat]')?.addEventListener('change', updateSelects);
-  $$('[data-ua],[data-uf],[data-ut]').forEach(el => {
-    el.addEventListener('input', calc);
-    el.addEventListener('change', calc);
-  });
-  $('[data-us]')?.addEventListener('click', e => {
-    e.preventDefault();
-    e.stopPropagation();
-    const f = $('[data-uf]');
-    const t = $('[data-ut]');
-    const a = f.value;
-    f.value = t.value;
-    t.value = a;
-    calc();
-  });
-
-  updateSelects();
+.page { display: none; }
+.page.is-active {
+  display: block;
+  animation: pageFade .4s var(--ease-ios);
 }
 
-/* ============================================================
-   مبدل حجم اختصاصی
-============================================================ */
-function toolVolumeConv(){
-  openModal(`<span data-icon="swap"></span> مبدل حجم`, `
-    <div class="form-group">
-      <label>مقدار</label>
-      <input class="input" type="number" value="1" step="0.01" data-vola>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 48px 1fr;gap:10px;align-items:center">
-      <select class="select" data-volf>
-        <option value="liter">لیتر (L)</option>
-        <option value="ml">میلی‌لیتر (mL)</option>
-        <option value="m3">متر مکعب (m³)</option>
-        <option value="gallon_us">گالن آمریکایی</option>
-        <option value="gallon_uk">گالن انگلیسی</option>
-        <option value="barrel_oil">بشکه نفت</option>
-        <option value="barrel">بشکه آمریکایی</option>
-        <option value="cubic_inch">اینچ مکعب</option>
-        <option value="cubic_ft">فوت مکعب</option>
-      </select>
-      <button type="button" class="btn btn-primary" data-vols style="padding:10px;width:48px;height:48px;border-radius:14px">⇄</button>
-      <select class="select" data-volt>
-        <option value="liter" selected>لیتر (L)</option>
-        <option value="ml">میلی‌لیتر (mL)</option>
-        <option value="m3">متر مکعب (m³)</option>
-        <option value="gallon_us">گالن آمریکایی</option>
-        <option value="gallon_uk">گالن انگلیسی</option>
-        <option value="barrel_oil">بشکه نفت</option>
-        <option value="barrel">بشکه آمریکایی</option>
-        <option value="cubic_inch">اینچ مکعب</option>
-        <option value="cubic_ft">فوت مکعب</option>
-      </select>
-    </div>
-    <div class="result-box" data-vol-out></div>
-  `);
-
-  const toLiter = {
-    liter: 1,
-    ml: 0.001,
-    m3: 1000,
-    gallon_us: 3.785411784,
-    gallon_uk: 4.54609,
-    barrel_oil: 158.987294928,
-    barrel: 119.240471196,
-    cubic_inch: 0.016387064,
-    cubic_ft: 28.316846592
-  };
-
-  const labels = {
-    liter: 'لیتر',
-    ml: 'میلی‌لیتر',
-    m3: 'متر مکعب',
-    gallon_us: 'گالن آمریکایی',
-    gallon_uk: 'گالن انگلیسی',
-    barrel_oil: 'بشکه نفت',
-    barrel: 'بشکه',
-    cubic_inch: 'اینچ مکعب',
-    cubic_ft: 'فوت مکعب'
-  };
-
-  function calc(){
-    const amt = parseFloat($('[data-vola]')?.value) || 0;
-    const from = $('[data-volf]')?.value;
-    const to = $('[data-volt]')?.value;
-    if(!from || !to) return;
-
-    const inLiter = amt * toLiter[from];
-    const res = inLiter / toLiter[to];
-
-    const out = $('[data-vol-out]');
-    if(out) out.innerHTML = `
-      <div class="result-row"><span>مقدار ورودی</span><strong>${window.U.num(amt, 4)} ${labels[from]}</strong></div>
-      <div class="result-row"><span>معادل لیتر</span><strong>${window.U.num(inLiter, 4)} لیتر</strong></div>
-      <div class="result-row result-total"><span>معادل</span><strong>${window.U.num(res, 4)} ${labels[to]}</strong></div>
-    `;
-  }
-
-  $$('[data-vola],[data-volf],[data-volt]').forEach(el => {
-    el.addEventListener('input', calc);
-    el.addEventListener('change', calc);
-  });
-  $('[data-vols]')?.addEventListener('click', e => {
-    e.preventDefault();
-    e.stopPropagation();
-    const a = $('[data-volf]').value;
-    $('[data-volf]').value = $('[data-volt]').value;
-    $('[data-volt]').value = a;
-    calc();
-  });
-  calc();
+@keyframes pageFade {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-/* ============================================================
-   PORTFOLIO
-============================================================ */
-function toolPortfolio(){
-  openModal(`<span data-icon="briefcase"></span> پرتفوی من`, `
-    <div class="form-group">
-      <label>نماد</label>
-      <select class="select" data-pa>
-        ${window.DATA.ASSETS.map(a => `<option value="${a.id}">${a.name}</option>`).join('')}
-      </select>
-    </div>
-    <div class="form-grid">
-      <div class="form-group">
-        <label>مقدار</label>
-        <input class="input" type="number" placeholder="۱۰" data-pq>
-      </div>
-      <div class="form-group">
-        <label>قیمت خرید (${unitLabel()})</label>
-        <input class="input" type="number" placeholder="خودکار" data-pp>
-      </div>
-    </div>
-    <button type="button" class="btn btn-primary btn-block" data-padd>
-      <span data-icon="plus"></span>
-      افزودن به پرتفوی
-    </button>
-    <div style="margin-top:16px" data-pf-list></div>
-  `);
+/* ═══════════════ 13. SECTION HEAD ═══════════════ */
+.sec-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 22px 0 12px;
+}
+.sec-head:first-child { margin-top: 4px; }
 
-  function render(){
-    const list = window.Storage.pf.get();
-    const el = $('[data-pf-list]');
-    if(!el) return;
-    if(!list.length){
-      el.innerHTML = '<div class="empty"><h3>هنوز دارایی اضافه نکرده‌اید</h3></div>';
-      return;
-    }
-    el.innerHTML = list.map(item => {
-      const a = window.DATA.find(item.id);
-      const l = window.API.getById(item.id);
-      if(!a) return '';
-      const price = (l && l.price != null) ? l.price : item.buyPrice;
-      const nv = price * item.qty;
-      const bv = item.buyPrice * item.qty;
-      const pl = nv - bv;
-      const pct = bv > 0 ? (pl / bv) * 100 : 0;
-      return `
-        <div class="result-row" style="padding:12px;border-radius:12px;background:var(--card-2);margin-bottom:8px">
-          <div style="display:flex;align-items:center;gap:10px">
-            <div class="m-card-icon" style="width:32px;height:32px;border-radius:10px">
-              ${assetIcon(a)}
-            </div>
-            <div>
-              <strong style="display:block;font-size:13px">${window.U.esc(a.name)}</strong>
-              <small style="font-size:11px;color:var(--muted)">${window.U.num(item.qty)} × ${formatPrice(a, item.buyPrice)}</small>
-            </div>
-          </div>
-          <div style="display:flex;align-items:center;gap:10px">
-            <div style="text-align:end">
-              <strong style="display:block;font-size:13px;direction:ltr">${formatPrice(a, nv)}</strong>
-              <small style="color:${pl >= 0 ? 'var(--up)' : 'var(--down)'};font-weight:800;direction:ltr">
-                ${pl >= 0 ? '+' : ''}${pct.toFixed(2)}%
-              </small>
-            </div>
-            <button type="button" class="icon-btn" data-pf-del2="${item.ts}"
-              style="width:28px;height:28px;font-size:14px;color:var(--muted)">
-              ${window.Icons.get('trash')}
-            </button>
-          </div>
-        </div>
-      `;
-    }).join('');
+.sec-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text);
+}
+.sec-title svg { width: 18px; height: 18px; color: var(--accent); stroke-width: 2; }
 
-    el.querySelectorAll('[data-pf-del2]').forEach(btn => {
-      btn.addEventListener('click', e => {
-        e.preventDefault();
-        e.stopPropagation();
-        const ts = +btn.dataset.pfDel2;
-        window.Storage.pf.save(window.Storage.pf.get().filter(x => x.ts !== ts));
-        render();
-        renderBankCard();
-      });
-    });
-  }
+.sec-head .link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--accent);
+  background: transparent;
+  border: 0;
+  padding: 6px 10px;
+  border-radius: 8px;
+  transition: background .2s var(--ease-ios);
+}
+.sec-head .link:active { background: var(--accent-soft); }
+.sec-head .link svg { width: 14px; height: 14px; stroke-width: 2.5; }
+.sec-head .muted { font-size: 12px; color: var(--text-muted); font-weight: 600; }
 
-  $('[data-padd]')?.addEventListener('click', e => {
-    e.preventDefault();
-    e.stopPropagation();
-    const id = $('[data-pa]')?.value;
-    const qty = parseFloat($('[data-pq]')?.value);
-    const ppUser = parseFloat($('[data-pp]')?.value);
-    if(!id || !qty || qty <= 0){ toast('مقدار را وارد کنید', 'error'); return; }
-    
-    let buyBase;
-    if(ppUser && !isNaN(ppUser)){
-      buyBase = userToBase(ppUser);
-    } else {
-      const l = window.API.getById(id);
-      if(!l || l.price == null){ toast('قیمت در دسترس نیست', 'error'); return; }
-      buyBase = l.price;
-    }
-    
-    const list = window.Storage.pf.get();
-    list.push({ id, qty, buyPrice: buyBase, ts: Date.now() });
-    window.Storage.pf.save(list);
-    render();
-    renderBankCard();
-    const pq = $('[data-pq]');
-    const ppEl = $('[data-pp]');
-    if(pq) pq.value = '';
-    if(ppEl) ppEl.value = '';
-    toast('اضافه شد ✓', 'success');
-  });
+/* ═══════════════ 14. SCROLL ROW ═══════════════ */
+.scroll-wrap { margin: 0 -14px; padding: 0 14px; overflow: hidden; }
 
-  render();
+.scroll-row {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 0 12px;
+  scroll-behavior: smooth;
+  overscroll-behavior-x: contain;
 }
 
-/* ============================================================
-   ALERTS
-============================================================ */
-function toolAlerts(){
-  openModal(`<span data-icon="bell"></span> هشدار قیمت`, `
-    <div class="form-group">
-      <label>نماد</label>
-      <select class="select" data-al-a>
-        ${window.DATA.ASSETS.map(a => `<option value="${a.id}">${a.name}</option>`).join('')}
-      </select>
-    </div>
-    <div class="form-grid">
-      <div class="form-group">
-        <label>بالاتر از (${unitLabel()})</label>
-        <input class="input" type="number" data-al-up>
-      </div>
-      <div class="form-group">
-        <label>پایین‌تر از (${unitLabel()})</label>
-        <input class="input" type="number" data-al-dn>
-      </div>
-    </div>
-    <button type="button" class="btn btn-primary btn-block" data-al-save>
-      <span data-icon="plus"></span>
-      ذخیره هشدار
-    </button>
-    <div style="margin-top:16px" data-al-list></div>
-  `);
+/* ═══════════════ 15. PORTFOLIO CARD (کارت بانکی) ═══════════════ */
+.portfolio-card-wrap { margin-bottom: 4px; }
 
-  function render(){
-    const list = window.Storage.alerts.get();
-    const el = $('[data-al-list]');
-    if(!el) return;
-    if(!list.length){
-      el.innerHTML = '<div class="empty"><h3>هشداری فعال نیست</h3></div>';
-      return;
-    }
-    el.innerHTML = list.map(al => {
-      const a = window.DATA.find(al.id);
-      const parts = [];
-      if(al.up) parts.push('بالاتر از ' + money(al.up));
-      if(al.dn) parts.push('پایین‌تر از ' + money(al.dn));
-      return `
-        <div class="result-row" style="padding:10px;border-radius:10px;background:var(--card-2);margin-bottom:6px">
-          <span>${window.U.esc(a?.name || '—')} — ${parts.join(' / ')}</span>
-          <button type="button" class="icon-btn" data-al-del="${al.ts}"
-            style="font-size:14px;width:28px;height:28px;color:var(--muted)">
-            ${window.Icons.get('trash')}
-          </button>
-        </div>
-      `;
-    }).join('');
-
-    el.querySelectorAll('[data-al-del]').forEach(b => {
-      b.addEventListener('click', e => {
-        e.preventDefault();
-        e.stopPropagation();
-        const ts = +b.dataset.alDel;
-        window.Storage.alerts.save(window.Storage.alerts.get().filter(x => x.ts !== ts));
-        render();
-      });
-    });
-  }
-
-  $('[data-al-save]')?.addEventListener('click', e => {
-    e.preventDefault();
-    e.stopPropagation();
-    const id = $('[data-al-a]')?.value;
-    const upUser = parseFloat($('[data-al-up]')?.value) || null;
-    const dnUser = parseFloat($('[data-al-dn]')?.value) || null;
-    if(!id || (!upUser && !dnUser)){ toast('حداقل یک شرط وارد کنید', 'error'); return; }
-    const up = upUser ? userToBase(upUser) : null;
-    const dn = dnUser ? userToBase(dnUser) : null;
-    const list = window.Storage.alerts.get();
-    list.push({ id, up, dn, ts: Date.now() });
-    window.Storage.alerts.save(list);
-    render();
-    toast('ذخیره شد ✓', 'success');
-  });
-
-  render();
+.bank-card {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  aspect-ratio: 1.6 / 1;
+  border-radius: 20px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  color: #fff;
+  overflow: hidden;
+  background: linear-gradient(135deg, #10b981 0%, #059669 50%, #065f46 100%);
+  box-shadow:
+    0 12px 40px rgba(16, 185, 129, 0.25),
+    0 4px 12px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transition: transform .3s var(--ease-ios), box-shadow .3s;
+  cursor: pointer;
+  isolation: isolate;
 }
 
-/* ============================================================
-   NOTES
-============================================================ */
-function toolNotes(){
-  const notes = window.Storage.notes.get() || '';
-  openModal(`<span data-icon="note"></span> یادداشت‌ها`, `
-    <textarea class="textarea" data-notes placeholder="یادداشت خود را بنویسید..." style="min-height:220px">${notes}</textarea>
-    <button type="button" class="btn btn-primary btn-block" data-notes-save>
-      <span data-icon="check"></span>
-      ذخیره
-    </button>
-  `);
-  $('[data-notes-save]')?.addEventListener('click', e => {
-    e.preventDefault();
-    e.stopPropagation();
-    const val = $('[data-notes]')?.value || '';
-    window.Storage.notes.save(val);
-    toast('ذخیره شد ✓', 'success');
-    closeModal();
-  });
+.bank-card:active { transform: scale(.985); }
+
+.bank-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(255,255,255,0.18), transparent 50%),
+    radial-gradient(circle at 80% 90%, rgba(0,0,0,0.15), transparent 50%);
+  z-index: 0;
+  pointer-events: none;
 }
 
-/* ============================================================
-   PROFIT
-============================================================ */
-function toolProfit(){
-  const opts = window.DATA.ASSETS.slice(0, 50).map(a => `<option value="${a.id}">${a.name}</option>`).join('');
-  openModal(`<span data-icon="trendingUp"></span> محاسبه سود / زیان`, `
-    <div class="form-group">
-      <label>دارایی</label>
-      <select class="select" data-pr-a>${opts}</select>
-    </div>
-    <div class="form-grid">
-      <div class="form-group">
-        <label>قیمت خرید (${unitLabel()})</label>
-        <input class="input" type="number" placeholder="قیمت واحد" data-pr-buy>
-      </div>
-      <div class="form-group">
-        <label>مقدار</label>
-        <input class="input" type="number" value="1" data-pr-qty>
-      </div>
-    </div>
-    <div class="result-box" data-profit-out></div>
-  `);
-
-  function calc(){
-    const id = $('[data-pr-a]')?.value;
-    const buyUser = parseFloat($('[data-pr-buy]')?.value) || 0;
-    const buyBase = userToBase(buyUser);
-    const qty = parseFloat($('[data-pr-qty]')?.value) || 0;
-    const a = window.DATA.find(id);
-    const l = window.API.getById(id);
-    const out = $('[data-profit-out]');
-    if(!a || !l || l.price == null || !buyBase || !qty){
-      if(out) out.innerHTML = '<div class="result-row"><span>قیمت خرید و مقدار را وارد کنید</span></div>';
-      return;
-    }
-    const nowVal = l.price * qty;
-    const buyVal = buyBase * qty;
-    const pl = nowVal - buyVal;
-    const pct = (pl / buyVal) * 100;
-    const up = pl >= 0;
-
-    if(out) out.innerHTML = `
-      <div class="result-row"><span>ارزش خرید</span><strong>${formatPrice(a, buyVal)}</strong></div>
-      <div class="result-row"><span>ارزش فعلی</span><strong>${formatPrice(a, nowVal)}</strong></div>
-      <div class="result-row result-total">
-        <span>${up ? 'سود' : 'زیان'}</span>
-        <strong style="color:${up ? 'var(--up)' : 'var(--down)'}">
-          ${up ? '+' : ''}${formatPrice(a, Math.abs(pl))} (${up ? '+' : ''}${pct.toFixed(2)}%)
-        </strong>
-      </div>
-    `;
-  }
-  $$('[data-pr-a],[data-pr-buy],[data-pr-qty]').forEach(el => {
-    el.addEventListener('input', calc);
-    el.addEventListener('change', calc);
-  });
-  calc();
+.bank-card::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: repeating-linear-gradient(45deg,
+    transparent 0,
+    transparent 60px,
+    rgba(255, 255, 255, 0.02) 60px,
+    rgba(255, 255, 255, 0.02) 61px);
+  z-index: 0;
+  pointer-events: none;
+  animation: bankShine 20s linear infinite;
 }
 
-/* ============================================================
-   ZAKAT
-============================================================ */
-function toolZakat(){
-  const gold = window.API.getById('gold18');
-  if(!gold || gold.price == null){ toast('در حال دریافت...', 'warning'); return; }
-
-  openModal(`<span data-icon="check"></span> محاسبه زکات طلا`, `
-    <div class="form-grid">
-      <div class="form-group">
-        <label>وزن طلا (گرم)</label>
-        <input class="input" type="number" value="100" step="0.1" data-zw>
-      </div>
-      <div class="form-group">
-        <label>عیار</label>
-        <select class="select" data-zk>
-          <option value="18" selected>۱۸ عیار</option>
-          <option value="24">۲۴ عیار</option>
-          <option value="21">۲۱ عیار</option>
-          <option value="14">۱۴ عیار</option>
-        </select>
-      </div>
-    </div>
-    <div class="result-box" data-zakat-out></div>
-  `);
-
-  const NISAB_GRAM_24K = 87.48;
-
-  function calc(){
-    const w = parseFloat($('[data-zw]')?.value) || 0;
-    const k = parseFloat($('[data-zk]')?.value) || 18;
-    const w24 = w * (k / 24);
-    const out = $('[data-zakat-out]');
-    const reached = w24 >= NISAB_GRAM_24K;
-
-    if(!reached){
-      if(out) out.innerHTML = `
-        <div class="result-row"><span>معادل ۲۴ عیار</span><strong>${window.U.num(w24, 2)} گرم</strong></div>
-        <div class="result-row"><span>نصاب شرعی</span><strong>${window.U.num(NISAB_GRAM_24K, 2)} گرم</strong></div>
-        <div class="result-row result-total"><span>وضعیت</span><strong style="color:var(--warn)">به نصاب نرسیده</strong></div>
-      `;
-      return;
-    }
-
-    const pricePerGram = gold.price * (k / 18);
-    const totalValue = w * pricePerGram;
-    const zakat = totalValue * 0.025;
-
-    if(out) out.innerHTML = `
-      <div class="result-row"><span>معادل ۲۴ عیار</span><strong>${window.U.num(w24, 2)} گرم</strong></div>
-      <div class="result-row"><span>ارزش کل</span><strong>${money(totalValue)}</strong></div>
-      <div class="result-row"><span>نرخ زکات</span><strong>۲.۵٪</strong></div>
-      <div class="result-row result-total"><span>زکات واجب</span><strong>${money(zakat)}</strong></div>
-    `;
-  }
-  $$('[data-zw],[data-zk]').forEach(el => {
-    el.addEventListener('input', calc);
-    el.addEventListener('change', calc);
-  });
-  calc();
+@keyframes bankShine {
+  from { transform: translate(0, 0); }
+  to { transform: translate(-80px, -80px); }
 }
 
-/* ============================================================
-   AVG BUY
-============================================================ */
-function toolAvgBuy(){
-  const opts = window.DATA.ASSETS.slice(0, 50).map(a => `<option value="${a.id}">${a.name}</option>`).join('');
-  openModal(`<span data-icon="barChart"></span> میانگین خرید`, `
-    <div class="form-group">
-      <label>دارایی</label>
-      <select class="select" data-avg-a>${opts}</select>
-    </div>
-    <div id="avg-rows"></div>
-    <button type="button" class="btn btn-ghost btn-block" data-avg-add style="margin-top:8px">
-      <span data-icon="plus"></span>
-      افزودن ردیف
-    </button>
-    <div class="result-box" data-avg-out></div>
-  `);
-
-  function addRow(){
-    const wrap = $('#avg-rows');
-    if(!wrap) return;
-    const row = document.createElement('div');
-    row.setAttribute('data-avg-row', '');
-    row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 40px;gap:8px;margin-bottom:8px';
-    row.innerHTML = `
-      <input class="input" type="number" placeholder="قیمت (${unitLabel()})" data-avg-p>
-      <input class="input" type="number" placeholder="مقدار" data-avg-q>
-      <button type="button" class="btn btn-danger" data-avg-del style="padding:0;width:40px;font-size:18px">×</button>
-    `;
-    wrap.appendChild(row);
-    row.querySelectorAll('input').forEach(i => i.addEventListener('input', calc));
-    row.querySelector('[data-avg-del]')?.addEventListener('click', e => {
-      e.preventDefault();
-      e.stopPropagation();
-      if($$('[data-avg-row]').length > 1){
-        row.remove();
-        calc();
-      }
-    });
-    calc();
-  }
-
-  function calc(){
-    const id = $('[data-avg-a]')?.value;
-    const a = window.DATA.find(id);
-    if(!a) return;
-
-    let totalQty = 0, totalCost = 0;
-    $$('[data-avg-row]').forEach(row => {
-      const pUser = parseFloat(row.querySelector('[data-avg-p]')?.value) || 0;
-      const p = userToBase(pUser);
-      const q = parseFloat(row.querySelector('[data-avg-q]')?.value) || 0;
-      totalQty += q;
-      totalCost += p * q;
-    });
-
-    const avg = totalQty > 0 ? totalCost / totalQty : 0;
-    const l = window.API.getById(id);
-    const nowVal = (l && l.price != null) ? l.price * totalQty : 0;
-    const pl = nowVal - totalCost;
-    const pct = totalCost > 0 ? (pl / totalCost) * 100 : 0;
-
-    const out = $('[data-avg-out]');
-    if(out) out.innerHTML = `
-      <div class="result-row"><span>مجموع مقدار</span><strong>${window.U.num(totalQty, 4)}</strong></div>
-      <div class="result-row"><span>مجموع هزینه</span><strong>${formatPrice(a, totalCost)}</strong></div>
-      <div class="result-row"><span>میانگین خرید</span><strong>${formatPrice(a, avg)}</strong></div>
-      ${l && l.price != null ? `
-        <div class="result-row"><span>قیمت فعلی</span><strong>${formatPrice(a, l.price)}</strong></div>
-        <div class="result-row result-total">
-          <span>سود / زیان</span>
-          <strong style="color:${pl >= 0 ? 'var(--up)' : 'var(--down)'}">
-            ${pl >= 0 ? '+' : ''}${pct.toFixed(2)}%
-          </strong>
-        </div>
-      ` : ''}
-    `;
-  }
-
-  $('[data-avg-add]')?.addEventListener('click', e => {
-    e.preventDefault();
-    e.stopPropagation();
-    addRow();
-  });
-  $('[data-avg-a]')?.addEventListener('change', calc);
-  addRow();
+.bank-card-top {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-/* ============================================================
-   OPEN TOOL
-============================================================ */
-function openTool(tool){
-  if(tool === 'gold') toolGold();
-  else if(tool === 'coin') toolCoin();
-  else if(tool === 'ounce') toolOunce();
-  else if(tool === 'silver') toolSilver();
-  else if(tool === 'conv') toolConv();
-  else if(tool === 'crypto-conv') toolCryptoConv();
-  else if(tool === 'unit-conv') toolUnitConv();
-  else if(tool === 'volume-conv') toolVolumeConv();
-  else if(tool === 'portfolio') toolPortfolio();
-  else if(tool === 'alerts') toolAlerts();
-  else if(tool === 'notes') toolNotes();
-  else if(tool === 'profit') toolProfit();
-  else if(tool === 'zakat') toolZakat();
-  else if(tool === 'avg') toolAvgBuy();
-  else if(tool === 'tv'){
-    if(window.TV){
-      if(TV.isActive()) TV.close();
-      else TV.open();
-    } else {
-      toast('حالت TV در دسترس نیست', 'warning');
-    }
-  }
-  else if(tool === 'fullscreen'){
-    if(!document.fullscreenElement){
-      document.documentElement.requestFullscreen?.().catch(() => {});
-    } else {
-      document.exitFullscreen?.().catch(() => {});
-    }
-  }
-  else if(tool === 'export'){
-    const btn = document.querySelector('[data-action="export"]');
-    if(btn) btn.click();
-  }
+.bank-card-brand { display: flex; align-items: center; gap: 10px; }
+
+.bank-card-brand img {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.18);
+  padding: 6px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
-/* ============================================================
-   SEARCH
-============================================================ */
-let searchIdx = -1;
-let searchResults = [];
-
-function doSearch(query){
-  const res = $('[data-search-results]');
-  if(!res) return;
-
-  const q = (query || '').trim().toLowerCase();
-
-  if(!q || q.length < 2){
-    res.hidden = true;
-    res.innerHTML = '';
-    searchResults = [];
-    searchIdx = -1;
-    return;
-  }
-
-  const list = window.DATA.ASSETS.filter(a =>
-    a.name.toLowerCase().includes(q) ||
-    a.code.toLowerCase().includes(q) ||
-    a.id.toLowerCase().includes(q)
-  ).slice(0, 15);
-
-  searchResults = list;
-  searchIdx = list.length ? 0 : -1;
-
-  if(!list.length){
-    res.innerHTML = '<div class="ms-empty">نتیجه‌ای یافت نشد</div>';
-    res.hidden = false;
-    return;
-  }
-
-  res.innerHTML = list.map((a, i) => {
-    const live = window.API.getById(a.id);
-    const price = live && live.price != null ? formatPrice(a, live.price) : '—';
-    return `
-      <div class="ms-item ${i === 0 ? 'is-active' : ''}" data-idx="${i}">
-        <div class="ms-item-icon">${assetIcon(a)}</div>
-        <div class="ms-item-info">
-          <strong>${window.U.esc(a.name)}</strong>
-          <small>${a.code} · ${window.DATA.CATEGORIES[a.cat]?.label || ''}</small>
-        </div>
-        <div class="ms-item-price">${price}</div>
-      </div>
-    `;
-  }).join('');
-  res.hidden = false;
-
-  res.querySelectorAll('.ms-item').forEach(el => {
-    el.addEventListener('click', e => {
-      e.stopPropagation();
-      pickSearch(searchResults[+el.dataset.idx]);
-    });
-  });
+.bank-card-brand-text strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: 0.3px;
+}
+.bank-card-brand-text small {
+  display: block;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.75);
 }
 
-function pickSearch(asset){
-  if(!asset) return;
-  activeChartId = asset.id;
-  closeSearch();
-  go('chart');
+.bank-card-chip {
+  width: 32px;
+  height: 24px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #f5d76e, #c9a227);
+  position: relative;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+.bank-card-chip::before,
+.bank-card-chip::after {
+  content: '';
+  position: absolute;
+  background: rgba(0, 0, 0, 0.15);
+}
+.bank-card-chip::before {
+  top: 4px; left: 4px; right: 4px; height: 1px;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.15), 0 8px 0 rgba(0, 0, 0, 0.15);
+}
+.bank-card-chip::after {
+  top: 4px; bottom: 4px; left: 50%; width: 1px;
 }
 
-function closeSearch(){
-  const res = $('[data-search-results]');
-  if(res){
-    res.hidden = true;
-    res.innerHTML = '';
-  }
-  const input = $('[data-search-input]');
-  if(input) input.value = '';
-  searchResults = [];
-  searchIdx = -1;
+.bank-card-center {
+  position: relative;
+  z-index: 1;
+  text-align: center;
 }
 
-/* ============================================================
-   EVENT HANDLING
-============================================================ */
-function handleClick(e){
-  const menuBtn = e.target.closest('[data-menu]');
-  if(menuBtn){
-    e.preventDefault();
-    e.stopPropagation();
-    if(window.TV && window.TV.isActive()){ window.TV.close(); return; }
-    document.body.classList.toggle('sidebar-open');
-    return;
-  }
-
-  if(e.target.closest('[data-backdrop]')){
-    e.preventDefault();
-    document.body.classList.remove('sidebar-open');
-    return;
-  }
-
-  const refreshBtn = e.target.closest('[data-action="refresh"]');
-  if(refreshBtn){
-    e.preventDefault();
-    e.stopPropagation();
-    if(refreshBtn.dataset.loading === '1') return;
-    refreshBtn.dataset.loading = '1';
-    window.API.fetchData(true).then(() => {
-      toast('بروزرسانی شد ✓', 'success');
-    }).catch(() => {
-      toast('خطا در بروزرسانی', 'error');
-    }).finally(() => {
-      refreshBtn.dataset.loading = '';
-    });
-    return;
-  }
-
-  const results = $('[data-search-results]');
-  if(results && !results.hidden){
-    if(!e.target.closest('.hdr-search-wrap')) closeSearch();
-  }
-
-  if(e.target.closest('[data-modal-close]')){
-    e.preventDefault();
-    e.stopPropagation();
-    closeModal();
-    return;
-  }
-
-  const tvBtn = e.target.closest('[data-tool="tv"]');
-  if(tvBtn){
-    e.preventDefault();
-    e.stopPropagation();
-    if(window.TV){
-      if(window.TV.isActive()) window.TV.close();
-      else {
-        document.body.classList.remove('sidebar-open');
-        window.TV.open();
-      }
-    }
-    return;
-  }
-
-  const favBtn = e.target.closest('[data-fav-toggle]');
-  if(favBtn){
-    e.preventDefault();
-    e.stopPropagation();
-    const id = favBtn.dataset.favToggle;
-    window.Storage.fav.toggle(id);
-    toast('علاقه‌مندی بروزرسانی شد', 'success');
-    if(currentPage === 'favorites') renderFavs();
-    else if(currentPage === 'markets') renderMarkets();
-    else if(currentPage === 'home'){ renderFeatured(); renderMostUsed(); }
-    else if(currentPage === 'chart'){ renderChartPage(); }
-    return;
-  }
-
-  const pfDel = e.target.closest('[data-pf-del]');
-  if(pfDel){
-    e.preventDefault();
-    e.stopPropagation();
-    const ts = +pfDel.dataset.pfDel;
-    window.Storage.pf.save(window.Storage.pf.get().filter(x => x.ts !== ts));
-    renderBankCard();
-    toast('حذف شد', 'success');
-    return;
-  }
-
-  const card = e.target.closest('[data-card-id]');
-  if(card){
-    if(card.classList.contains('m-card-empty')) return;
-    e.preventDefault();
-    e.stopPropagation();
-    activeChartId = card.dataset.cardId;
-    go('chart');
-    return;
-  }
-
-  const routeBtn = e.target.closest('[data-route]');
-  if(routeBtn){
-    e.preventDefault();
-    e.stopPropagation();
-    go(routeBtn.dataset.route);
-    return;
-  }
-
-  const toolBtn = e.target.closest('[data-tool]');
-  if(toolBtn){
-    e.preventDefault();
-    e.stopPropagation();
-    document.body.classList.remove('sidebar-open');
-    openTool(toolBtn.dataset.tool);
-    return;
-  }
-
-  const chip = e.target.closest('[data-filter]');
-  if(chip){
-    e.preventDefault();
-    e.stopPropagation();
-    $$('[data-filters] .chip').forEach(c => c.classList.remove('is-active'));
-    chip.classList.add('is-active');
-    filter = chip.dataset.filter;
-    renderMarkets();
-    return;
-  }
-
-  const unitBtn = e.target.closest('[data-unit]');
-  if(unitBtn){
-    e.preventDefault();
-    e.stopPropagation();
-    const newUnit = unitBtn.dataset.unit;
-    if(getUnit() === newUnit) return;
-    window.CFG.set('currency', newUnit);
-    $$('[data-unit]').forEach(b => b.classList.toggle('is-active', b.dataset.unit === newUnit));
-    refreshAll();
-    toast(newUnit === 'toman' ? 'واحد: تومان' : 'واحد: ریال', 'success');
-    return;
-  }
-
-  const sw = e.target.closest('.switch');
-  if(sw){
-    e.preventDefault();
-    e.stopPropagation();
-    sw.classList.toggle('is-on');
-    const k = sw.dataset.toggle;
-    if(k === 'darkTheme'){
-      const on = sw.classList.contains('is-on');
-      window.CFG.set('theme', on ? 'dark' : 'light');
-      document.body.classList.toggle('dark', on);
-    } else if(k){
-      window.CFG.set(k, sw.classList.contains('is-on'));
-    }
-    return;
-  }
-
-  const pill = e.target.closest('.pills button[data-period]');
-  if(pill){
-    e.preventDefault();
-    e.stopPropagation();
-    const parent = pill.parentElement;
-    parent.querySelectorAll('button').forEach(b => b.classList.remove('is-active'));
-    pill.classList.add('is-active');
-    window.CFG.set('chartPeriod', pill.dataset.period);
-    if(currentPage === 'chart') renderChartPage();
-    if(currentPage === 'home') renderHomeChart();
-    return;
-  }
-
-  if(e.target.closest('[data-action="reset"]')){
-    e.preventDefault();
-    e.stopPropagation();
-    if(confirm('همه داده‌ها بازنشانی شود؟')){
-      window.CFG.reset();
-      window.Storage.clear();
-      location.reload();
-    }
-    return;
-  }
-
-  if(e.target.closest('[data-action="export"]')){
-    e.preventDefault();
-    e.stopPropagation();
-    const data = {
-      cfg: window.CFG._c,
-      fav: window.Storage.fav.get(),
-      alerts: window.Storage.alerts.get(),
-      pf: window.Storage.pf.get(),
-      notes: window.Storage.notes.get(),
-      userName: getUserName(),
-      date: new Date().toISOString()
-    };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'gheymato-backup-' + new Date().toISOString().slice(0, 10) + '.json';
-    a.click();
-    URL.revokeObjectURL(url);
-    toast('دانلود شد ✓', 'success');
-    return;
-  }
+.bank-card-label {
+  display: block;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 4px;
+  letter-spacing: 0.5px;
 }
 
-/* ============================================================
-   REFRESH ALL
-============================================================ */
-function refreshAll(){
-  if(currentPage === 'home'){
-    renderBankCard();
-    renderFeatured();
-    renderMostUsed();
-    renderCats();
-    renderTools();
-    renderHomeChart();
-  }
-  if(currentPage === 'markets') renderMarkets();
-  if(currentPage === 'chart') renderChartPage();
-  if(currentPage === 'compare') renderCompare();
-  if(currentPage === 'favorites') renderFavs();
-  renderHdrTicker();
-  if(window.TV && window.TV.isActive()) window.TV.refresh();
+.bank-card-value {
+  display: block;
+  font-size: 26px;
+  font-weight: 900;
+  color: #fff;
+  direction: ltr;
+  letter-spacing: -0.8px;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }
 
-/* ============================================================
-   HELPERS
-============================================================ */
-function checkAlerts(){
-  const list = window.Storage.alerts.get();
-  if(!list.length) return;
-  const remaining = [];
-  list.forEach(al => {
-    const l = window.API.getById(al.id);
-    if(!l || l.price == null){ remaining.push(al); return; }
-    let fired = false;
-    if(al.up && l.price >= al.up) fired = true;
-    if(al.dn && l.price <= al.dn) fired = true;
-    if(fired){
-      const a = window.DATA.find(al.id);
-      toast(`🔔 ${a?.name || al.id}`, 'warning');
-    } else {
-      remaining.push(al);
-    }
-  });
-  if(remaining.length !== list.length) window.Storage.alerts.save(remaining);
+.bank-card-change {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 3px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  font-size: 11.5px;
+  font-weight: 800;
+  direction: ltr;
+  color: #fff;
 }
 
-/* ============================================================
-   INIT
-============================================================ */
-function init(){
-  window.CFG.load();
-  document.body.classList.toggle('dark', window.CFG.get('theme') === 'dark');
-
-  if(window.Icons && window.Icons.hydrate) window.Icons.hydrate();
-  if(window.Icons && window.Icons.installImageFallback) window.Icons.installImageFallback();
-
-  const unit = getUnit();
-  $$('[data-unit]').forEach(b => b.classList.toggle('is-active', b.dataset.unit === unit));
-
-  const unInput = $('[data-input="userName"]');
-  if(unInput){
-    unInput.value = getUserName() === 'کاربر مهمان' ? '' : getUserName();
-    unInput.addEventListener('input', window.U.debounce(e => {
-      const v = e.target.value.trim();
-      saveUserName(v);
-      if(currentPage === 'home') renderBankCard();
-    }, 300));
-  }
-
-  const hash = (location.hash || '').replace('#', '');
-  go(PAGES.includes(hash) ? hash : 'home');
-
-  document.addEventListener('click', handleClick, true);
-
-  document.addEventListener('keydown', e => {
-    if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k'){
-      e.preventDefault();
-      const input = $('[data-search-input]');
-      if(input) input.focus();
-    }
-    if(e.key === 'Escape'){
-      closeSearch();
-      closeModal();
-      document.body.classList.remove('sidebar-open');
-    }
-  });
-
-  const si = $('[data-search-input]');
-  if(si){
-    si.addEventListener('input', window.U.debounce(e => doSearch(e.target.value), 150));
-  }
-
-  const iv = $('[data-input="interval"]');
-  if(iv){
-    iv.value = window.CFG.get('refreshInterval');
-    iv.addEventListener('change', e => {
-      const v = parseInt(e.target.value);
-      window.CFG.set('refreshInterval', v);
-      window.API.start(v);
-      toast('فاصله: ' + (v / 1000) + 's', 'success');
-    });
-  }
-
-  window.addEventListener('online', () => {
-    toast('اتصال برقرار شد ✓', 'success');
-    window.API.fetchData(true).catch(() => {});
-  });
-
-  window.addEventListener('offline', () => {
-    toast('حالت آفلاین', 'warning');
-  });
-
-  window.API.subscribe(() => {
-    refreshAll();
-    checkAlerts();
-  });
-
-  renderHdrTicker();
+.bank-card-bottom {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-/* ============================================================
-   PUBLIC API
-============================================================ */
-return {
-  init, go, toast, refreshAll,
-  openModal, closeModal, closeSearch,
-  renderChartPage, renderMarkets, renderFavs,
-  renderBankCard, renderFeatured, renderMostUsed,
-  renderTools, renderCats, renderHdrTicker,
-  getUserName, saveUserName,
-  formatPrice, formatPriceWithUnit, fullUnitLabel,
-  baseToUser, userToBase,
-  openTool,
-  toolGold, toolCoin, toolOunce, toolSilver,
-  toolConv, toolCryptoConv, toolUnitConv, toolVolumeConv,
-  toolPortfolio, toolAlerts, toolNotes,
-  toolProfit, toolZakat, toolAvgBuy
-};
+.bank-card-user { display: flex; align-items: center; gap: 10px; }
 
-})();
+.bank-card-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 900;
+  color: #fff;
+  flex-shrink: 0;
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+}
+
+.bank-card-user-info strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 800;
+  color: #fff;
+}
+.bank-card-user-info small {
+  display: block;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.bank-card-add {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 900;
+  transition: transform .18s var(--ease-ios), background .2s;
+  flex-shrink: 0;
+}
+.bank-card-add:active {
+  transform: scale(.9);
+  background: rgba(255, 255, 255, 0.3);
+}
+.bank-card-add svg { width: 18px; height: 18px; stroke-width: 2.5; }
+
+.bank-card.is-empty {
+  background: linear-gradient(135deg, #2a3a34 0%, #1a2a25 50%, #0f1a16 100%);
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.4),
+    0 4px 12px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.bank-card.is-empty .bank-card-value { color: rgba(255, 255, 255, 0.6); }
+.bank-card.is-empty .bank-card-chip { opacity: 0.4; }
+
+/* ═══════════════ 16. MARKET CARD ═══════════════ */
+.m-card {
+  flex: 0 0 auto;
+  width: 155px;
+  padding: 12px;
+  border-radius: 15px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  scroll-snap-align: start;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 96px;
+  transition: transform .2s var(--ease-ios), background .2s;
+  animation: cardSlideIn .4s var(--ease-ios) backwards;
+  will-change: transform;
+}
+.m-card:active {
+  transform: scale(.97);
+  background: var(--card-2);
+}
+
+.m-card-empty { opacity: 0.5; cursor: not-allowed; }
+.m-card-empty:active { transform: none; }
+.m-card-empty .m-card-price { color: var(--text-muted); }
+
+.m-card-head { display: flex; align-items: center; gap: 8px; }
+
+.m-card-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  background: var(--card-2);
+}
+.m-card-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 5px;
+}
+.m-card-icon svg { width: 17px; height: 17px; stroke-width: 2; }
+.m-card-icon.gold { background: rgba(229, 185, 110, .14); color: #c8974a; }
+.m-card-icon.blue { background: rgba(91, 157, 217, .12); color: #3d7eb8; }
+.m-card-icon.purple { background: rgba(155, 125, 219, .12); color: #7558b8; }
+.m-card-icon.orange { background: rgba(232, 165, 92, .12); color: #c87c3a; }
+.m-card-icon.green { background: rgba(16, 162, 110, .12); color: #10a26e; }
+.m-card-icon.cyan { background: rgba(221, 126, 161, .12); color: #b85c7e; }
+
+.m-card-info { flex: 1; min-width: 0; }
+.m-card-info strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.m-card-info small { display: block; font-size: 10px; color: var(--text-muted); font-weight: 600; }
+
+.m-card-price {
+  font-size: 13.5px;
+  font-weight: 900;
+  color: var(--text);
+  direction: ltr;
+  text-align: right;
+  letter-spacing: -.3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.m-card-change {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  border-radius: 7px;
+  font-size: 10.5px;
+  font-weight: 800;
+  direction: ltr;
+  align-self: flex-start;
+}
+.m-card-change.up { background: var(--up-soft); color: var(--up); }
+.m-card-change.down { background: var(--down-soft); color: var(--down); }
+.m-card-change.muted { background: rgba(122, 138, 131, 0.15); color: var(--muted); }
+
+@keyframes cardSlideIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.m-card:nth-child(1) { animation-delay: .02s; }
+.m-card:nth-child(2) { animation-delay: .04s; }
+.m-card:nth-child(3) { animation-delay: .06s; }
+.m-card:nth-child(4) { animation-delay: .08s; }
+.m-card:nth-child(5) { animation-delay: .10s; }
+.m-card:nth-child(6) { animation-delay: .12s; }
+
+/* ═══════════════ 17. CATEGORIES ═══════════════ */
+.cat-chip {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 90px;
+  padding: 12px 10px;
+  border-radius: 15px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 700;
+  scroll-snap-align: start;
+  transition: transform .2s var(--ease-ios), background .2s;
+}
+.cat-chip:active { transform: scale(.95); background: var(--card-2); }
+.cat-chip-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cat-chip-icon svg { width: 18px; height: 18px; stroke-width: 2; }
+.cat-chip small { font-size: 10px; color: var(--text-muted); }
+
+/* ═══════════════ 18. TOOLS GRID ═══════════════ */
+.tools-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 10px;
+}
+
+.tool-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 8px;
+  border-radius: 15px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  font-size: 11.5px;
+  font-weight: 700;
+  text-align: center;
+  transition: transform .2s var(--ease-ios), background .2s;
+  animation: cardSlideIn .4s var(--ease-ios) backwards;
+}
+.tool-chip:active { transform: scale(.94); background: var(--card-2); }
+.tool-chip-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tool-chip-icon svg { width: 20px; height: 20px; stroke-width: 1.75; }
+.tool-chip-name { line-height: 1.2; }
+
+/* ═══════════════ 19. BANNERS ═══════════════ */
+.banner-single {
+  margin: 16px 0;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--card);
+  border: 1px solid var(--border);
+  position: relative;
+  min-height: 100px;
+  animation: cardSlideIn .4s var(--ease-ios) backwards;
+}
+.banner-single img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 200px;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
+/* ═══════════════ 20. PANEL ═══════════════ */
+.panel {
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  position: relative;
+}
+.panel canvas { display: block; width: 100%; height: 200px; }
+
+/* ═══════════════ 21. PILLS ═══════════════ */
+.pills {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  background: var(--card-2);
+  border-radius: 11px;
+  border: 1px solid var(--border);
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+.pills button {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: background .25s var(--ease-ios), color .25s var(--ease-ios), transform .15s var(--ease-ios);
+}
+.pills button:active { transform: scale(.95); }
+.pills button.is-active { background: var(--accent); color: #fff; }
+
+/* ═══════════════ 22. CHIPS ═══════════════ */
+.chips {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 4px 0 10px;
+  margin: 0 -14px;
+  padding-left: 14px;
+  padding-right: 14px;
+}
+.chip {
+  flex: 0 0 auto;
+  padding: 7px 14px;
+  border-radius: 11px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text-2);
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: transform .18s var(--ease-ios), background .2s, color .2s;
+}
+.chip:active { transform: scale(.95); }
+.chip.is-active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* ═══════════════ 23. GRID ASSETS ═══════════════ */
+.grid-assets {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+/* ═══════════════ 24. UNIT TOGGLE ═══════════════ */
+.unit-toggle {
+  display: inline-flex;
+  gap: 3px;
+  padding: 3px;
+  background: var(--card-2);
+  border-radius: 11px;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.unit-toggle button {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  transition: background .2s var(--ease-ios), color .2s;
+}
+.unit-toggle button.is-active { background: var(--accent); color: #fff; }
+
+/* ═══════════════ 25. SETTINGS ═══════════════ */
+.set-card {
+  padding: 18px;
+  border-radius: 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  margin-bottom: 14px;
+}
+.set-card h3 {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.set-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.set-row:last-child { border-bottom: 0; padding-bottom: 0; }
+.set-row > div:first-child { flex: 1; min-width: 0; }
+.set-row span { display: block; font-size: 13px; font-weight: 600; color: var(--text); }
+.set-row small { display: block; font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+.switch {
+  width: 44px;
+  height: 26px;
+  border-radius: 13px;
+  background: var(--card-2);
+  border: 1px solid var(--border);
+  position: relative;
+  padding: 0;
+  transition: background .3s var(--ease-ios);
+  flex-shrink: 0;
+}
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: all .3s var(--ease-ios);
+}
+.switch.is-on { background: var(--accent); border-color: var(--accent); }
+.switch.is-on::after { left: 20px; background: #fff; }
+
+/* ═══════════════ 26. EMPTY ═══════════════ */
+.empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--text-muted);
+}
+.empty h3 { font-size: 15px; font-weight: 800; color: var(--text); margin-bottom: 6px; }
+.empty p { font-size: 12.5px; }
+
+/* ═══════════════ 27. BUTTONS ═══════════════ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-radius: 13px;
+  border: 1px solid transparent;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: transform .18s var(--ease-ios), background .2s;
+}
+.btn svg { width: 16px; height: 16px; stroke-width: 2; }
+.btn:active { transform: scale(.97); }
+.btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn-ghost { background: var(--card); color: var(--text-2); border-color: var(--border); }
+.btn-secondary { background: var(--card-2); color: var(--text); border-color: var(--border); }
+.btn-danger { background: var(--down-soft); color: var(--down); border-color: transparent; }
+.btn-block { width: 100%; margin-top: 12px; }
+.btn-sm { padding: 7px 12px; font-size: 12px; border-radius: 10px; }
+.btn-lg { padding: 13px 22px; font-size: 14px; border-radius: 15px; }
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  transition: transform .18s var(--ease-ios);
+}
+.icon-btn:active { transform: scale(.9); }
+.icon-btn svg { width: 100%; height: 100%; stroke-width: 1.75; }
+
+/* ═══════════════ 28. FORMS ═══════════════ */
+.input, .textarea, .select {
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: 13px;
+  border: 1px solid var(--border);
+  background: var(--card-2);
+  color: var(--text);
+  font-size: 13.5px;
+  transition: border-color .25s var(--ease-ios), box-shadow .25s var(--ease-ios);
+  -webkit-appearance: none;
+  appearance: none;
+}
+.input:focus, .textarea:focus, .select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  outline: none;
+}
+.input::placeholder, .textarea::placeholder {
+  color: var(--text-muted);
+  opacity: .7;
+}
+.textarea { resize: vertical; min-height: 100px; line-height: 1.7; }
+.select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237a8a83' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left 12px center;
+  padding-left: 34px;
+}
+
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.form-group { margin-bottom: 10px; }
+.form-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-2);
+  margin-bottom: 6px;
+}
+
+/* ═══════════════ 29. RESULT BOX ═══════════════ */
+.result-box {
+  padding: 14px;
+  border-radius: 13px;
+  background: var(--card-2);
+  border: 1px solid var(--border);
+  margin-top: 12px;
+}
+.result-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--border);
+  font-size: 13px;
+}
+.result-row:last-child { border-bottom: 0; }
+.result-row span { color: var(--text-muted); font-size: 12.5px; }
+.result-row strong { color: var(--text); font-weight: 800; direction: ltr; }
+.result-row.result-total {
+  border-top: 1.5px solid var(--accent);
+  border-bottom: 0;
+  margin-top: 6px;
+  padding-top: 12px;
+  font-size: 14px;
+}
+.result-row.result-total span { color: var(--text); font-weight: 800; }
+.result-row.result-total strong { color: var(--accent); font-size: 15px; }
+
+/* ═══════════════ 30. MODAL ═══════════════ */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .3s var(--ease-ios), visibility .3s;
+}
+.modal.is-open { opacity: 1; visibility: visible; }
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, .6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.modal-sheet {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  max-height: 85vh;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: var(--shadow-xl);
+  transform: translateY(20px) scale(.98);
+  transition: transform .35s var(--ease-ios);
+}
+.modal.is-open .modal-sheet { transform: translateY(0) scale(1); }
+.modal-head {
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.modal-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text);
+}
+.modal-title svg { width: 18px; height: 18px; color: var(--accent); stroke-width: 2; }
+.modal-head .icon-btn { width: 32px; height: 32px; font-size: 22px; color: var(--text-muted); }
+.modal-body { padding: 18px; overflow-y: auto; flex: 1; }
+
+/* ═══════════════ 31. TOAST ═══════════════ */
+.toast {
+  position: fixed;
+  bottom: 90px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  z-index: 500;
+  padding: 12px 20px;
+  border-radius: 15px;
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: var(--shadow-lg);
+  opacity: 0;
+  visibility: hidden;
+  transition: all .35s var(--ease-ios);
+  max-width: calc(100% - 40px);
+  text-align: center;
+}
+.toast.is-show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+.toast.success { background: var(--up); color: #fff; border-color: transparent; }
+.toast.error { background: var(--down); color: #fff; border-color: transparent; }
+.toast.warning { background: var(--warn); color: #fff; border-color: transparent; }
+
+/* ═══════════════ 32. MOBILE NAV ═══════════════ */
+.mobile-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 25;
+  height: 64px;
+  padding: 0 6px;
+  padding-bottom: var(--safe-bottom);
+  background: var(--bg-glass);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+}
+.mnav-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 4px;
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 11px;
+  transition: color .25s var(--ease-ios), transform .18s var(--ease-ios);
+}
+.mnav-btn svg { width: 20px; height: 20px; stroke-width: 1.75; }
+.mnav-btn.is-active { color: var(--accent); }
+.mnav-btn:active { transform: scale(.9); }
+
+/* ═══════════════ 33. RESPONSIVE ═══════════════ */
+@media (min-width: 1024px) {
+  .sidebar {
+    position: sticky;
+    top: 0;
+    transform: translateX(0);
+    height: 100vh;
+    padding-top: 0;
+  }
+  body.sidebar-open .sidebar { transform: translateX(0); }
+  .backdrop { display: none !important; }
+  .mobile-nav { display: none; }
+  .app-header [data-menu] { display: none; }
+  .content {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px 24px 40px;
+  }
+  .scroll-wrap { margin: 0; padding: 0; }
+  .chips { margin: 0; padding: 4px 0 10px; }
+  .grid-assets { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+  .tools-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
+  .bank-card { max-width: 500px; margin: 0 auto; }
+}
+
+@media (max-width: 1023px) {
+  .content { padding: 16px 14px 90px; }
+}
+
+@media (max-width: 380px) {
+  .content { padding: 14px 12px 86px; }
+  .app-header { padding: 0 10px; gap: 6px; height: 56px; }
+  .hdr-btn { width: 38px; height: 38px; min-width: 38px; flex: 0 0 38px; border-radius: 11px; }
+  .hdr-btn svg { width: 17px; height: 17px; }
+  .hdr-search { height: 38px; padding: 0 10px; gap: 8px; border-radius: 11px; }
+  .hdr-search input { font-size: 12px; }
+  .hdr-search-icon { flex: 0 0 16px; width: 16px; height: 16px; }
+  .m-card { width: 145px; min-height: 92px; }
+  .tools-grid { grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 8px; }
+  .tool-chip { padding: 12px 6px; }
+  .tool-chip-icon { width: 34px; height: 34px; }
+  .grid-assets { grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); gap: 6px; }
+  .bank-card { padding: 18px; }
+  .bank-card-value { font-size: 22px; }
+}
+
+@media (min-width: 481px) and (max-width: 1023px) {
+  .grid-assets { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+  .tools-grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); }
+}
+
+/* ═══════════════ 34. UTILITY ═══════════════ */
+.up { color: var(--up); }
+.down { color: var(--down); }
+.muted { color: var(--text-muted); }
+[hidden] { display: none !important; }
+
+/* ═══════════════ 35. حذف کامل hover روی موبایل ═══════════════ */
+@media (hover: hover) and (pointer: fine) {
+  /* روی دسکتاپ، هیچ تغییر hover اعمال نمی‌شود تا پرش نداشته باشیم */
+}
+
+/* ═══════════════ 36. ANIMATIONS ═══════════════ */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes rippleAnim {
+  to { transform: scale(4); opacity: 0; }
+}
+
+/* ═══════════════ 37. CHART HEADER ═══════════════ */
+.chart-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  margin-bottom: 12px;
+  animation: cardSlideIn .4s var(--ease-ios) backwards;
+}
+
+.chart-header-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: var(--card-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.chart-header-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 8px;
+}
+
+.chart-header-icon svg {
+  width: 26px;
+  height: 26px;
+  stroke-width: 2;
+  color: var(--accent);
+}
+
+.chart-header-info { flex: 1; min-width: 0; }
+
+.chart-header-info strong {
+  display: block;
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--text);
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chart-header-info small {
+  display: block;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  font-weight: 600;
+  direction: ltr;
+  text-align: right;
+}
+
+.chart-fav {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--card-2);
+  border: 1px solid var(--border);
+  font-size: 20px;
+  color: var(--dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform .2s var(--ease-ios), color .2s;
+  flex-shrink: 0;
+  padding: 0;
+}
+.chart-fav:active { transform: scale(.9); }
+.chart-fav.is-fav {
+  color: var(--warn);
+  background: var(--warn-soft);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+.chart-fav svg { width: 22px; height: 22px; stroke-width: 2; }
+
+/* ═══════════════ 38. CHART MAIN ═══════════════ */
+.chart-main {
+  padding: 24px 16px 20px;
+  border-radius: 18px;
+  background: linear-gradient(160deg, var(--card-2), var(--card));
+  border: 1px solid var(--border);
+  margin-bottom: 16px;
+  text-align: center;
+  animation: cardSlideIn .4s var(--ease-ios) backwards;
+  animation-delay: .05s;
+}
+
+.chart-price {
+  font-size: 34px;
+  font-weight: 900;
+  color: var(--text);
+  direction: ltr;
+  letter-spacing: -0.8px;
+  margin-bottom: 10px;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  word-break: break-all;
+}
+
+.chart-change {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 16px;
+  border-radius: 11px;
+  font-size: 14px;
+  font-weight: 800;
+  direction: ltr;
+  margin-bottom: 10px;
+}
+.chart-change.up { background: var(--up-soft); color: var(--up); }
+.chart-change.down { background: var(--down-soft); color: var(--down); }
+
+.chart-main-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+.chart-main-meta span { display: inline-flex; align-items: center; }
+.chart-main-meta span:empty { display: none; }
+
+/* ═══════════════ 39. CHART CANVAS ═══════════════ */
+.chart-canvas-wrap {
+  position: relative;
+  height: 280px;
+  width: 100%;
+}
+
+.chart-canvas-wrap canvas {
+  cursor: crosshair;
+  touch-action: pan-y;
+}
+
+/* ─── Tooltip نمودار ─── */
+.chart-tooltip {
+  position: fixed;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(10, 19, 16, 0.98);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .2s var(--ease-ios);
+  z-index: 10000;
+  direction: rtl;
+  white-space: nowrap;
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  font-family: 'Dana', sans-serif;
+  line-height: 1.5;
+}
+
+/* ─── Crosshair ─── */
+.chart-crosshair {
+  position: fixed;
+  width: 1.5px;
+  background: linear-gradient(to bottom, transparent, #10b981, transparent);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .15s;
+  z-index: 9999;
+}
+
+/* ═══════════════ 40. CHART QUESTIONS ═══════════════ */
+.chart-questions-full {
+  margin: 20px 0;
+  border-radius: 20px;
+  background: linear-gradient(160deg, var(--card), var(--bg));
+  border: 1px solid var(--border);
+  overflow: hidden;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  animation: cardSlideIn .4s var(--ease-ios) backwards;
+  animation-delay: .1s;
+}
+
+.chart-q-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), transparent);
+  border-bottom: 1px solid var(--border);
+}
+
+.chart-q-title {
+  font-size: 15px;
+  font-weight: 900;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.chart-q-title svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2;
+  color: var(--accent);
+}
+
+.chart-q-date {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+  background: var(--card-2);
+  padding: 4px 10px;
+  border-radius: 8px;
+}
+
+.chart-q-list {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chart-q-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--card-2);
+  border: 1px solid var(--border);
+  transition: transform .2s var(--ease-ios), background .2s, border-color .2s;
+  animation: slideUp .4s var(--ease-ios) backwards;
+}
+
+.chart-q-item:nth-child(1) { animation-delay: .04s; }
+.chart-q-item:nth-child(2) { animation-delay: .06s; }
+.chart-q-item:nth-child(3) { animation-delay: .08s; }
+.chart-q-item:nth-child(4) { animation-delay: .10s; }
+.chart-q-item:nth-child(5) { animation-delay: .12s; }
+.chart-q-item:nth-child(6) { animation-delay: .14s; }
+.chart-q-item:nth-child(7) { animation-delay: .16s; }
+.chart-q-item:nth-child(8) { animation-delay: .18s; }
+.chart-q-item:nth-child(9) { animation-delay: .20s; }
+.chart-q-item:nth-child(10) { animation-delay: .22s; }
+.chart-q-item:nth-child(11) { animation-delay: .24s; }
+.chart-q-item:nth-child(12) { animation-delay: .26s; }
+.chart-q-item:nth-child(13) { animation-delay: .28s; }
+.chart-q-item:nth-child(14) { animation-delay: .30s; }
+.chart-q-item:nth-child(15) { animation-delay: .32s; }
+
+.chart-q-body { flex: 1; min-width: 0; }
+
+.chart-q-question {
+  display: block;
+  font-size: 13px;
+  color: var(--text-2);
+  font-weight: 600;
+  line-height: 1.7;
+  margin-bottom: 8px;
+}
+
+.chart-q-answer {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--text);
+  direction: ltr;
+  font-variant-numeric: tabular-nums;
+  padding: 6px 14px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.chart-q-answer.up {
+  color: var(--up);
+  background: var(--up-soft);
+  border-color: rgba(16, 185, 129, 0.2);
+}
+.chart-q-answer.down {
+  color: var(--down);
+  background: var(--down-soft);
+  border-color: rgba(239, 68, 68, 0.2);
+}
+.chart-q-answer.neutral {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.chart-q-date-tiny {
+  display: block;
+  font-size: 10.5px;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-top: 6px;
+  direction: rtl;
+  text-align: right;
+}
+
+/* ═══════════════ 41. BUBBLE ANALYSIS ═══════════════ */
+.bubble-analysis {
+  margin: 16px 0;
+  border-radius: 16px;
+  background: linear-gradient(160deg, rgba(200, 151, 74, 0.08), var(--card));
+  border: 1px solid rgba(200, 151, 74, 0.25);
+  overflow: hidden;
+  animation: cardSlideIn .4s var(--ease-ios) backwards;
+  animation-delay: .15s;
+}
+.bubble-analysis[hidden] { display: none; }
+
+.bubble-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, rgba(200, 151, 74, 0.12), transparent);
+  border-bottom: 1px solid rgba(200, 151, 74, 0.2);
+}
+
+.bubble-title {
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--gold);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bubble-title svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2;
+  color: var(--gold);
+}
+
+.bubble-body {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bubble-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.bubble-row span {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.bubble-row strong {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text);
+  direction: ltr;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.bubble-row.bubble-total {
+  background: rgba(200, 151, 74, 0.12);
+  border-color: rgba(200, 151, 74, 0.3);
+  margin-top: 4px;
+}
+.bubble-row.bubble-total span { color: var(--text); font-weight: 800; }
+.bubble-row.bubble-total strong { font-size: 15px; }
+
+.bubble-positive { color: #ef4444 !important; }
+.bubble-negative { color: #10b981 !important; }
+.bubble-neutral { color: var(--text-muted) !important; }
+
+.bubble-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 800;
+  direction: ltr;
+}
+.bubble-badge.bubble-positive {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+.bubble-badge.bubble-negative {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+.bubble-badge.bubble-neutral {
+  background: rgba(122, 138, 131, 0.15);
+  color: var(--muted);
+}
+
+/* ═══════════════ 42. COMPARE ═══════════════ */
+.compare-pick {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.compare-pick .vs {
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--text-muted);
+  padding: 0 4px;
+}
+.cmp-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+/* ═══════════════ 43. HEATMAP GRID ═══════════════ */
+.heat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.heat-cell {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: 14px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform .2s var(--ease-ios);
+  border: 1.5px solid transparent;
+}
+
+.heat-cell:active { transform: scale(.95); }
+
+.heat-cell.up {
+  background: linear-gradient(160deg, rgba(16, 185, 129, 0.28), rgba(16, 185, 129, 0.08));
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.heat-cell.down {
+  background: linear-gradient(160deg, rgba(239, 68, 68, 0.28), rgba(239, 68, 68, 0.08));
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+.heat-cell.neutral {
+  background: linear-gradient(160deg, var(--card-2), var(--card));
+  border-color: var(--border);
+}
+
+.heat-cell-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.heat-cell-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.heat-cell-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 4px;
+}
+
+.heat-cell-icon svg {
+  width: 14px;
+  height: 14px;
+  color: #fff;
+  stroke-width: 2;
+}
+
+.heat-cell-name {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: right;
+  flex: 1;
+}
+
+.heat-cell-price {
+  font-size: 11.5px;
+  font-weight: 900;
+  color: var(--text);
+  direction: ltr;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.heat-cell-chg {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  font-size: 9.5px;
+  font-weight: 900;
+  direction: ltr;
+  background: rgba(0, 0, 0, 0.25);
+  color: #fff;
+  align-self: flex-end;
+}
+
+.heat-cell.up .heat-cell-chg { background: rgba(16, 185, 129, 0.4); }
+.heat-cell.down .heat-cell-chg { background: rgba(239, 68, 68, 0.4); }
+
+.view-toggle {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--card-2);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.view-toggle button {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .18s var(--ease-ios);
+  padding: 0;
+}
+
+.view-toggle button svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
+}
+
+.view-toggle button.is-active {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* ═══════════════ 44. RESPONSIVE — Chart ═══════════════ */
+@media (max-width: 480px) {
+  .chart-price { font-size: 26px; }
+  .chart-header-icon { width: 44px; height: 44px; }
+  .chart-header-info strong { font-size: 14px; }
+  .chart-canvas-wrap { height: 220px; }
+  .chart-q-item { padding: 12px 14px; gap: 10px; }
+  .chart-q-question { font-size: 12px; }
+  .chart-q-answer { font-size: 13px; padding: 5px 12px; }
+  .chart-q-header { padding: 12px 16px; }
+  .chart-q-list { padding: 12px; }
+  .bubble-body { padding: 12px; }
+  .heat-grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 6px; }
+  .heat-cell { padding: 8px; border-radius: 12px; }
+  .heat-cell-price { font-size: 10.5px; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TV MODE
+═══════════════════════════════════════════════════════════ */
+.tv[hidden] { display: none !important; }
+
+.tv {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: tvFadeIn .5s var(--ease-ios);
+}
+
+@keyframes tvFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.tv-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 24px;
+  padding-top: calc(16px + var(--safe-top));
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), transparent);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.tv-brand { display: flex; align-items: center; gap: 12px; }
+
+.tv-brand img {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 6px;
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.2);
+}
+
+.tv-brand strong {
+  display: block;
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--accent);
+}
+
+.tv-brand small {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.tv-ctrl { display: flex; gap: 8px; }
+
+.tv-ctrl .icon-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  background: var(--card);
+  border: 1px solid var(--border-2);
+  color: var(--text-2);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: transform .18s var(--ease-ios), background .2s, color .2s;
+  flex-shrink: 0;
+}
+.tv-ctrl .icon-btn:active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--accent);
+  transform: scale(.92);
+}
+.tv-ctrl .icon-btn svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.85;
+}
+
+.tv-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  padding: 24px;
+}
+
+.tv-ticker {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 44px;
+  background: linear-gradient(180deg, rgba(16, 26, 23, 0.95), rgba(16, 26, 23, 1));
+  border-top: 1px solid var(--border);
+  overflow: hidden;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+}
+body:not(.dark) .tv-ticker {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 1));
+}
+.tv-ticker-track {
+  display: flex;
+  gap: 32px;
+  padding: 0 24px;
+  animation: tvTickerScroll 90s linear infinite;
+  white-space: nowrap;
+  will-change: transform;
+}
+@keyframes tvTickerScroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.tv-ticker-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.tv-ticker-item .name { color: var(--text-2); }
+.tv-ticker-item .price {
+  color: var(--text);
+  font-weight: 800;
+  direction: ltr;
+  font-variant-numeric: tabular-nums;
+}
+.tv-ticker-item .chg {
+  font-weight: 800;
+  direction: ltr;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+.tv-ticker-item .chg.up { background: var(--up-soft); color: var(--up); }
+.tv-ticker-item .chg.down { background: var(--down-soft); color: var(--down); }
+
+/* TV Card */
+.tv-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  text-align: center;
+  width: 100%;
+  animation: tvFadeIn .6s var(--ease-ios);
+}
+.tv-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 24px;
+  display: grid;
+  place-items: center;
+  background: var(--accent-soft);
+  color: var(--accent);
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+.tv-icon svg { width: 40px; height: 40px; }
+.tv-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  padding: 14px;
+}
+.tv-name {
+  font-size: 24px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 700;
+}
+.tv-price {
+  font-size: clamp(48px, 10vw, 140px);
+  font-weight: 900;
+  letter-spacing: -6px;
+  line-height: 1;
+  direction: ltr;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  margin: 16px 0;
+}
+.tv-change {
+  font-size: 28px;
+  font-weight: 800;
+  direction: ltr;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: var(--r-full);
+}
+.tv-change.up { background: var(--up-soft); color: var(--up); }
+.tv-change.down { background: var(--down-soft); color: var(--down); }
+
+.tv-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  width: min(900px, 90vw);
+  margin-top: 24px;
+}
+.tv-mini-card {
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  text-align: start;
+  cursor: pointer;
+  transition: transform .2s var(--ease-ios);
+}
+.tv-mini-card:active { transform: scale(.95); border-color: var(--accent); }
+.tv-mini-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-2);
+  margin-bottom: 6px;
+}
+.tv-mini-price {
+  font-size: 14px;
+  font-weight: 800;
+  direction: ltr;
+  text-align: right;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.tv-mini-chg { font-size: 10px; font-weight: 800; direction: ltr; }
+.tv-mini-chg.up { color: var(--up); }
+.tv-mini-chg.down { color: var(--down); }
+
+/* TV Table */
+.tv-table {
+  width: min(1400px, 95vw);
+  height: 100%;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.tv-table-head {
+  display: grid;
+  grid-template-columns: 60px 2fr 1.5fr 1fr 1fr 1fr 1fr;
+  gap: 16px;
+  padding: 16px 24px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.05));
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--muted);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  direction: ltr;
+}
+.tv-table-head > div:first-child { text-align: center; }
+.tv-table-body { flex: 1; overflow-y: auto; }
+.tv-table-row {
+  display: grid;
+  grid-template-columns: 60px 2fr 1.5fr 1fr 1fr 1fr 1fr;
+  gap: 16px;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+  font-size: 14px;
+  transition: background .18s var(--ease-ios);
+  cursor: pointer;
+}
+.tv-table-row:active { background: var(--accent-soft); }
+.tv-table-row:last-child { border-bottom: 0; }
+.tv-table-rank {
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--muted);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.tv-table-name {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 700;
+  color: var(--text);
+}
+.tv-table-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: var(--card-2);
+  color: var(--accent);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.tv-table-icon svg { width: 18px; height: 18px; }
+.tv-table-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 5px;
+}
+.tv-table-price, .tv-table-high, .tv-table-low {
+  font-weight: 800;
+  direction: ltr;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.tv-table-chg { font-weight: 800; direction: ltr; text-align: end; }
+.tv-table-chg.up { color: var(--up); }
+.tv-table-chg.down { color: var(--down); }
+.tv-table-time {
+  font-size: 12px;
+  color: var(--muted);
+  direction: ltr;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+/* TV Grids */
+.tv-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 16px;
+  width: min(1200px, 95vw);
+  height: min(700px, 75vh);
+}
+.tv-grid-card {
+  padding: 24px;
+  border-radius: var(--r-xl);
+  background: linear-gradient(135deg, var(--card), var(--card-2));
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: transform .2s var(--ease-ios);
+  overflow: hidden;
+  position: relative;
+}
+.tv-grid-card:active { transform: scale(.98); border-color: var(--accent); }
+.tv-grid-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 16px;
+  font-weight: 800;
+}
+.tv-grid-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: var(--card-2);
+  color: var(--accent);
+  overflow: hidden;
+}
+.tv-grid-icon svg { width: 22px; height: 22px; }
+.tv-grid-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 8px;
+}
+.tv-grid-price {
+  font-size: 32px;
+  font-weight: 900;
+  letter-spacing: -1px;
+  direction: ltr;
+  text-align: right;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.tv-grid-chg {
+  font-size: 16px;
+  font-weight: 800;
+  direction: ltr;
+  text-align: right;
+}
+.tv-grid-chg.up { color: var(--up); }
+.tv-grid-chg.down { color: var(--down); }
+
+.tv-grid-3x2 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 14px;
+  width: min(1400px, 95vw);
+  height: min(700px, 75vh);
+}
+.tv-grid-4x2 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 12px;
+  width: min(1600px, 95vw);
+  height: min(700px, 75vh);
+}
+.tv-grid-4x2 .tv-grid-card { padding: 18px; }
+.tv-grid-4x2 .tv-grid-icon { width: 36px; height: 36px; }
+.tv-grid-4x2 .tv-grid-icon svg { width: 18px; height: 18px; }
+.tv-grid-4x2 .tv-grid-head { font-size: 13px; }
+.tv-grid-4x2 .tv-grid-price { font-size: 22px; }
+.tv-grid-4x2 .tv-grid-chg { font-size: 13px; }
+
+.tv-focus {
+  text-align: center;
+  width: 100%;
+  animation: tvFadeIn .6s var(--ease-ios);
+}
+.tv-focus-icon {
+  width: 100px;
+  height: 100px;
+  border-radius: 30px;
+  display: grid;
+  place-items: center;
+  background: var(--accent-soft);
+  color: var(--accent);
+  margin: 0 auto 24px;
+  overflow: hidden;
+}
+.tv-focus-icon svg { width: 50px; height: 50px; }
+.tv-focus-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 20px;
+}
+.tv-focus-name {
+  font-size: 32px;
+  color: var(--muted);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+.tv-focus-price {
+  font-size: clamp(80px, 16vw, 200px);
+  font-weight: 900;
+  letter-spacing: -8px;
+  line-height: 1;
+  direction: ltr;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 24px;
+}
+.tv-focus-chg {
+  font-size: 36px;
+  font-weight: 800;
+  direction: ltr;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 28px;
+  border-radius: var(--r-full);
+}
+.tv-focus-chg.up { background: var(--up-soft); color: var(--up); }
+.tv-focus-chg.down { background: var(--down-soft); color: var(--down); }
+
+.tv-heatmap {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+}
+.tv-heat-cell {
+  padding: 14px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 100px;
+  cursor: pointer;
+  transition: transform .2s var(--ease-ios);
+  position: relative;
+  overflow: hidden;
+}
+.tv-heat-cell:active { transform: scale(.96); }
+.tv-heat-cell.up {
+  background: linear-gradient(135deg, rgba(16, 209, 124, 0.25), rgba(16, 209, 124, 0.08));
+  border: 1px solid rgba(16, 209, 124, 0.3);
+}
+.tv-heat-cell.down {
+  background: linear-gradient(135deg, rgba(248, 85, 85, 0.25), rgba(248, 85, 85, 0.08));
+  border: 1px solid rgba(248, 85, 85, 0.3);
+}
+.tv-heat-cell.neutral {
+  background: var(--card);
+  border: 1px solid var(--border);
+}
+.tv-heat-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.3;
+}
+.tv-heat-price {
+  font-size: 15px;
+  font-weight: 900;
+  direction: ltr;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.tv-heat-chg {
+  font-size: 12px;
+  font-weight: 800;
+  direction: ltr;
+  text-align: right;
+}
+.tv-heat-chg.up { color: var(--up); }
+.tv-heat-chg.down { color: var(--down); }
+
+.tv-compact {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  padding: 4px;
+}
+.tv-compact-card {
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  cursor: pointer;
+  transition: transform .2s var(--ease-ios);
+}
+.tv-compact-card:active { transform: scale(.97); border-color: var(--accent); }
+.tv-compact-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.tv-compact-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: var(--accent-soft);
+  color: var(--accent);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.tv-compact-icon svg { width: 17px; height: 17px; }
+.tv-compact-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 5px;
+}
+.tv-compact-name {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tv-compact-price {
+  font-size: 18px;
+  font-weight: 900;
+  direction: ltr;
+  text-align: right;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.tv-compact-chg {
+  font-size: 12px;
+  font-weight: 800;
+  direction: ltr;
+  text-align: right;
+}
+.tv-compact-chg.up { color: var(--up); }
+.tv-compact-chg.down { color: var(--down); }
+
+.tv-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.05);
+  z-index: 30;
+}
+.tv-bar i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  width: 0;
+  transition: width .1s linear;
+  box-shadow: 0 0 12px var(--accent);
+}
+
+.tv-set-group { margin-bottom: 20px; }
+.tv-set-group h4 {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+.tv-layout-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 8px;
+}
+.tv-layout-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 8px;
+  border-radius: 11px;
+  background: var(--card-2);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .25s var(--ease-ios);
+}
+.tv-layout-btn svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.75;
+}
+.tv-layout-btn.is-active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+@media (max-width: 900px) {
+  .tv-body { padding: 12px; }
+  .tv-price { font-size: 48px; letter-spacing: -2px; }
+  .tv-focus-price { font-size: 60px; letter-spacing: -2px; }
+  .tv-mini-grid { grid-template-columns: repeat(2, 1fr); }
+  .tv-grid, .tv-grid-3x2, .tv-grid-4x2 {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+  .tv-grid-price { font-size: 24px; }
+  .tv-table-head, .tv-table-row {
+    grid-template-columns: 40px 2fr 1fr 1fr;
+    padding: 10px 14px;
+    font-size: 12px;
+    gap: 8px;
+  }
+  .tv-table-head > div:nth-child(n+5),
+  .tv-table-row > div:nth-child(n+5) { display: none; }
+  .tv-ticker-item { font-size: 11px; }
+}
+
+/* ═══════════════ SCROLL SMOOTHING ═══════════════ */
+.scroll-row,
+.chips,
+.pills,
+.hdr-ticker,
+.tv-ticker,
+.tv-heatmap,
+.tv-compact {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+/* ═══════════════ PRINT ═══════════════ */
+@media print {
+  .app-header, .mobile-nav, .sidebar, .hdr-ticker, .tv {
+    display: none !important;
+  }
+  .content { padding: 0; }
+}
