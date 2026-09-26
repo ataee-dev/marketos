@@ -1,8 +1,9 @@
 /**
- * قیمتو 6.0 — CAR SCRAPER v4 (با URL)
+ * قیمتو 6.0 — CAR SCRAPER v5 (با URL + قیمت به ریال)
  * منبع: iranjib.ir
  * ✅ دریافت همه‌ی گروه‌ها
  * ✅ استخراج URL صفحه‌ی هر آیتم
+ * ✅ تبدیل قیمت‌ها به ریال (سایت به تومان است)
  * ✅ موازی‌سازی + Retry
  * ✅ ذخیره در فایل جداگانه هر گروه
  */
@@ -27,6 +28,7 @@ const CONFIG = {
   DELAY_BETWEEN: 800,
   MAX_CONCURRENT: 2,
   OUTPUT: 'cars.json',
+  TOMAN_TO_RIAL: 10,
   USER_AGENT: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
 };
 
@@ -49,8 +51,7 @@ const GROUPS = [
     icon: 'globe',
     color: 'blue',
     enabled: true
-  },
-
+  }
 ];
 
 /* ============================================================
@@ -75,6 +76,18 @@ function cleanNumber(text){
   if(!s || s === '-' || s === '.') return null;
   const n = parseFloat(s);
   return isNaN(n) ? null : n;
+}
+
+/**
+ * ═══════════════════════════════════════════════════════════
+ * تبدیل قیمت تومان → ریال
+ * سایت iranjib.ir قیمت‌ها را به تومان نمایش می‌دهد
+ * برای یکسان‌سازی با data/latest.json همه به ریال ذخیره می‌شود
+ * ═══════════════════════════════════════════════════════════
+ */
+function tomanToRial(value){
+  if(value == null || isNaN(value)) return null;
+  return Math.round(value * CONFIG.TOMAN_TO_RIAL);
 }
 
 function slugify(name){
@@ -223,20 +236,20 @@ function parseTable(html, groupKey){
       if(!name || name.length < 2) return;
       if(/نام خودرو|نام کالا|header/i.test(name)) return;
 
-      // ستون ۱: قیمت اول
+      // ستون ۱: قیمت اول (بازار) — به تومان
       const $cell1 = $cells.eq(1);
       const price1Text = cleanName($cell1.text());
-      const price1 = cleanNumber(price1Text);
+      const price1Toman = cleanNumber(price1Text);
 
-      // ستون ۲: قیمت دوم
+      // ستون ۲: قیمت دوم (کارخانه) — به تومان
       const $cell2 = $cells.length > 2 ? $cells.eq(2) : null;
       const price2Text = $cell2 ? cleanName($cell2.text()) : '';
-      const price2 = price2Text ? cleanNumber(price2Text) : null;
+      const price2Toman = price2Text ? cleanNumber(price2Text) : null;
 
       // ستون ۳: تغییر
       const $cell3 = $cells.length > 3 ? $cells.eq(3) : null;
       let changePercent = null;
-      let changeAmount = null;
+      let changeAmountToman = null;
 
       if($cell3){
         const changeText = $cell3.text();
@@ -245,7 +258,7 @@ function parseTable(html, groupKey){
           changePercent = cleanNumber(percentMatch[1]);
         }
         const afterParen = changeText.replace(/\([^)]*\)/g, '');
-        changeAmount = cleanNumber(afterParen);
+        changeAmountToman = cleanNumber(afterParen);
       }
 
       // وضعیت
@@ -256,17 +269,24 @@ function parseTable(html, groupKey){
       else if(/توقف\s*تولید/.test(allText)) status = 'discontinued';
       else if(/توقف\s*فروش/.test(allText)) status = 'not-selling';
 
+      // ═══════════════════════════════════════════════════
+      // تبدیل تومان → ریال
+      // ═══════════════════════════════════════════════════
+      const priceMarketRial  = tomanToRial(price1Toman);
+      const priceFactoryRial = tomanToRial(price2Toman);
+      const changeRial       = tomanToRial(changeAmountToman);
+
       // ═══ ساخت آیتم ═══
       const item = {
         id: slugify(name),
         name: name,
         category: currentCategory || groupKey,
         group: groupKey,
-        url: pageUrl,                          // ← URL صفحه
-        priceMarket: price1,
-        priceFactory: price2,
-        change: changeAmount,
-        changePercent: changePercent,
+        url: pageUrl,
+        priceMarket: priceMarketRial,          // ← ریال
+        priceFactory: priceFactoryRial,        // ← ریال
+        change: changeRial,                    // ← ریال
+        changePercent: changePercent,          // ← درصد (بدون تغییر)
         status: status,
         rawPriceMarket: price1Text.substring(0, 80),
         rawPriceFactory: price2Text.substring(0, 80)
@@ -307,17 +327,17 @@ function parseTable(html, groupKey){
       if(!name || name.length < 2) return;
 
       const price1Text = cleanName($cells.eq(1).text());
-      const price1 = cleanNumber(price1Text);
+      const price1Toman = cleanNumber(price1Text);
       const price2Text = $cells.length > 2 ? cleanName($cells.eq(2).text()) : '';
-      const price2 = price2Text ? cleanNumber(price2Text) : null;
+      const price2Toman = price2Text ? cleanNumber(price2Text) : null;
 
       let changePercent = null;
-      let changeAmount = null;
+      let changeAmountToman = null;
       if($cells.length > 3){
         const changeText = $cells.eq(3).text();
         const percentMatch = changeText.match(/\(([^)]*?)%[^)]*?\)/);
         if(percentMatch) changePercent = cleanNumber(percentMatch[1]);
-        changeAmount = cleanNumber(changeText.replace(/\([^)]*\)/g, ''));
+        changeAmountToman = cleanNumber(changeText.replace(/\([^)]*\)/g, ''));
       }
 
       let status = 'available';
@@ -332,9 +352,9 @@ function parseTable(html, groupKey){
         category: groupKey,
         group: groupKey,
         url: pageUrl,
-        priceMarket: price1,
-        priceFactory: price2,
-        change: changeAmount,
+        priceMarket: tomanToRial(price1Toman),    // ← ریال
+        priceFactory: tomanToRial(price2Toman),   // ← ریال
+        change: tomanToRial(changeAmountToman),   // ← ریال
         changePercent: changePercent,
         status: status,
         rawPriceMarket: price1Text.substring(0, 80),
@@ -447,9 +467,10 @@ async function main(){
   const startTime = Date.now();
 
   console.log('═══════════════════════════════════════════════');
-  console.log('🚗 CAR SCRAPER v4 — iranjib.ir (با URL)');
+  console.log('🚗 CAR SCRAPER v5 — iranjib.ir (قیمت به ریال)');
   console.log(`📅 ${new Date().toISOString()}`);
   console.log(`📊 ${GROUPS.filter(g => g.enabled).length} گروه`);
+  console.log(`💱 تبدیل تومان → ریال (×${CONFIG.TOMAN_TO_RIAL})`);
   console.log('═══════════════════════════════════════════════');
 
   await fs.mkdir(DATA_DIR, { recursive: true });
@@ -516,6 +537,7 @@ async function main(){
     updated: new Date().toISOString(),
     updatedTehran: new Date().toLocaleString('fa-IR'),
     source: 'iranjib.ir',
+    currency: 'rial',
     stats: stats,
     groups: groupsMeta,
     categories: Object.keys(byCategory),
