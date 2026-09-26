@@ -1,9 +1,11 @@
 /**
- * قیمتو 6.0 — API
+ * قیمتو 6.0 — API (اصلاح‌شده - بدون حلقه بی‌پایان)
  * ✅ annual-history.json + history/ روزانه
  * ✅ cars.json (قیمت خودرو)
  * ✅ cache هوشمند
  * ✅ بدون CORS
+ * ✅ جلوگیری از start تکراری
+ * ✅ جلوگیری از حلقه بی‌پایان
  */
 window.API = (function(){
 'use strict';
@@ -35,6 +37,10 @@ let fallback = false;
 let timer = null;
 let subs = new Set();
 let currentSource = 'primary';
+
+// ═══ فلگ‌های محافظت از حلقه ═══
+let started = false;
+let carsFetching = false;
 
 let annualCache = null;
 let annualCacheTime = 0;
@@ -176,16 +182,24 @@ async function fetchAnnual(){
   }
 }
 
-/**
- * دریافت خودروها
- */
+/* ============================================================
+   FETCH CARS — با محافظت از حلقه
+============================================================ */
 async function fetchCars(force){
   force = force || false;
   const now = Date.now();
 
+  // اگر در حال fetch هستیم، کش فعلی را برگردان (جلوگیری از حلقه)
+  if(carsFetching){
+    return carsCache;
+  }
+
+  // اگر کش معتبر داریم و force نیست، برگردان
   if(!force && carsCache && (now - carsCacheTime) < CONFIG.carsCacheTTL){
     return carsCache;
   }
+
+  carsFetching = true;
 
   const url = CONFIG.DATA_BASE + '/cars.json?_=' + now;
 
@@ -207,9 +221,15 @@ async function fetchCars(force){
       cars: [],
       byCategory: {}
     };
+  } finally {
+    carsFetching = false;
   }
 }
 
+/**
+ * ✅ خواندن خودروها از کش (بدون fetch)
+ * این تابع را در renderCars استفاده کن تا حلقه نشود
+ */
 function getCars(){
   return carsCache;
 }
@@ -250,7 +270,10 @@ async function fetchData(force){
 
     console.log('[API] ✅ ' + Object.keys(out).length + ' نماد از ' + currentSource);
     saveLocal();
+
+    // ✅ notify فقط یک بار در هر fetch
     notify();
+
     return json;
 
   } catch(err){
@@ -280,6 +303,7 @@ async function fetchData(force){
 function get(k){ return norm[k] || null; }
 
 function getById(id){
+  if(!window.DATA) return null;
   const a = window.DATA.find(id);
   if(!a) return null;
   return get(a.tgju);
@@ -302,21 +326,43 @@ function notify(){
   });
 }
 
+/**
+ * ✅ start با محافظت از اجرای تکراری
+ */
 function start(ms){
-  stop();
+  if(started){
+    console.log('[API] already started, skipping duplicate');
+    return;
+  }
+  started = true;
+
+  stop(); // پاک کردن تایمر قبلی (اگر وجود دارد)
+
   const interval = ms || CONFIG.poll;
+
   if(loadLocal()) notify();
+
+  // ═══ fetch اولیه ═══
   fetchData().catch(function(){});
   fetchAnnual().catch(function(){});
+  // ═══ بار اول cars را هم fetch کن (یک بار) ═══
+  fetchCars().catch(function(){});
+
+  // ═══ تایمر برای fetch دوره‌ای ═══
   timer = setInterval(function(){
     if(document.hidden) return;
     fetchData().catch(function(){});
   }, interval);
+
   console.log('[API] ▶ ' + interval + 'ms — ' + currentSource);
 }
 
 function stop(){
-  if(timer){ clearInterval(timer); timer = null; }
+  if(timer){
+    clearInterval(timer);
+    timer = null;
+  }
+  started = false;
 }
 
 /* ============================================================

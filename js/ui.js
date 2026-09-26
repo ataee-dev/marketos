@@ -2666,9 +2666,11 @@ function init(){
     }, 300));
   }
 
+  // ═══ Router اولیه ═══
   const hash = (location.hash || '').replace('#', '');
   go(PAGES.includes(hash) ? hash : 'home');
 
+  // ═══ Event Handlers ═══
   document.addEventListener('click', handleClick, true);
 
   document.addEventListener('keydown', e => {
@@ -2684,34 +2686,57 @@ function init(){
     }
   });
 
+  // ═══ جستجوی نمادها ═══
   const si = $('[data-search-input]');
   if(si){
     si.addEventListener('input', window.U.debounce(e => doSearch(e.target.value), 150));
   }
 
-  // جستجوی خودروها
+  // ═══ جستجوی خودروها ═══
   const cs = $('[data-cars-search]');
   if(cs){
     cs.addEventListener('input', window.U.debounce(function(e){
       carsSearch = e.target.value.trim();
-      renderCars();
+      // ═══ فقط اگر در صفحه cars هستیم رندر کن ═══
+      if(currentPage === 'cars'){
+        renderCars();
+      }
     }, 200));
   }
 
-  // فرمت خودکار فیلدهای پولی
+  // ═══ فیلتر خودروها ═══
+  $$('[data-cars-filter]').forEach(function(btn){
+    btn.addEventListener('click', function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      $$('[data-cars-filter]').forEach(function(b){ b.classList.remove('is-active'); });
+      btn.classList.add('is-active');
+      carsFilter = btn.dataset.carsFilter;
+      if(currentPage === 'cars'){
+        renderCars();
+      }
+    });
+  });
+
+  // ═══ فرمت خودکار فیلدهای پولی ═══
   attachMoneyFormatter();
 
+  // ═══ تنظیم فاصله بروزرسانی ═══
   const iv = $('[data-input="interval"]');
   if(iv){
     iv.value = window.CFG.get('refreshInterval');
     iv.addEventListener('change', e => {
       const v = parseInt(e.target.value);
       window.CFG.set('refreshInterval', v);
+      // ═══ برای اعمال فاصله جدید، API.start دوباره صدا زده می‌شود ═══
+      // (با محافظت از تکرار در api.js جدید)
+      window.API.stop();
       window.API.start(v);
       toast('فاصله: ' + (v / 1000) + 's', 'success');
     });
   }
 
+  // ═══ Online/Offline ═══
   window.addEventListener('online', () => {
     toast('اتصال برقرار شد ✓', 'success');
     window.API.fetchData(true).catch(() => {});
@@ -2721,14 +2746,21 @@ function init(){
     toast('حالت آفلاین', 'warning');
   });
 
+  // ═══════════════════════════════════════════════════════════
+  // ✅ subscribe با debounce — جلوگیری از حلقه بی‌پایان
+  // ═══════════════════════════════════════════════════════════
+  let refreshTimer = null;
   window.API.subscribe(() => {
-    refreshAll();
-    checkAlerts();
+    if(refreshTimer) clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(() => {
+      refreshAll();
+      checkAlerts();
+    }, 500);
   });
 
+  // ═══ رندر اولیه ticker ═══
   renderHdrTicker();
 }
-
 /* ============================================================
    PUBLIC API
 ============================================================ */
