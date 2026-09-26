@@ -7,6 +7,8 @@
  * ✅ واحدهای حجمی
  * ✅ جستجوی inline
  * ✅ نمودار با نقاط تعاملی
+ * ✅ جداکننده هزارگان
+ * ✅ فرمت خودکار فیلدهای ورودی
  */
 
 window.UI = (function(){
@@ -21,6 +23,47 @@ let currentPage = 'home';
 let activeChartId = 'gold18';
 
 const PAGES = ['home', 'markets', 'chart', 'compare', 'favorites', 'settings'];
+
+/* ============================================================
+   NUMBER FORMATTING — جداکننده هزارگان
+============================================================ */
+function formatNumber(num, decimals){
+  if(num == null || isNaN(num)) return '—';
+
+  decimals = decimals || 0;
+  const fixed = Number(num).toFixed(decimals);
+  const parts = fixed.split('.');
+  const intPart = parts[0];
+  const decPart = parts[1];
+
+  const sign = intPart.startsWith('-') ? '-' : '';
+  const absInt = intPart.replace('-', '');
+  const withCommas = absInt.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+  let result = sign + withCommas;
+  if(decPart) result += '.' + decPart;
+
+  result = result.replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
+  return result;
+}
+
+function parseFormattedNumber(str){
+  if(str == null) return null;
+
+  const persian = '۰۱۲۳۴۵۶۷۸۹';
+  const arabic = '٠١٢٣٤٥٦٧٨٩';
+
+  let s = String(str)
+    .replace(/[۰-۹]/g, d => persian.indexOf(d))
+    .replace(/[٠-٩]/g, d => arabic.indexOf(d));
+
+  s = s.replace(/[^\d.\-]/g, '');
+
+  if(!s || s === '-' || s === '.') return null;
+
+  const n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
 
 /* ============================================================
    ICON HELPERS
@@ -74,16 +117,16 @@ function fullUnitLabel(asset){
 
 function formatPrice(asset, rialValue){
   if(rialValue == null || isNaN(rialValue)) return '—';
-  
+
   if(asset && asset.ptype === 'usd'){
     const dec = asset.dec != null ? asset.dec : 2;
-    return '$' + window.U.num(rialValue, dec);
+    return '$' + formatNumber(rialValue, dec);
   }
-  
+
   const val = baseToUser(rialValue);
   const abs = Math.abs(val);
   const d = abs < 10 ? 4 : (abs < 1000 ? 2 : 0);
-  return window.U.num(val, d) + ' ' + unitLabel();
+  return formatNumber(val, d) + ' ' + unitLabel();
 }
 
 function formatPriceWithUnit(asset, rialValue){
@@ -220,7 +263,6 @@ function renderBankCard(){
   const wrap = $('[data-portfolio-card]');
   if(!wrap) return;
 
-  // ═══ Guard ═══
   if(!window.DATA || !window.DATA.find || !window.DATA.ASSETS) return;
 
   const list = window.Storage.pf.get();
@@ -245,12 +287,12 @@ function renderBankCard(){
   const up = pl >= 0;
   const firstChar = userName.trim().charAt(0) || '👤';
 
-  let displayValue = '0 تومان';
+  let displayValue = '۰ تومان';
   let displayChange = '';
   if(!isEmpty){
     const unitText = unitLabel();
     const val = baseToUser(totalNow);
-    displayValue = window.U.num(val, 0) + ' ' + unitText;
+    displayValue = formatNumber(val, 0) + ' ' + unitText;
     displayChange = `
       <span class="bank-card-change">
         ${up ? '▲' : '▼'} ${up ? '+' : ''}${plPct.toFixed(2)}%
@@ -265,7 +307,7 @@ function renderBankCard(){
           <img src="assets/logo.png" alt="قیمتو">
           <div class="bank-card-brand-text">
             <strong>قیمتو</strong>
-            <small>${isEmpty ? 'پرتفوی خالی' : window.U.num(list.length) + ' دارایی'}</small>
+            <small>${isEmpty ? 'پرتفوی خالی' : formatNumber(list.length, 0) + ' دارایی'}</small>
           </div>
         </div>
         <div class="bank-card-chip"></div>
@@ -312,13 +354,10 @@ function renderMarkets(){
   }
 
   const cnt = $('[data-count]');
-  if(cnt) cnt.textContent = list.length + ' نماد';
+  if(cnt) cnt.textContent = formatNumber(list.length, 0) + ' نماد';
 
   g.innerHTML = list.map(marketCardHTML).join('');
 }
-
-
-
 
 /* ============================================================
    CARS — قیمت خودرو
@@ -332,10 +371,8 @@ async function renderCars(){
   const emptyEl = $('[data-cars-empty]');
   const updatedEl = $('[data-cars-updated]');
 
-  // فقط اگر یکی از این‌ها وجود داشت، اجرا کن
   if(!wrap && !listEl) return;
 
-  // چک API
   if(!window.API || !window.API.fetchCars){
     if(wrap) wrap.innerHTML = '<div class="empty"><h3>API خودرو در دسترس نیست</h3></div>';
     if(listEl) listEl.innerHTML = '<div class="empty"><h3>API خودرو در دسترس نیست</h3></div>';
@@ -350,7 +387,6 @@ async function renderCars(){
       return;
     }
 
-    // فیلتر و جستجو
     let list = data.cars.slice();
     if(carsFilter && carsFilter !== 'all'){
       list = list.filter(function(c){ return c.status === carsFilter; });
@@ -359,11 +395,10 @@ async function renderCars(){
       const q = carsSearch.toLowerCase();
       list = list.filter(function(c){
         return (c.name || '').toLowerCase().includes(q) ||
-               (c.brand || '').toLowerCase().includes(q);
+               (c.category || '').toLowerCase().includes(q);
       });
     }
 
-    // Home — فقط ۵ خودروی اول
     if(wrap){
       const homeList = list.slice(0, 5);
       wrap.innerHTML = homeList.map(function(c){
@@ -371,7 +406,6 @@ async function renderCars(){
       }).join('');
     }
 
-    // Page cars — همه
     if(listEl){
       listEl.innerHTML = list.map(function(c){
         return carRowHTML(c);
@@ -380,38 +414,42 @@ async function renderCars(){
 
     if(emptyEl) emptyEl.hidden = list.length > 0;
 
+    if(updatedEl && data.updatedTehran){
+      updatedEl.textContent = 'آخرین به‌روزرسانی: ' + data.updatedTehran;
+    }
+
+    const countEl = $('[data-cars-count]');
+    if(countEl) countEl.textContent = formatNumber(list.length, 0) + ' خودرو';
+
+  } catch(err){
+    console.error('[Cars]', err);
+    if(wrap) wrap.innerHTML = '<div class="empty"><h3>خطا در بارگذاری خودرو</h3></div>';
+    if(listEl) listEl.innerHTML = '<div class="empty"><h3>خطا در بارگذاری خودرو</h3></div>';
+  }
+}
+
 function carRowHTML(car){
-  // ═══ قیمت: اول بازار، بعد کارخانه ═══
   const priceValue = car.priceMarket != null ? car.priceMarket
                     : car.priceFactory != null ? car.priceFactory
                     : null;
 
-  // ═══════════════════════════════════════════════════
-  // ✅ استفاده از formatPrice برای تبدیل واحد درست
-  // (cars.json به ریال است — همان واحد پایه‌ی پروژه)
-  // ═══════════════════════════════════════════════════
   const priceText = priceValue != null
-    ? window.UI.formatPrice({ ptype: 'rial', dec: 0 }, priceValue)
+    ? formatPrice({ ptype: 'rial', dec: 0 }, priceValue)
     : (car.status === 'coming-soon' ? 'به زودی'
       : car.status === 'unavailable' ? 'ناموجود'
       : car.status === 'discontinued' ? 'توقف تولید'
       : car.status === 'not-selling' ? 'توقف فروش'
       : '—');
 
-  // ═══ تغییرات (درصد — بدون تبدیل) ═══
-  const changePercent = car.changePercent != null ? car.changePercent
-                       : (car.change != null && car.priceMarket != null && car.priceMarket !== 0)
-                         ? (car.change / (car.priceMarket - car.change)) * 100
-                         : null;
-
+  const changePercent = car.changePercent != null ? car.changePercent : null;
   const up = (changePercent || 0) >= 0;
+
   const changeText = changePercent != null && changePercent !== 0
     ? `<span class="car-row-change ${up ? 'up' : 'down'}">
          ${up ? '▲' : '▼'} ${Math.abs(changePercent).toFixed(2)}%
        </span>`
     : '';
 
-  // ═══ رنگ قیمت بر اساس وضعیت ═══
   const isPlaceholder = priceValue == null;
   const rowClass = car.status === 'unavailable' || car.status === 'discontinued'
     ? 'car-row is-unavailable'
@@ -430,71 +468,6 @@ function carRowHTML(car){
   `;
 }
 
-    // شمارنده خودروها
-    const countEl = $('[data-cars-count]');
-    if(countEl) countEl.textContent = list.length + ' خودرو';
-
-
-  } catch(err){
-    console.error('[Cars]', err);
-    if(wrap) wrap.innerHTML = '<div class="empty"><h3>خطا در بارگذاری خودرو</h3></div>';
-    if(listEl) listEl.innerHTML = '<div class="empty"><h3>خطا در بارگذاری خودرو</h3></div>';
-  }
-}
-
-function carRowHTML(car){
-  // ═══ قیمت: اول بازار، بعد کارخانه ═══
-  const priceValue = car.priceMarket != null ? car.priceMarket
-                    : car.priceFactory != null ? car.priceFactory
-                    : null;
-
-  const priceText = priceValue != null
-    ? window.U.num(priceValue / 10, 0) + ' تومان'
-    : (car.status === 'coming-soon' ? 'به زودی'
-      : car.status === 'unavailable' ? 'ناموجود'
-      : car.status === 'discontinued' ? 'توقف تولید'
-      : car.status === 'not-selling' ? 'توقف فروش'
-      : '—');
-
-  // ═══ تغییرات ═══
-  const changePercent = car.changePercent != null ? car.changePercent
-                       : (car.change != null && car.priceMarket != null && car.priceMarket !== 0)
-                         ? (car.change / (car.priceMarket - car.change)) * 100
-                         : null;
-
-  const up = (changePercent || 0) >= 0;
-  const changeText = changePercent != null && changePercent !== 0
-    ? `<span style="display:block;font-size:11px;font-weight:700;color:${up ? 'var(--up)' : 'var(--down)'};margin-top:2px">
-         ${up ? '▲' : '▼'} ${Math.abs(changePercent).toFixed(2)}%
-       </span>`
-    : '';
-
-  // ═══ رنگ قیمت بر اساس وضعیت ═══
-  const priceColor = car.status === 'available' ? 'var(--text)'
-                    : car.status === 'coming-soon' ? 'var(--warn)'
-                    : 'var(--muted)';
-
-  return `
-    <div class="car-row" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border)">
-      <div style="flex:1;min-width:0">
-        <strong style="display:block;font-size:13.5px;font-weight:700;line-height:1.4">
-          ${window.U.esc(car.name || '—')}
-        </strong>
-        <small style="display:block;font-size:11px;color:var(--muted);margin-top:3px">
-          ${window.U.esc(car.category || '')}
-        </small>
-      </div>
-      <div style="text-align:left;flex-shrink:0">
-        <strong style="display:block;font-size:13px;font-weight:800;direction:ltr;color:${priceColor}">
-          ${priceText}
-        </strong>
-        ${changeText}
-      </div>
-    </div>
-  `;
-}
-
-
 /* ============================================================
    FAVORITES
 ============================================================ */
@@ -506,7 +479,7 @@ function renderFavs(){
 
   const list = window.Storage.fav.get().map(id => window.DATA.find(id)).filter(Boolean);
 
-  if(cnt) cnt.textContent = list.length + ' مورد';
+  if(cnt) cnt.textContent = formatNumber(list.length, 0) + ' مورد';
   if(empty) empty.hidden = list.length > 0;
 
   g.innerHTML = list.map(marketCardHTML).join('');
@@ -675,7 +648,7 @@ async function renderChartQuestions(asset, live){
     if(hasChange){
       cls = change >= 0 ? 'up' : 'down';
     }
-    const changeText = hasChange 
+    const changeText = hasChange
       ? `<span class="chart-q-answer ${cls}">${change >= 0 ? '▲' : '▼'} ${Math.abs(change).toFixed(2)}%</span>`
       : `<span class="chart-q-answer neutral">—</span>`;
 
@@ -726,8 +699,8 @@ async function renderChartQuestions(asset, live){
   const u = unitText ? ' / ' + unitText : '';
 
   const currentDisplay = asset.ptype === 'usd'
-    ? '$' + window.U.num(current, asset.dec || 2) + u
-    : window.U.num(baseToUser(current), 0) + ' ' + unitLabel() + u;
+    ? '$' + formatNumber(current, asset.dec || 2) + u
+    : formatNumber(baseToUser(current), 0) + ' ' + unitLabel() + u;
 
   questions.push(valueItem(
     `در حال حاضر قیمت ${asset.name} چقدر می‌باشد؟`,
@@ -891,13 +864,13 @@ async function renderChartQuestions(asset, live){
 async function compareWith(assetId, msAgo, myCurrent, myPast){
   try {
     if(myPast == null) return null;
-    
+
     const a = window.DATA.find(assetId);
     if(!a) return null;
-    
+
     const hist = await window.API.getHistory(a, 30);
     if(!hist || hist.length < 2) return null;
-    
+
     const sorted = hist.slice().sort((x, y) => x.t - y.t);
     const target = Date.now() - msAgo;
     let closest = null, minDiff = Infinity;
@@ -905,15 +878,15 @@ async function compareWith(assetId, msAgo, myCurrent, myPast){
       const diff = Math.abs(p.t - target);
       if(diff < minDiff){ minDiff = diff; closest = p; }
     }
-    
+
     if(!closest || !closest.p) return null;
-    
+
     const last = sorted[sorted.length - 1].p;
     const otherPast = closest.p;
-    
+
     const myPct = ((myCurrent - myPast) / myPast) * 100;
     const otherPct = ((last - otherPast) / otherPast) * 100;
-    
+
     return {
       name: a.short || a.name,
       myPct: myPct,
@@ -930,7 +903,7 @@ function comparisonItem(label, comp){
   const iconName = comp.better ? 'trendingUp' : 'trendingDown';
   const iconColor = comp.better ? 'var(--up)' : 'var(--down)';
   const text = comp.better ? 'بله' : 'خیر';
-  
+
   return `
     <div class="chart-q-item">
       <div class="chart-q-body">
@@ -957,7 +930,7 @@ function renderBubbleAnalysis(asset, live){
 
   const isGold = asset.cat === 'gold' && (asset.tgju === 'geram18' || asset.tgju === 'geram24');
   const isCoin = asset.id === 'coin' || asset.id === 'coin_bahar';
-  
+
   if(!isGold && !isCoin){
     wrap.hidden = true;
     return;
@@ -1007,7 +980,7 @@ function renderBubbleAnalysis(asset, live){
   body.innerHTML = `
     <div class="bubble-row">
       <span>انس جهانی طلا</span>
-      <strong>$${window.U.num(ounceUSD, 2)}</strong>
+      <strong>$${formatNumber(ounceUSD, 2)}</strong>
     </div>
     <div class="bubble-row">
       <span>نرخ دلار</span>
@@ -1177,17 +1150,14 @@ function renderHomeChart(){
    ROUTER
 ============================================================ */
 function go(page){
-  // ═══ Guard 1: منتظر DATA بمان ═══
   if(!window.DATA || !window.DATA.ASSETS || !window.DATA.ASSETS.length){
     setTimeout(function(){ go(page); }, 100);
     return;
   }
 
-  // ═══ Guard 2: اعتبارسنجی page ═══
   if(!PAGES.includes(page)) page = 'home';
   currentPage = page;
 
-  // ═══ Guard 3: چک وجود DOM ═══
   const pages = $$('.page');
   if(pages.length){
     pages.forEach(p => p.classList.toggle('is-active', p.dataset.page === page));
@@ -1202,7 +1172,6 @@ function go(page){
 
   document.body.classList.remove('sidebar-open');
 
-  // ═══ رندر صفحه با try/catch جداگانه ═══
   try {
     if(page === 'home'){
       renderBankCard();
@@ -1211,6 +1180,7 @@ function go(page){
       renderCats();
       renderTools();
       renderHomeChart();
+      renderCars();
     }
     else if(page === 'markets'){
       renderMarkets();
@@ -1227,11 +1197,13 @@ function go(page){
     else if(page === 'favorites'){
       renderFavs();
     }
+    else if(page === 'cars'){
+      renderCars();
+    }
 
     renderHdrTicker();
   } catch(err){
     console.error('[UI.go] render error on page "' + page + '":', err);
-    // تلاش مجدد یک‌بار پس از ۲۰۰ms (ممکن است DATA در حال به‌روزرسانی باشد)
     if(!go._retried){
       go._retried = true;
       setTimeout(function(){
@@ -1283,7 +1255,7 @@ function toolGold(){
     <div class="form-grid">
       <div class="form-group">
         <label>وزن (گرم)</label>
-        <input class="input" type="number" value="10" step="0.01" data-gw>
+        <input class="input" type="text" inputmode="decimal" value="10" data-money data-gw>
       </div>
       <div class="form-group">
         <label>عیار</label>
@@ -1297,26 +1269,26 @@ function toolGold(){
       </div>
       <div class="form-group">
         <label>اجرت ساخت (%)</label>
-        <input class="input" type="number" value="7" step="0.1" data-gwg>
+        <input class="input" type="text" inputmode="decimal" value="7" data-money data-gwg>
       </div>
       <div class="form-group">
         <label>سود فروشنده (%)</label>
-        <input class="input" type="number" value="5" step="0.1" data-gp>
+        <input class="input" type="text" inputmode="decimal" value="5" data-money data-gp>
       </div>
       <div class="form-group" style="grid-column:1/-1">
         <label>مالیات (%)</label>
-        <input class="input" type="number" value="9" step="0.1" data-gt>
+        <input class="input" type="text" inputmode="decimal" value="9" data-money data-gt>
       </div>
     </div>
     <div class="result-box" data-gold-out></div>
   `);
 
   function calc(){
-    const w = parseFloat($('[data-gw]')?.value) || 0;
+    const w = parseFormattedNumber($('[data-gw]')?.value) || 0;
     const k = parseFloat($('[data-gk]')?.value) || 18;
-    const wg = parseFloat($('[data-gwg]')?.value) || 0;
-    const pr = parseFloat($('[data-gp]')?.value) || 0;
-    const tx = parseFloat($('[data-gt]')?.value) || 0;
+    const wg = parseFormattedNumber($('[data-gwg]')?.value) || 0;
+    const pr = parseFormattedNumber($('[data-gp]')?.value) || 0;
+    const tx = parseFormattedNumber($('[data-gt]')?.value) || 0;
 
     const base = gold.price * (k / 18);
     const val = w * base;
@@ -1352,14 +1324,14 @@ function toolCoin(){
     </div>
     <div class="form-group">
       <label>تعداد</label>
-      <input class="input" type="number" value="1" min="1" data-cc>
+      <input class="input" type="text" inputmode="decimal" value="1" data-money data-cc>
     </div>
     <div class="result-box" data-coin-out></div>
   `);
 
   function calc(){
     const id = $('[data-ct]')?.value;
-    const n = parseInt($('[data-cc]')?.value) || 1;
+    const n = parseFormattedNumber($('[data-cc]')?.value) || 1;
     const live = window.API.getById(id);
     const out = $('[data-coin-out]');
     if(!live || live.price == null){
@@ -1369,7 +1341,7 @@ function toolCoin(){
     const tot = live.price * n;
     if(out) out.innerHTML = `
       <div class="result-row"><span>قیمت واحد</span><strong>${money(live.price)}</strong></div>
-      <div class="result-row"><span>تعداد</span><strong>${window.U.num(n)} عدد</strong></div>
+      <div class="result-row"><span>تعداد</span><strong>${formatNumber(n, 0)} عدد</strong></div>
       <div class="result-row result-total"><span>ارزش کل</span><strong>${money(tot)}</strong></div>
     `;
   }
@@ -1388,7 +1360,7 @@ function toolOunce(){
     <div class="form-grid">
       <div class="form-group">
         <label>تعداد انس</label>
-        <input class="input" type="number" value="1" step="0.01" data-oc>
+        <input class="input" type="text" inputmode="decimal" value="1" data-money data-oc>
       </div>
       <div class="form-group">
         <label>عیار</label>
@@ -1403,7 +1375,7 @@ function toolOunce(){
   `);
 
   function calc(){
-    const n = parseFloat($('[data-oc]')?.value) || 1;
+    const n = parseFormattedNumber($('[data-oc]')?.value) || 1;
     const k = parseFloat($('[data-ok]')?.value) || 18;
     const dollar = window.API.getById('dollar');
     if(!dollar || dollar.price == null) return;
@@ -1415,7 +1387,7 @@ function toolOunce(){
 
     const out = $('[data-ounce-out]');
     if(out) out.innerHTML = `
-      <div class="result-row"><span>ارزش دلاری</span><strong>$${window.U.num(totalUSD, 2)}</strong></div>
+      <div class="result-row"><span>ارزش دلاری</span><strong>$${formatNumber(totalUSD, 2)}</strong></div>
       <div class="result-row"><span>ارزش ${unitLabel()}</span><strong>${money(totalRial)}</strong></div>
       <div class="result-row"><span>هر گرم ۲۴ عیار</span><strong>${money(gramPrice)}</strong></div>
       <div class="result-row result-total"><span>هر گرم ${k} عیار</span><strong>${money(gramK)}</strong></div>
@@ -1435,13 +1407,13 @@ function toolSilver(){
   openModal(`<span data-icon="diamond"></span> محاسبه‌گر نقره`, `
     <div class="form-group">
       <label>وزن (گرم)</label>
-      <input class="input" type="number" value="100" step="0.01" data-sv>
+      <input class="input" type="text" inputmode="decimal" value="100" data-money data-sv>
     </div>
     <div class="result-box" data-silver-out></div>
   `);
 
   function calc(){
-    const w = parseFloat($('[data-sv]')?.value) || 0;
+    const w = parseFormattedNumber($('[data-sv]')?.value) || 0;
     const dollar = window.API.getById('dollar');
     if(!dollar || dollar.price == null) return;
     const pricePerGram = (silver.price * dollar.price) / 31.1035;
@@ -1450,7 +1422,7 @@ function toolSilver(){
     const out = $('[data-silver-out]');
     if(out) out.innerHTML = `
       <div class="result-row"><span>هر گرم</span><strong>${money(pricePerGram)}</strong></div>
-      <div class="result-row result-total"><span>ارزش ${w} گرم</span><strong>${money(total)}</strong></div>
+      <div class="result-row result-total"><span>ارزش ${formatNumber(w, 0)} گرم</span><strong>${money(total)}</strong></div>
     `;
   }
   $('[data-sv]')?.addEventListener('input', calc);
@@ -1464,7 +1436,7 @@ function toolConv(){
   openModal(`<span data-icon="exchange"></span> مبدل ارز`, `
     <div class="form-group">
       <label>مقدار (${unitLabel()})</label>
-      <input class="input" type="number" value="1000000" data-va>
+      <input class="input" type="text" inputmode="decimal" value="1000000" data-money data-va>
     </div>
     <div style="display:grid;grid-template-columns:1fr 48px 1fr;gap:10px;align-items:center">
       <select class="select" data-vf>${opts}</select>
@@ -1480,7 +1452,7 @@ function toolConv(){
   if(selT) selT.value = 'euro';
 
   function calc(){
-    const userAmt = parseFloat($('[data-va]')?.value) || 0;
+    const userAmt = parseFormattedNumber($('[data-va]')?.value) || 0;
     const amtBase = userToBase(userAmt);
     const f = window.DATA.find($('[data-vf]')?.value);
     const t = window.DATA.find($('[data-vt]')?.value);
@@ -1494,8 +1466,8 @@ function toolConv(){
     }
     const res = (amtBase * lf.price) / lt.price;
     if(out) out.innerHTML = `
-      <div class="result-row"><span>${window.U.num(userAmt, 2)} ${f.code}</span><strong>${window.U.num(res, 4)} ${t.code}</strong></div>
-      <div class="result-row"><span>نرخ تبدیل</span><strong>۱ ${f.code} = ${window.U.num(lf.price / lt.price, 4)} ${t.code}</strong></div>
+      <div class="result-row"><span>${formatNumber(userAmt, 2)} ${f.code}</span><strong>${formatNumber(res, 4)} ${t.code}</strong></div>
+      <div class="result-row"><span>نرخ تبدیل</span><strong>۱ ${f.code} = ${formatNumber(lf.price / lt.price, 4)} ${t.code}</strong></div>
     `;
   }
   $$('[data-va],[data-vf],[data-vt]').forEach(el => {
@@ -1520,7 +1492,7 @@ function toolCryptoConv(){
   openModal(`<span data-icon="bitcoin"></span> مبدل کریپتو`, `
     <div class="form-group">
       <label>مقدار</label>
-      <input class="input" type="number" value="1" step="0.0001" data-cca>
+      <input class="input" type="text" inputmode="decimal" value="1" data-money data-cca>
     </div>
     <div style="display:grid;grid-template-columns:1fr 48px 1fr;gap:10px;align-items:center">
       <select class="select" data-ccf>${opts}</select>
@@ -1536,7 +1508,7 @@ function toolCryptoConv(){
   if(t) t.value = 'usdt';
 
   function calc(){
-    const amt = parseFloat($('[data-cca]')?.value) || 0;
+    const amt = parseFormattedNumber($('[data-cca]')?.value) || 0;
     const from = window.DATA.find($('[data-ccf]')?.value);
     const to = window.DATA.find($('[data-cct]')?.value);
     if(!from || !to) return;
@@ -1553,8 +1525,8 @@ function toolCryptoConv(){
     const tomanVal = dollar ? usdVal * dollar.price : 0;
 
     if(out) out.innerHTML = `
-      <div class="result-row"><span>${window.U.num(amt, 4)} ${from.code}</span><strong>${window.U.num(res, 6)} ${to.code}</strong></div>
-      <div class="result-row"><span>ارزش دلاری</span><strong>$${window.U.num(usdVal, 2)}</strong></div>
+      <div class="result-row"><span>${formatNumber(amt, 4)} ${from.code}</span><strong>${formatNumber(res, 6)} ${to.code}</strong></div>
+      <div class="result-row"><span>ارزش دلاری</span><strong>$${formatNumber(usdVal, 2)}</strong></div>
       ${tomanVal ? `<div class="result-row result-total"><span>ارزش ${unitLabel()}</span><strong>${money(tomanVal)}</strong></div>` : ''}
     `;
   }
@@ -1589,7 +1561,7 @@ function toolUnitConv(){
     </div>
     <div class="form-group">
       <label>مقدار</label>
-      <input class="input" type="number" value="1" step="0.01" data-ua>
+      <input class="input" type="text" inputmode="decimal" value="1" data-money data-ua>
     </div>
     <div style="display:grid;grid-template-columns:1fr 48px 1fr;gap:10px;align-items:center">
       <select class="select" data-uf></select>
@@ -1665,11 +1637,11 @@ function toolUnitConv(){
     const fSel = $('[data-uf]');
     const tSel = $('[data-ut]');
     if(!fSel || !tSel) return;
-    
+
     const html = getLabels(catKey);
     fSel.innerHTML = html;
     tSel.innerHTML = html;
-    
+
     if(catKey === 'weight'){
       fSel.value = 'gram';
       tSel.value = 'mesghal';
@@ -1689,7 +1661,7 @@ function toolUnitConv(){
   function calc(){
     const catKey = $('[data-ucat]')?.value || 'weight';
     const cat = units[catKey];
-    const amt = parseFloat($('[data-ua]')?.value) || 0;
+    const amt = parseFormattedNumber($('[data-ua]')?.value) || 0;
     const from = $('[data-uf]')?.value;
     const to = $('[data-ut]')?.value;
     if(!from || !to || !cat.units[from] || !cat.units[to]) return;
@@ -1700,8 +1672,8 @@ function toolUnitConv(){
     const out = $('[data-unit-out]');
     if(out) out.innerHTML = `
       <div class="result-row"><span>دسته</span><strong>${cat.label}</strong></div>
-      <div class="result-row"><span>مقدار ورودی</span><strong>${window.U.num(amt, 4)} ${cat.units[from].name}</strong></div>
-      <div class="result-row result-total"><span>معادل</span><strong>${window.U.num(res, 4)} ${cat.units[to].name}</strong></div>
+      <div class="result-row"><span>مقدار ورودی</span><strong>${formatNumber(amt, 4)} ${cat.units[from].name}</strong></div>
+      <div class="result-row result-total"><span>معادل</span><strong>${formatNumber(res, 4)} ${cat.units[to].name}</strong></div>
     `;
   }
 
@@ -1731,7 +1703,7 @@ function toolVolumeConv(){
   openModal(`<span data-icon="swap"></span> مبدل حجم`, `
     <div class="form-group">
       <label>مقدار</label>
-      <input class="input" type="number" value="1" step="0.01" data-vola>
+      <input class="input" type="text" inputmode="decimal" value="1" data-money data-vola>
     </div>
     <div style="display:grid;grid-template-columns:1fr 48px 1fr;gap:10px;align-items:center">
       <select class="select" data-volf>
@@ -1786,7 +1758,7 @@ function toolVolumeConv(){
   };
 
   function calc(){
-    const amt = parseFloat($('[data-vola]')?.value) || 0;
+    const amt = parseFormattedNumber($('[data-vola]')?.value) || 0;
     const from = $('[data-volf]')?.value;
     const to = $('[data-volt]')?.value;
     if(!from || !to) return;
@@ -1796,9 +1768,9 @@ function toolVolumeConv(){
 
     const out = $('[data-vol-out]');
     if(out) out.innerHTML = `
-      <div class="result-row"><span>مقدار ورودی</span><strong>${window.U.num(amt, 4)} ${labels[from]}</strong></div>
-      <div class="result-row"><span>معادل لیتر</span><strong>${window.U.num(inLiter, 4)} لیتر</strong></div>
-      <div class="result-row result-total"><span>معادل</span><strong>${window.U.num(res, 4)} ${labels[to]}</strong></div>
+      <div class="result-row"><span>مقدار ورودی</span><strong>${formatNumber(amt, 4)} ${labels[from]}</strong></div>
+      <div class="result-row"><span>معادل لیتر</span><strong>${formatNumber(inLiter, 4)} لیتر</strong></div>
+      <div class="result-row result-total"><span>معادل</span><strong>${formatNumber(res, 4)} ${labels[to]}</strong></div>
     `;
   }
 
@@ -1831,11 +1803,11 @@ function toolPortfolio(){
     <div class="form-grid">
       <div class="form-group">
         <label>مقدار</label>
-        <input class="input" type="number" placeholder="۱۰" data-pq>
+        <input class="input" type="text" inputmode="decimal" placeholder="۱۰" data-money data-pq>
       </div>
       <div class="form-group">
         <label>قیمت خرید (${unitLabel()})</label>
-        <input class="input" type="number" placeholder="خودکار" data-pp>
+        <input class="input" type="text" inputmode="decimal" placeholder="خودکار" data-money data-pp>
       </div>
     </div>
     <button type="button" class="btn btn-primary btn-block" data-padd>
@@ -1870,7 +1842,7 @@ function toolPortfolio(){
             </div>
             <div>
               <strong style="display:block;font-size:13px">${window.U.esc(a.name)}</strong>
-              <small style="font-size:11px;color:var(--muted)">${window.U.num(item.qty)} × ${formatPrice(a, item.buyPrice)}</small>
+              <small style="font-size:11px;color:var(--muted)">${formatNumber(item.qty, 0)} × ${formatPrice(a, item.buyPrice)}</small>
             </div>
           </div>
           <div style="display:flex;align-items:center;gap:10px">
@@ -1905,10 +1877,10 @@ function toolPortfolio(){
     e.preventDefault();
     e.stopPropagation();
     const id = $('[data-pa]')?.value;
-    const qty = parseFloat($('[data-pq]')?.value);
-    const ppUser = parseFloat($('[data-pp]')?.value);
+    const qty = parseFormattedNumber($('[data-pq]')?.value);
+    const ppUser = parseFormattedNumber($('[data-pp]')?.value);
     if(!id || !qty || qty <= 0){ toast('مقدار را وارد کنید', 'error'); return; }
-    
+
     let buyBase;
     if(ppUser && !isNaN(ppUser)){
       buyBase = userToBase(ppUser);
@@ -1917,7 +1889,7 @@ function toolPortfolio(){
       if(!l || l.price == null){ toast('قیمت در دسترس نیست', 'error'); return; }
       buyBase = l.price;
     }
-    
+
     const list = window.Storage.pf.get();
     list.push({ id, qty, buyPrice: buyBase, ts: Date.now() });
     window.Storage.pf.save(list);
@@ -1947,11 +1919,11 @@ function toolAlerts(){
     <div class="form-grid">
       <div class="form-group">
         <label>بالاتر از (${unitLabel()})</label>
-        <input class="input" type="number" data-al-up>
+        <input class="input" type="text" inputmode="decimal" data-money data-al-up>
       </div>
       <div class="form-group">
         <label>پایین‌تر از (${unitLabel()})</label>
-        <input class="input" type="number" data-al-dn>
+        <input class="input" type="text" inputmode="decimal" data-money data-al-dn>
       </div>
     </div>
     <button type="button" class="btn btn-primary btn-block" data-al-save>
@@ -2000,11 +1972,11 @@ function toolAlerts(){
     e.preventDefault();
     e.stopPropagation();
     const id = $('[data-al-a]')?.value;
-    const upUser = parseFloat($('[data-al-up]')?.value) || null;
-    const dnUser = parseFloat($('[data-al-dn]')?.value) || null;
-    if(!id || (!upUser && !dnUser)){ toast('حداقل یک شرط وارد کنید', 'error'); return; }
-    const up = upUser ? userToBase(upUser) : null;
-    const dn = dnUser ? userToBase(dnUser) : null;
+    const upUser = parseFormattedNumber($('[data-al-up]')?.value);
+    const dnUser = parseFormattedNumber($('[data-al-dn]')?.value);
+    if(!id || (upUser == null && dnUser == null)){ toast('حداقل یک شرط وارد کنید', 'error'); return; }
+    const up = upUser != null ? userToBase(upUser) : null;
+    const dn = dnUser != null ? userToBase(dnUser) : null;
     const list = window.Storage.alerts.get();
     list.push({ id, up, dn, ts: Date.now() });
     window.Storage.alerts.save(list);
@@ -2050,11 +2022,11 @@ function toolProfit(){
     <div class="form-grid">
       <div class="form-group">
         <label>قیمت خرید (${unitLabel()})</label>
-        <input class="input" type="number" placeholder="قیمت واحد" data-pr-buy>
+        <input class="input" type="text" inputmode="decimal" placeholder="قیمت واحد" data-money data-pr-buy>
       </div>
       <div class="form-group">
         <label>مقدار</label>
-        <input class="input" type="number" value="1" data-pr-qty>
+        <input class="input" type="text" inputmode="decimal" value="1" data-money data-pr-qty>
       </div>
     </div>
     <div class="result-box" data-profit-out></div>
@@ -2062,9 +2034,9 @@ function toolProfit(){
 
   function calc(){
     const id = $('[data-pr-a]')?.value;
-    const buyUser = parseFloat($('[data-pr-buy]')?.value) || 0;
+    const buyUser = parseFormattedNumber($('[data-pr-buy]')?.value) || 0;
     const buyBase = userToBase(buyUser);
-    const qty = parseFloat($('[data-pr-qty]')?.value) || 0;
+    const qty = parseFormattedNumber($('[data-pr-qty]')?.value) || 0;
     const a = window.DATA.find(id);
     const l = window.API.getById(id);
     const out = $('[data-profit-out]');
@@ -2107,7 +2079,7 @@ function toolZakat(){
     <div class="form-grid">
       <div class="form-group">
         <label>وزن طلا (گرم)</label>
-        <input class="input" type="number" value="100" step="0.1" data-zw>
+        <input class="input" type="text" inputmode="decimal" value="100" data-money data-zw>
       </div>
       <div class="form-group">
         <label>عیار</label>
@@ -2125,7 +2097,7 @@ function toolZakat(){
   const NISAB_GRAM_24K = 87.48;
 
   function calc(){
-    const w = parseFloat($('[data-zw]')?.value) || 0;
+    const w = parseFormattedNumber($('[data-zw]')?.value) || 0;
     const k = parseFloat($('[data-zk]')?.value) || 18;
     const w24 = w * (k / 24);
     const out = $('[data-zakat-out]');
@@ -2133,8 +2105,8 @@ function toolZakat(){
 
     if(!reached){
       if(out) out.innerHTML = `
-        <div class="result-row"><span>معادل ۲۴ عیار</span><strong>${window.U.num(w24, 2)} گرم</strong></div>
-        <div class="result-row"><span>نصاب شرعی</span><strong>${window.U.num(NISAB_GRAM_24K, 2)} گرم</strong></div>
+        <div class="result-row"><span>معادل ۲۴ عیار</span><strong>${formatNumber(w24, 2)} گرم</strong></div>
+        <div class="result-row"><span>نصاب شرعی</span><strong>${formatNumber(NISAB_GRAM_24K, 2)} گرم</strong></div>
         <div class="result-row result-total"><span>وضعیت</span><strong style="color:var(--warn)">به نصاب نرسیده</strong></div>
       `;
       return;
@@ -2145,7 +2117,7 @@ function toolZakat(){
     const zakat = totalValue * 0.025;
 
     if(out) out.innerHTML = `
-      <div class="result-row"><span>معادل ۲۴ عیار</span><strong>${window.U.num(w24, 2)} گرم</strong></div>
+      <div class="result-row"><span>معادل ۲۴ عیار</span><strong>${formatNumber(w24, 2)} گرم</strong></div>
       <div class="result-row"><span>ارزش کل</span><strong>${money(totalValue)}</strong></div>
       <div class="result-row"><span>نرخ زکات</span><strong>۲.۵٪</strong></div>
       <div class="result-row result-total"><span>زکات واجب</span><strong>${money(zakat)}</strong></div>
@@ -2183,8 +2155,8 @@ function toolAvgBuy(){
     row.setAttribute('data-avg-row', '');
     row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 40px;gap:8px;margin-bottom:8px';
     row.innerHTML = `
-      <input class="input" type="number" placeholder="قیمت (${unitLabel()})" data-avg-p>
-      <input class="input" type="number" placeholder="مقدار" data-avg-q>
+      <input class="input" type="text" inputmode="decimal" placeholder="قیمت (${unitLabel()})" data-money data-avg-p>
+      <input class="input" type="text" inputmode="decimal" placeholder="مقدار" data-money data-avg-q>
       <button type="button" class="btn btn-danger" data-avg-del style="padding:0;width:40px;font-size:18px">×</button>
     `;
     wrap.appendChild(row);
@@ -2207,9 +2179,9 @@ function toolAvgBuy(){
 
     let totalQty = 0, totalCost = 0;
     $$('[data-avg-row]').forEach(row => {
-      const pUser = parseFloat(row.querySelector('[data-avg-p]')?.value) || 0;
+      const pUser = parseFormattedNumber(row.querySelector('[data-avg-p]')?.value) || 0;
       const p = userToBase(pUser);
-      const q = parseFloat(row.querySelector('[data-avg-q]')?.value) || 0;
+      const q = parseFormattedNumber(row.querySelector('[data-avg-q]')?.value) || 0;
       totalQty += q;
       totalCost += p * q;
     });
@@ -2222,7 +2194,7 @@ function toolAvgBuy(){
 
     const out = $('[data-avg-out]');
     if(out) out.innerHTML = `
-      <div class="result-row"><span>مجموع مقدار</span><strong>${window.U.num(totalQty, 4)}</strong></div>
+      <div class="result-row"><span>مجموع مقدار</span><strong>${formatNumber(totalQty, 4)}</strong></div>
       <div class="result-row"><span>مجموع هزینه</span><strong>${formatPrice(a, totalCost)}</strong></div>
       <div class="result-row"><span>میانگین خرید</span><strong>${formatPrice(a, avg)}</strong></div>
       ${l && l.price != null ? `
@@ -2487,6 +2459,17 @@ function handleClick(e){
     return;
   }
 
+  const carChip = e.target.closest('[data-cars-filter]');
+  if(carChip){
+    e.preventDefault();
+    e.stopPropagation();
+    $$('[data-cars-filter]').forEach(c => c.classList.remove('is-active'));
+    carChip.classList.add('is-active');
+    carsFilter = carChip.dataset.carsFilter;
+    renderCars();
+    return;
+  }
+
   const unitBtn = e.target.closest('[data-unit]');
   if(unitBtn){
     e.preventDefault();
@@ -2567,22 +2550,67 @@ function handleClick(e){
 }
 
 /* ============================================================
+   FORMAT INPUT — جداکننده هزارگان خودکار
+============================================================ */
+function attachMoneyFormatter(){
+  document.addEventListener('input', function(e){
+    const input = e.target;
+    if(!input || input.tagName !== 'INPUT') return;
+    if(!input.hasAttribute('data-money')) return;
+
+    const start = input.selectionStart || 0;
+    const oldVal = input.value;
+    const num = parseFormattedNumber(oldVal);
+
+    if(num == null){
+      if(oldVal === '' || oldVal === '-') return;
+      input.value = '';
+      return;
+    }
+
+    const formatted = formatNumber(num, 0);
+    if(formatted === oldVal) return;
+
+    input.value = formatted;
+
+    const diff = formatted.length - oldVal.length;
+    const newPos = Math.max(0, Math.min(formatted.length, start + diff));
+    try {
+      input.setSelectionRange(newPos, newPos);
+    } catch(err){}
+  }, true);
+
+  // جلوگیری از ورود حروف غیرعددی
+  document.addEventListener('keypress', function(e){
+    const input = e.target;
+    if(!input || input.tagName !== 'INPUT') return;
+    if(!input.hasAttribute('data-money')) return;
+
+    const key = e.key;
+    if(key && key.length === 1 && !/[\d۰-۹٠-٩.,\-]/.test(key)){
+      e.preventDefault();
+    }
+  }, true);
+}
+
+/* ============================================================
    REFRESH ALL
 ============================================================ */
 function refreshAll(){
-    if(currentPage === 'home'){
+  if(currentPage === 'home'){
     renderBankCard();
     renderFeatured();
     renderMostUsed();
     renderCats();
     renderTools();
     renderHomeChart();
-    renderCars();      // ← این خط را اضافه کن
+    renderCars();
   }
   if(currentPage === 'markets') renderMarkets();
   if(currentPage === 'chart') renderChartPage();
   if(currentPage === 'compare') renderCompare();
   if(currentPage === 'favorites') renderFavs();
+  if(currentPage === 'cars') renderCars();
   renderHdrTicker();
   if(window.TV && window.TV.isActive()) window.TV.refresh();
 }
@@ -2656,6 +2684,18 @@ function init(){
     si.addEventListener('input', window.U.debounce(e => doSearch(e.target.value), 150));
   }
 
+  // جستجوی خودروها
+  const cs = $('[data-cars-search]');
+  if(cs){
+    cs.addEventListener('input', window.U.debounce(function(e){
+      carsSearch = e.target.value.trim();
+      renderCars();
+    }, 200));
+  }
+
+  // فرمت خودکار فیلدهای پولی
+  attachMoneyFormatter();
+
   const iv = $('[data-input="interval"]');
   if(iv){
     iv.value = window.CFG.get('refreshInterval');
@@ -2711,6 +2751,8 @@ return {
   fullUnitLabel: fullUnitLabel,
   baseToUser: baseToUser,
   userToBase: userToBase,
+  formatNumber: formatNumber,
+  parseFormattedNumber: parseFormattedNumber,
   openTool: openTool,
   toolGold: toolGold,
   toolCoin: toolCoin,
@@ -2726,7 +2768,8 @@ return {
   toolProfit: toolProfit,
   toolZakat: toolZakat,
   toolAvgBuy: toolAvgBuy,
-  renderCars: renderCars
+  renderCars: renderCars,
+  carRowHTML: carRowHTML
 };
 
 })();
