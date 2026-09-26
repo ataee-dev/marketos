@@ -223,7 +223,6 @@ function renderBankCard(){
   // ═══ Guard ═══
   if(!window.DATA || !window.DATA.find || !window.DATA.ASSETS) return;
 
-
   const list = window.Storage.pf.get();
   const userName = getUserName();
   const isEmpty = !list.length;
@@ -1064,6 +1063,7 @@ function go(page){
     }
   }
 }
+
 /* ============================================================
    MODAL / TOAST
 ============================================================ */
@@ -2328,17 +2328,17 @@ function handleClick(e){
     e.stopPropagation();
     sw.classList.toggle('is-on');
     const k = sw.dataset.toggle;
-    // در handleClick، بخش switch تم:
-if(k === 'darkTheme'){
-  const on = sw.classList.contains('is-on');
-  window.CFG.set('theme', on ? 'dark' : 'light');
-  document.body.classList.toggle('dark', on);
-  
-  // ═══ به‌روزرسانی iframe ها ═══
-  try {
-    localStorage.setItem('gheymato.cfg.v6', JSON.stringify(window.CFG._c));
-  } catch(e){}
-}
+
+    if(k === 'darkTheme'){
+      const on = sw.classList.contains('is-on');
+      window.CFG.set('theme', on ? 'dark' : 'light');
+      document.body.classList.toggle('dark', on);
+
+      try {
+        localStorage.setItem('gheymato.cfg.v6', JSON.stringify(window.CFG._c));
+      } catch(e){}
+    }
+  }
 
   const pill = e.target.closest('.pills button[data-period]');
   if(pill){

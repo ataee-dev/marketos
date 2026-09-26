@@ -1,5 +1,8 @@
 /**
- * قیمتو 5.5 — APP BOOT
+ * قیمتو 6.0 — APP BOOT
+ * ✅ انتظار برای DATA
+ * ✅ مخفی کردن Splash
+ * ✅ بدون خطای undefined
  */
 (function(){
 'use strict';
@@ -13,13 +16,13 @@ window.Gestures = (function(){
   function attachPageSwipe(container){
     if(!container) return;
     let sx = 0, sy = 0, st = 0, tracking = false;
-    container.addEventListener('touchstart', e => {
+    container.addEventListener('touchstart', function(e){
       if(!state.enabled) return;
       const t = e.touches[0];
       sx = t.clientX; sy = t.clientY; st = Date.now();
       tracking = true;
     }, {passive:true});
-    container.addEventListener('touchend', e => {
+    container.addEventListener('touchend', function(e){
       if(!tracking) return;
       tracking = false;
       const t = e.changedTouches[0];
@@ -27,9 +30,10 @@ window.Gestures = (function(){
       const dy = t.clientY - sy;
       const dt = Date.now() - st;
       if(dt > 700 || Math.abs(dx) < 100 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
-      const pages = ['home','markets','chart','compare','favorites','settings'];
-      const cur = document.querySelector('.page.is-active')?.dataset.page || 'home';
-      const i = pages.indexOf(cur);
+      const pages = ['home','markets','chart','compare','favorites','cars','settings'];
+      const cur = document.querySelector('.page.is-active');
+      const curPage = cur ? cur.dataset.page : 'home';
+      const i = pages.indexOf(curPage);
       if(dx > 0 && i < pages.length - 1 && window.UI) window.UI.go(pages[i+1]);
       else if(dx < 0 && i > 0 && window.UI) window.UI.go(pages[i-1]);
     }, {passive:true});
@@ -41,7 +45,7 @@ window.Gestures = (function(){
     console.log('[Gestures] ✓');
   }
 
-  return { init };
+  return { init: init };
 })();
 
 /* ============================================================
@@ -49,7 +53,7 @@ window.Gestures = (function(){
 ============================================================ */
 window.Anim = (function(){
   function attachRipple(){
-    document.addEventListener('click', e => {
+    document.addEventListener('click', function(e){
       const btn = e.target.closest('.btn, .chip, .tool-chip, .cat-chip, .mnav-btn, .nav-link');
       if(!btn) return;
       const cs = getComputedStyle(btn);
@@ -60,9 +64,9 @@ window.Anim = (function(){
       const x = e.clientX - rect.left - size/2;
       const y = e.clientY - rect.top - size/2;
       const ripple = document.createElement('span');
-      ripple.style.cssText = `position:absolute;width:${size}px;height:${size}px;left:${x}px;top:${y}px;border-radius:50%;background:rgba(255,255,255,.35);transform:scale(0);animation:rippleAnim .6s cubic-bezier(.22,1,.36,1);pointer-events:none;z-index:1;`;
+      ripple.style.cssText = 'position:absolute;width:' + size + 'px;height:' + size + 'px;left:' + x + 'px;top:' + y + 'px;border-radius:50%;background:rgba(255,255,255,.35);transform:scale(0);animation:rippleAnim .6s cubic-bezier(.22,1,.36,1);pointer-events:none;z-index:1;';
       btn.appendChild(ripple);
-      setTimeout(() => ripple.remove(), 700);
+      setTimeout(function(){ ripple.remove(); }, 700);
     });
   }
 
@@ -70,37 +74,54 @@ window.Anim = (function(){
     if(!document.getElementById('anim-keyframes')){
       const style = document.createElement('style');
       style.id = 'anim-keyframes';
-      style.textContent = `
-        @keyframes rippleAnim{to{transform:scale(4);opacity:0}}
-        @keyframes spin{to{transform:rotate(360deg)}}
-      `;
+      style.textContent =
+        '@keyframes rippleAnim{to{transform:scale(4);opacity:0}}' +
+        '@keyframes spin{to{transform:rotate(360deg)}}';
       document.head.appendChild(style);
     }
     attachRipple();
     console.log('[Anim] ✓');
   }
 
-  return { init };
+  return { init: init };
 })();
 
 /* ============================================================
-   SPLASH + OFFLINE
+   SPLASH — مخفی کردن
 ============================================================ */
 function hideSplash(){
-  const s = document.querySelector('[data-splash]');
-  if(!s) return;
-  setTimeout(() => s.classList.add('is-hidden'), 1200);
+  // نسخه inline (index.html جدید)
+  const s = document.getElementById('splashScreen');
+  if(s){
+    s.classList.add('is-hidden');
+    setTimeout(function(){
+      if(s.parentNode) s.parentNode.removeChild(s);
+    }, 500);
+    return;
+  }
+
+  // fallback قدیمی (data-splash)
+  const s2 = document.querySelector('[data-splash]');
+  if(s2) setTimeout(function(){ s2.classList.add('is-hidden'); }, 800);
+
+  // API
+  if(window.Splash && window.Splash.hide){
+    window.Splash.hide();
+  }
 }
 
+/* ============================================================
+   ONLINE / OFFLINE
+============================================================ */
 function initOnlineStatus(){
-  const offline = document.querySelector('[data-offline]');
+  const offline = document.getElementById('offlineScreen');
   if(!offline) return;
 
   function update(){
     if(navigator.onLine){
-      offline.classList.remove('is-active');
+      offline.style.display = 'none';
     } else {
-      offline.classList.add('is-active');
+      offline.style.display = 'flex';
     }
   }
 
@@ -108,14 +129,17 @@ function initOnlineStatus(){
   window.addEventListener('offline', update);
   update();
 
-  offline.querySelector('[data-retry]')?.addEventListener('click', () => {
-    if(navigator.onLine){
-      offline.classList.remove('is-active');
-      window.API.fetchData(true).catch(() => {});
-    } else {
-      if(window.UI) window.UI.toast('هنوز آفلاین هستید', 'warning');
-    }
-  });
+  const retry = document.getElementById('offlineRetry');
+  if(retry){
+    retry.addEventListener('click', function(){
+      if(navigator.onLine){
+        offline.style.display = 'none';
+        window.API.fetchData(true).catch(function(){});
+      } else {
+        if(window.UI) window.UI.toast('هنوز آفلاین هستید', 'warning');
+      }
+    });
+  }
 }
 
 /* ============================================================
@@ -132,107 +156,68 @@ function boot(){
     }
 
     // 2. Icons
-    if(window.Icons?.hydrate) Icons.hydrate();
-    if(window.Icons?.installImageFallback) Icons.installImageFallback();
+    if(window.Icons && window.Icons.hydrate) window.Icons.hydrate();
+    if(window.Icons && window.Icons.installImageFallback) window.Icons.installImageFallback();
 
-    // 3. UI
-    if(window.UI?.init) UI.init();
+    // 3. Anim
+    if(window.Anim && window.Anim.init) window.Anim.init();
 
-    // 4. TV
-    if(window.TV?.init) TV.init();
+    // 4. Gestures
+    if(window.Gestures && window.Gestures.init) window.Gestures.init();
 
-    // 5. Anim
-    if(window.Anim?.init) Anim.init();
-
-    // 6. Gestures
-    if(window.Gestures?.init) Gestures.init();
-
-    // 7. Online/Offline
+    // 5. Online/Offline
     initOnlineStatus();
 
-    // 8. API
-    if(window.API){
-      const interval = CFG.get('refreshInterval') || 60000;
-      if(CFG.get('autoRefresh') !== false) API.start(interval);
-      else API.fetchData().catch(() => {});
+    // 6. TV
+    if(window.TV && window.TV.init) window.TV.init();
+
+    // ═══ 7. UI — انتظار برای DATA ═══
+    function initUIWhenReady(attempts){
+      attempts = attempts || 0;
+
+      // چک آماده بودن DATA
+      if(window.DATA && window.DATA.ASSETS && window.DATA.ASSETS.length > 0){
+
+        if(window.UI && window.UI.init){
+          UI.init();
+          console.log('%c[UI] ✓ آماده', 'color:#10b981;font-weight:900');
+        }
+
+        // 8. API
+        if(window.API){
+          const interval = CFG.get('refreshInterval') || 60000;
+          if(CFG.get('autoRefresh') !== false) API.start(interval);
+          else API.fetchData().catch(function(){});
+        }
+
+        // 9. مخفی کردن Splash
+        hideSplash();
+
+        console.log('%c[قیمتو] ✓ آماده', 'color:#10b981;font-weight:900');
+        return;
+      }
+
+      // تلاش مجدد (حداکثر ۵۰ بار = ۲.۵ ثانیه)
+      if(attempts < 50){
+        setTimeout(function(){ initUIWhenReady(attempts + 1); }, 50);
+      } else {
+        console.error('[Boot] DATA آماده نشد');
+        hideSplash();
+      }
     }
 
-    // ═══ 9. Hide Splash ═══
-    hideSplashIframe();
+    initUIWhenReady();
 
-    console.log('%c[قیمتو] ✓ آماده', 'color:#10b981;font-weight:900');
   } catch(err){
     console.error('[Boot]', err);
-    hideSplashIframe();
+    hideSplash();
   }
 }
 
-/* ═══ Splash Iframe ═══ */
-function hideSplashIframe(){
-  const frame = document.getElementById('splashFrame');
-  if(!frame) return;
-
-  try {
-    frame.contentWindow.postMessage('splash:hide', '*');
-  } catch(e){}
-
-  // حذف کامل iframe پس از انیمیشن
-  setTimeout(() => {
-    if(frame.parentNode) frame.parentNode.removeChild(frame);
-  }, 1000);
-}
-
-/* ═══ Online/Offline Iframe ═══ */
-function initOnlineStatus(){
-  const offlineFrame = document.getElementById('offlineFrame');
-  if(!offlineFrame) return;
-
-  function showOffline(){
-    offlineFrame.style.display = 'block';
-    offlineFrame.style.pointerEvents = 'auto';
-    try {
-      offlineFrame.contentWindow.postMessage('offline:show', '*');
-    } catch(e){}
-  }
-
-  function hideOffline(){
-    offlineFrame.style.display = 'none';
-    offlineFrame.style.pointerEvents = 'none';
-    try {
-      offlineFrame.contentWindow.postMessage('offline:hide', '*');
-    } catch(e){}
-  }
-
-  function update(){
-    if(navigator.onLine){
-      hideOffline();
-    } else {
-      showOffline();
-    }
-  }
-
-  window.addEventListener('online', () => {
-    if(window.UI) UI.toast('اتصال برقرار شد ✓', 'success');
-    setTimeout(update, 800);
-  });
-
-  window.addEventListener('offline', () => {
-    showOffline();
-  });
-
-  // پیام از iframe
-  window.addEventListener('message', (e) => {
-    if(e.data === 'offline:reconnect'){
-      setTimeout(hideOffline, 500);
-    }
-    if(e.data === 'offline:retry-success'){
-      if(window.UI) UI.toast('اتصال برقرار شد ✓', 'success');
-      setTimeout(hideOffline, 500);
-    }
-  });
-
-  // بررسی اولیه
-  update();
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', boot);
+} else {
+  boot();
 }
 
 })();
