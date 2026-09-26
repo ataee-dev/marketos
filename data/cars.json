@@ -1,6 +1,6 @@
 {
-  "updated": "2026-09-26T15:16:52.195Z",
-  "updatedTehran": "۱۴۰۵/۷/۴, ۸:۱۶:۵۲",
+  "updated": "2026-09-26T18:16:00.542Z",
+  "updatedTehran": "۱۴۰۵/۷/۴, ۱۸:۱۶:۰۰",
   "source": "iranjib.ir",
   "stats": {
     "total": 247,
@@ -23,7 +23,7 @@
       "withUrl": 54,
       "success": true,
       "error": null,
-      "duration": 3.2
+      "duration": 1.3
     },
     {
       "key": "imported",
@@ -35,7 +35,7 @@
       "withUrl": 1,
       "success": true,
       "error": null,
-      "duration": 2.1
+      "duration": 1.6
     }
   ],
   "categories": [
@@ -383,12 +383,12 @@
       "category": "ایران خودرو",
       "group": "domestic",
       "url": "https://www.iranjib.ir/shownews/126838//t",
-      "priceMarket": 5630000000,
+      "priceMarket": 5605000000,
       "priceFactory": null,
-      "change": 20000000,
-      "changePercent": 0.36,
+      "change": -5000000,
+      "changePercent": -0.09,
       "status": "discontinued",
-      "rawPriceMarket": "۵,۶۳۰,۰۰۰,۰۰۰",
+      "rawPriceMarket": "۵,۶۰۵,۰۰۰,۰۰۰",
       "rawPriceFactory": "توقف تولید"
     },
     {
@@ -3844,12 +3844,12 @@
         "category": "ایران خودرو",
         "group": "domestic",
         "url": "https://www.iranjib.ir/shownews/126838//t",
-        "priceMarket": 5630000000,
+        "priceMarket": 5605000000,
         "priceFactory": null,
-        "change": 20000000,
-        "changePercent": 0.36,
+        "change": -5000000,
+        "changePercent": -0.09,
         "status": "discontinued",
-        "rawPriceMarket": "۵,۶۳۰,۰۰۰,۰۰۰",
+        "rawPriceMarket": "۵,۶۰۵,۰۰۰,۰۰۰",
         "rawPriceFactory": "توقف تولید"
       },
       {
@@ -7358,12 +7358,12 @@
         "category": "ایران خودرو",
         "group": "domestic",
         "url": "https://www.iranjib.ir/shownews/126838//t",
-        "priceMarket": 5630000000,
+        "priceMarket": 5605000000,
         "priceFactory": null,
-        "change": 20000000,
-        "changePercent": 0.36,
+        "change": -5000000,
+        "changePercent": -0.09,
         "status": "discontinued",
-        "rawPriceMarket": "۵,۶۳۰,۰۰۰,۰۰۰",
+        "rawPriceMarket": "۵,۶۰۵,۰۰۰,۰۰۰",
         "rawPriceFactory": "توقف تولید"
       },
       {
