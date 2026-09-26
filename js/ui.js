@@ -317,6 +317,112 @@ function renderMarkets(){
   g.innerHTML = list.map(marketCardHTML).join('');
 }
 
+
+
+
+/* ============================================================
+   CARS — قیمت خودرو
+============================================================ */
+let carsFilter = 'all';
+let carsSearch = '';
+
+async function renderCars(){
+  const wrap = $('[data-home-cars]');
+  const listEl = $('[data-cars-list]');
+  const emptyEl = $('[data-cars-empty]');
+  const updatedEl = $('[data-cars-updated]');
+
+  // فقط اگر یکی از این‌ها وجود داشت، اجرا کن
+  if(!wrap && !listEl) return;
+
+  // چک API
+  if(!window.API || !window.API.fetchCars){
+    if(wrap) wrap.innerHTML = '<div class="empty"><h3>API خودرو در دسترس نیست</h3></div>';
+    if(listEl) listEl.innerHTML = '<div class="empty"><h3>API خودرو در دسترس نیست</h3></div>';
+    return;
+  }
+
+  try {
+    const data = await window.API.fetchCars();
+    if(!data || !data.cars || !data.cars.length){
+      if(wrap) wrap.innerHTML = '<div class="empty"><h3>داده‌ای موجود نیست</h3></div>';
+      if(listEl) listEl.innerHTML = '<div class="empty"><h3>داده‌ای موجود نیست</h3></div>';
+      return;
+    }
+
+    // فیلتر و جستجو
+    let list = data.cars.slice();
+    if(carsFilter && carsFilter !== 'all'){
+      list = list.filter(function(c){ return c.status === carsFilter; });
+    }
+    if(carsSearch){
+      const q = carsSearch.toLowerCase();
+      list = list.filter(function(c){
+        return (c.name || '').toLowerCase().includes(q) ||
+               (c.brand || '').toLowerCase().includes(q);
+      });
+    }
+
+    // Home — فقط ۵ خودروی اول
+    if(wrap){
+      const homeList = list.slice(0, 5);
+      wrap.innerHTML = homeList.map(function(c){
+        return carRowHTML(c);
+      }).join('');
+    }
+
+    // Page cars — همه
+    if(listEl){
+      listEl.innerHTML = list.map(function(c){
+        return carRowHTML(c);
+      }).join('');
+    }
+
+    if(emptyEl) emptyEl.hidden = list.length > 0;
+
+    if(updatedEl && data.updatedTehran){
+      updatedEl.textContent = 'آخرین به‌روزرسانی: ' + data.updatedTehran;
+    }
+
+  } catch(err){
+    console.error('[Cars]', err);
+    if(wrap) wrap.innerHTML = '<div class="empty"><h3>خطا در بارگذاری خودرو</h3></div>';
+    if(listEl) listEl.innerHTML = '<div class="empty"><h3>خطا در بارگذاری خودرو</h3></div>';
+  }
+}
+
+function carRowHTML(car){
+  const priceText = car.price != null
+    ? window.U.num(car.price, 0) + ' تومان'
+    : (car.statusText || '—');
+
+  const statusClass = car.status === 'available' ? 'up'
+                     : car.status === 'coming-soon' ? 'warn'
+                     : 'muted';
+
+  const changeText = car.change != null && car.change !== 0
+    ? ((car.change >= 0 ? '▲ ' : '▼ ') + Math.abs(car.change).toFixed(1) + '%')
+    : '';
+
+  return `
+    <div class="car-row" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border)">
+      <div style="flex:1;min-width:0">
+        <strong style="display:block;font-size:13.5px;font-weight:700">${window.U.esc(car.name || '—')}</strong>
+        <small style="display:block;font-size:11px;color:var(--muted);margin-top:2px">${window.U.esc(car.brand || '')} ${car.model ? '· ' + window.U.esc(car.model) : ''}</small>
+      </div>
+      <div style="text-align:left;flex-shrink:0">
+        <strong style="display:block;font-size:13px;font-weight:800;direction:ltr">${priceText}</strong>
+        ${changeText ? `<small style="display:block;font-size:11px;font-weight:700;color:var(--up);margin-top:2px">${changeText}</small>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+
+
+
+
+
 /* ============================================================
    FAVORITES
 ============================================================ */
@@ -2392,13 +2498,14 @@ function handleClick(e){
    REFRESH ALL
 ============================================================ */
 function refreshAll(){
-  if(currentPage === 'home'){
+    if(currentPage === 'home'){
     renderBankCard();
     renderFeatured();
     renderMostUsed();
     renderCats();
     renderTools();
     renderHomeChart();
+    renderCars();      // ← این خط را اضافه کن
   }
   if(currentPage === 'markets') renderMarkets();
   if(currentPage === 'chart') renderChartPage();
@@ -2546,7 +2653,8 @@ return {
   toolNotes: toolNotes,
   toolProfit: toolProfit,
   toolZakat: toolZakat,
-  toolAvgBuy: toolAvgBuy
+  toolAvgBuy: toolAvgBuy,
+  renderCars: renderCars
 };
 
 })();
