@@ -12,34 +12,158 @@
 <link rel="icon" type="image/png" href="assets/logo.png">
 <link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="css/app.css">
+
+<!-- ═══════════════ SPLASH INLINE STYLES (بلافاصله) ═══════════════ -->
+<style>
+/* Splash — بدون تأخیر، همه چیز inline */
+#splashScreen {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: #0a1310;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.4s ease, visibility 0.4s ease;
+  will-change: opacity;
+}
+
+#splashScreen.light {
+  background: #f5f7f6;
+}
+
+#splashScreen.is-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+#splashScreen .splash-logo {
+  width: 110px;
+  height: 110px;
+  margin-bottom: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#splashScreen .splash-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  animation: splashLogoIn 0.6s ease;
+}
+
+#splashScreen .splash-name {
+  font-size: 30px;
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+
+#splashScreen.light .splash-name {
+  color: #0a1310;
+}
+
+#splashScreen .splash-subtitle {
+  font-size: 13px;
+  color: #7a8a83;
+  font-weight: 500;
+  margin-bottom: 36px;
+}
+
+#splashScreen .splash-message {
+  font-size: 14px;
+  color: #7a8a83;
+  font-weight: 500;
+  margin-bottom: 18px;
+  text-align: center;
+}
+
+#splashScreen .splash-loader {
+  position: absolute;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 180px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+#splashScreen.light .splash-loader {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+#splashScreen .splash-loader-bar {
+  width: 40%;
+  height: 100%;
+  background: #10b981;
+  border-radius: 3px;
+  animation: splashLoaderMove 1.2s cubic-bezier(0.65, 0.05, 0.36, 1) infinite;
+}
+
+@keyframes splashLogoIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes splashLoaderMove {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(500%); }
+}
+</style>
 </head>
 <body class="dark">
 
-<!-- ═══════════════ SPLASH ═══════════════ -->
-<div class="splash" data-splash>
+<!-- ═══════════════ SPLASH — INLINE (سریع‌ترین حالت) ═══════════════ -->
+<div id="splashScreen">
   <div class="splash-logo">
     <img src="assets/logo.png" alt="قیمتو">
   </div>
-  <div class="splash-loader-wrap">
-    <div class="splash-spinner"></div>
+  <div class="splash-name">قیمتو</div>
+  <div class="splash-subtitle">پایش زنده بازار</div>
+  <div class="splash-message">لطفاً شکیبا باشید...</div>
+  <div class="splash-loader">
+    <div class="splash-loader-bar"></div>
   </div>
 </div>
 
-<!-- ═══════════════ OFFLINE ═══════════════ -->
-<div class="offline-screen" data-offline>
+<!-- ═══════════════ OFFLINE — INLINE (فقط نمایش در صورت نیاز) ═══════════════ -->
+<div id="offlineScreen" style="display:none">
   <div class="offline-icon">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M1 1l22 22M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.58 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M1 1l22 22"/>
+      <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/>
+      <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/>
+      <path d="M10.71 5.05A16 16 0 0 1 22.58 9"/>
+      <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/>
+      <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+      <path d="M12 20h.01"/>
     </svg>
   </div>
-  <h2>اتصال قطع شد</h2>
-  <p>لطفاً اتصال خود را بررسی کنید.</p>
-  <button data-retry>تلاش مجدد</button>
+  <h1 class="offline-title">اتصال قطع شد</h1>
+  <p class="offline-desc">لطفاً اتصال اینترنت خود را بررسی کنید و دوباره تلاش کنید</p>
+  <button class="offline-btn" id="offlineRetry">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 12a9 9 0 1 1-3-6.7L21 8"/>
+      <path d="M21 3v5h-5"/>
+    </svg>
+    <span>تلاش مجدد</span>
+  </button>
+  <div class="offline-status" id="offlineStatus">
+    <span class="dot"></span>
+    <span id="offlineStatusText">اتصال قطع است</span>
+  </div>
 </div>
 
 <div class="backdrop" data-backdrop></div>
 
 <div class="app">
+
   <!-- ═══════════════ SIDEBAR ═══════════════ -->
   <aside class="sidebar">
     <div class="sidebar-head">
@@ -49,6 +173,7 @@
         <small>پایش زنده بازار</small>
       </div>
     </div>
+
     <nav class="sidebar-nav">
       <div class="nav-group">نمایش بازار</div>
       <button class="nav-link is-active" data-route="home"><span data-icon="home"></span>خانه</button>
@@ -56,6 +181,7 @@
       <button class="nav-link" data-route="chart"><span data-icon="activity"></span>نمودار</button>
       <button class="nav-link" data-route="compare"><span data-icon="swap"></span>مقایسه</button>
       <button class="nav-link" data-route="favorites"><span data-icon="star"></span>علاقه‌مندی</button>
+      <button class="nav-link" data-route="cars"><span data-icon="car"></span>قیمت خودرو</button>
 
       <div class="nav-group">ابزارها</div>
       <button class="nav-link" data-tool="gold"><span data-icon="calculator"></span>محاسبه‌گر طلا</button>
@@ -80,6 +206,7 @@
       <button class="nav-link" data-tool="fullscreen"><span data-icon="external"></span>تمام‌صفحه</button>
       <button class="nav-link" data-route="settings"><span data-icon="settings"></span>تنظیمات</button>
     </nav>
+
     <div class="sidebar-foot">
       <div class="foot-status">
         <span class="dot"></span>
@@ -97,13 +224,15 @@
       <button class="hdr-btn" data-menu aria-label="منو">
         <span data-icon="menu"></span>
       </button>
+
       <div class="hdr-search-wrap">
         <div class="hdr-search">
           <span class="hdr-search-icon" data-icon="search"></span>
-          <input type="search" placeholder="جستجوی نماد، ارز، سکه، کریپتو..." data-search-input autocomplete="off">
+          <input type="search" placeholder="جستجوی نماد، ارز، سکه، کریپتو، خودرو..." data-search-input autocomplete="off">
         </div>
         <div class="hdr-search-results" data-search-results hidden></div>
       </div>
+
       <button class="hdr-btn" data-action="refresh" aria-label="بروزرسانی">
         <span data-icon="refresh"></span>
       </button>
@@ -126,7 +255,7 @@
         </div>
         <div class="portfolio-card-wrap" data-portfolio-card></div>
 
-        <!-- Banner Home -->
+        <!-- Banner Home 1 -->
         <div class="banner-single">
           <img src="assets/banners/banner-home.jpg" alt="پایش زنده بازار" loading="lazy">
         </div>
@@ -154,6 +283,20 @@
         <!-- Banner Home 2 -->
         <div class="banner-single">
           <img src="assets/banners/banner-home2.jpg" alt="تحلیل حرفه‌ای" loading="lazy">
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════
+             جدول خودروها — بعد از بنر دوم
+        ═══════════════════════════════════════════════════════ -->
+        <div class="sec-head">
+          <div class="sec-title"><span data-icon="car"></span>قیمت خودرو</div>
+          <button class="link" data-route="cars">همه<span data-icon="arrowLeft"></span></button>
+        </div>
+
+        <div class="cars-table-wrap" data-home-cars>
+          <div class="empty">
+            <h3>در حال بارگذاری...</h3>
+          </div>
         </div>
 
         <!-- Tools Grid -->
@@ -219,7 +362,6 @@
           <img src="assets/banners/banner-chart.jpg" alt="نمودار" loading="lazy">
         </div>
 
-        <!-- Header نماد -->
         <div class="chart-header">
           <div class="chart-header-icon" data-c-icon></div>
           <div class="chart-header-info">
@@ -231,7 +373,6 @@
           </button>
         </div>
 
-        <!-- قیمت اصلی -->
         <div class="chart-main">
           <div class="chart-price" data-c-price>—</div>
           <div class="chart-change" data-c-change>—</div>
@@ -242,21 +383,18 @@
           </div>
         </div>
 
-        <!-- Period selector -->
         <div class="pills" style="margin-bottom:16px">
           <button data-period="1D" class="is-active">۱روز</button>
           <button data-period="1W">۱هفته</button>
           <button data-period="1M">۱ماه</button>
         </div>
 
-        <!-- نمودار -->
         <div class="panel" style="margin-bottom:16px">
           <div class="chart-canvas-wrap">
             <canvas data-chart-canvas></canvas>
           </div>
         </div>
 
-        <!-- سوالات TGJU -->
         <div class="chart-questions-full">
           <div class="chart-q-header">
             <span class="chart-q-title">
@@ -268,7 +406,6 @@
           <div class="chart-q-list" data-c-questions></div>
         </div>
 
-        <!-- تحلیل حباب -->
         <div class="bubble-analysis" data-bubble-analysis hidden>
           <div class="bubble-header">
             <span class="bubble-title">
@@ -279,7 +416,6 @@
           <div class="bubble-body" data-bubble-body></div>
         </div>
 
-        <!-- نمادهای مرتبط -->
         <div class="sec-head">
           <div class="sec-title"><span data-icon="list"></span>نمادهای مرتبط</div>
         </div>
@@ -314,6 +450,43 @@
         <div class="empty" data-fav-empty hidden>
           <h3>هنوز چیزی اضافه نکرده‌اید</h3>
           <p>روی ستاره هر کارت بزنید</p>
+        </div>
+      </section>
+
+      <!-- ═══════════════ CARS ═══════════════ -->
+      <section class="page" data-page="cars">
+        <div class="sec-head">
+          <div class="sec-title"><span data-icon="car"></span>قیمت خودرو</div>
+        </div>
+
+        <div class="cars-search-wrap">
+          <div class="cars-search">
+            <span data-icon="search"></span>
+            <input type="search" placeholder="جستجوی خودرو..." data-cars-search autocomplete="off">
+          </div>
+        </div>
+
+        <div class="chips" data-cars-filters>
+          <button class="chip is-active" data-cars-filter="all">همه</button>
+          <button class="chip" data-cars-filter="available">موجود</button>
+          <button class="chip" data-cars-filter="coming-soon">به زودی</button>
+          <button class="chip" data-cars-filter="unavailable">ناموجود</button>
+          <button class="chip" data-cars-filter="discontinued">توقف</button>
+        </div>
+
+        <div class="cars-table-wrap" data-cars-list>
+          <div class="empty">
+            <h3>در حال بارگذاری...</h3>
+          </div>
+        </div>
+
+        <div class="empty" data-cars-empty hidden>
+          <h3>موردی یافت نشد</h3>
+          <p>فیلتر یا جستجو را تغییر دهید</p>
+        </div>
+
+        <div class="cars-updated">
+          <span data-cars-updated>—</span>
         </div>
       </section>
 
@@ -392,8 +565,8 @@
 <nav class="mobile-nav">
   <button class="mnav-btn is-active" data-route="home"><span data-icon="home"></span><span>خانه</span></button>
   <button class="mnav-btn" data-route="markets"><span data-icon="barChart"></span><span>بازار</span></button>
+  <button class="mnav-btn" data-route="cars"><span data-icon="car"></span><span>خودرو</span></button>
   <button class="mnav-btn" data-tool="portfolio"><span data-icon="briefcase"></span><span>پرتفوی</span></button>
-  <button class="mnav-btn" data-route="chart"><span data-icon="activity"></span><span>نمودار</span></button>
   <button class="mnav-btn" data-route="settings"><span data-icon="settings"></span><span>تنظیمات</span></button>
 </nav>
 
@@ -449,6 +622,152 @@
     <i data-tv-progress></i>
   </div>
 </div>
+
+<script>
+/* ═══════════════ SPLASH + OFFLINE FAST SCRIPT ═══════════════ */
+(function(){
+  'use strict';
+
+  var splash = document.getElementById('splashScreen');
+  var offline = document.getElementById('offlineScreen');
+  var offlineRetry = document.getElementById('offlineRetry');
+  var offlineStatus = document.getElementById('offlineStatus');
+  var offlineStatusText = document.getElementById('offlineStatusText');
+  var splashHidden = false;
+
+  /* ─── تشخیص تم ─── */
+  try {
+    var cfg = JSON.parse(localStorage.getItem('gheymato.cfg.v6') || '{}');
+    if(cfg.theme === 'light'){
+      splash.classList.add('light');
+    }
+  } catch(e){}
+
+  /* ═══ مخفی کردن Splash ═══ */
+  function hideSplash(){
+    if(splashHidden || !splash) return;
+    splashHidden = true;
+    splash.classList.add('is-hidden');
+    setTimeout(function(){
+      if(splash && splash.parentNode){
+        splash.parentNode.removeChild(splash);
+      }
+    }, 500);
+  }
+
+  /* ═══ نمایش Splash ═══ */
+  function showSplash(){
+    if(!splash) return;
+    splashHidden = false;
+    splash.classList.remove('is-hidden');
+  }
+
+  /* ═══ زمان‌بندی: حداکثر 1.5 ثانیه ═══ */
+  // اگر تا 1.5 ثانیه اپ لود شد، پنهان می‌شود
+  // اگر نشد، باز هم پنهان می‌شود (سریع‌تر)
+  setTimeout(hideSplash, 1500);
+
+  /* ═══ اعلام آماده بودن ═══ */
+  window.addEventListener('load', function(){
+    // بعد از لود کامل منابع، سریع پنهان کن
+    setTimeout(hideSplash, 300);
+  });
+
+  /* ═══ API ═══ */
+  window.Splash = {
+    hide: hideSplash,
+    show: showSplash
+  };
+
+  /* ═══════════════ OFFLINE ═══════════════ */
+  function showOffline(){
+    if(!offline) return;
+    offline.style.display = 'flex';
+    offline.style.opacity = '0';
+    requestAnimationFrame(function(){
+      offline.style.transition = 'opacity 0.3s ease';
+      offline.style.opacity = '1';
+    });
+    document.documentElement.style.overflow = 'hidden';
+  }
+
+  function hideOffline(){
+    if(!offline) return;
+    offline.style.opacity = '0';
+    setTimeout(function(){
+      offline.style.display = 'none';
+      document.documentElement.style.overflow = '';
+    }, 300);
+  }
+
+  function updateOfflineStatus(){
+    if(!offlineStatus) return;
+    if(navigator.onLine){
+      offlineStatus.classList.add('online');
+      offlineStatusText.textContent = 'اتصال برقرار است';
+    } else {
+      offlineStatus.classList.remove('online');
+      offlineStatusText.textContent = 'اتصال قطع است';
+    }
+  }
+
+  /* ═══ دکمه تلاش مجدد ═══ */
+  if(offlineRetry){
+    offlineRetry.addEventListener('click', function(){
+      if(!navigator.onLine){
+        offlineStatusText.textContent = 'هنوز آفلاین هستید';
+        setTimeout(updateOfflineStatus, 2000);
+        return;
+      }
+
+      offlineRetry.classList.add('is-loading');
+
+      fetch('data/latest.json?_=' + Date.now(), { method: 'HEAD', cache: 'no-store' })
+        .then(function(res){
+          offlineRetry.classList.remove('is-loading');
+          if(res.ok){
+            hideOffline();
+            if(window.UI && window.UI.toast){
+              window.UI.toast('اتصال برقرار شد ✓', 'success');
+            }
+          } else {
+            offlineStatusText.textContent = 'اتصال برقرار نشد';
+            setTimeout(updateOfflineStatus, 2000);
+          }
+        })
+        .catch(function(){
+          offlineRetry.classList.remove('is-loading');
+          offlineStatusText.textContent = 'اتصال برقرار نشد';
+          setTimeout(updateOfflineStatus, 2000);
+        });
+    });
+  }
+
+  /* ═══ Event Listeners ═══ */
+  window.addEventListener('online', function(){
+    updateOfflineStatus();
+    setTimeout(hideOffline, 800);
+  });
+
+  window.addEventListener('offline', function(){
+    showOffline();
+  });
+
+  /* ═══ بررسی اولیه ═══ */
+  if(!navigator.onLine){
+    showOffline();
+  }
+  updateOfflineStatus();
+
+  /* ═══ API ═══ */
+  window.Offline = {
+    show: showOffline,
+    hide: hideOffline,
+    check: updateOfflineStatus
+  };
+
+})();
+</script>
 
 <script src="js/icons.js"></script>
 <script src="js/core.js"></script>

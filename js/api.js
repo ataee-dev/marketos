@@ -1,8 +1,7 @@
 /**
  * قیمتو 6.0 — API
- * ✅ annual-history.json (۳۰ روز کامل با o/h/l/p/d)
- * ✅ history/ روزانه (فقط ۲ روز اخیر به عنوان پشتیبان)
- * ✅ getPriceAt برای بازه‌های زمانی
+ * ✅ annual-history.json + history/ روزانه
+ * ✅ cars.json (قیمت خودرو)
  * ✅ cache هوشمند
  * ✅ بدون CORS
  */
@@ -17,10 +16,11 @@ const CONFIG = {
   RAW_BASE: 'https://raw.githubusercontent.com/ataee-dev/marketos/main/data',
   cacheTTL: 30000,
   annualCacheTTL: 5 * 60000,
+  carsCacheTTL: 5 * 60000,
   poll: 60000,
   timeout: 8000,
   retries: 2,
-  historyBackupDays: 2   // ← فقط ۲ روز اخیر
+  historyBackupDays: 2
 };
 
 /* ============================================================
@@ -38,6 +38,10 @@ let currentSource = 'primary';
 
 let annualCache = null;
 let annualCacheTime = 0;
+
+let carsCache = null;
+let carsCacheTime = 0;
+let carsError = null;
 
 const HISTORY_CACHE = new Map();
 const HISTORY_TTL = 5 * 60 * 1000;
@@ -154,9 +158,6 @@ async function fetchLatest(){
   }
 }
 
-/**
- * annual-history.json (با cache)
- */
 async function fetchAnnual(){
   if(annualCache && (Date.now() - annualCacheTime) < CONFIG.annualCacheTTL){
     return annualCache;
@@ -176,39 +177,45 @@ async function fetchAnnual(){
 }
 
 /**
- * history روزانه (فقط پشتیبان — ۲ روز اخیر)
+ * دریافت خودروها
  */
-async function fetchHistory(date){
-  if(NEGATIVE_CACHE.has(date)) return null;
+async function fetchCars(force){
+  force = force || false;
+  const now = Date.now();
 
-  const cached = HISTORY_CACHE.get(date);
-  if(cached && (Date.now() - cached.t) < HISTORY_TTL){
-    return cached.data;
+  if(!force && carsCache && (now - carsCacheTime) < CONFIG.carsCacheTTL){
+    return carsCache;
   }
 
-  const url = CONFIG.DATA_BASE + '/history/' + date + '.json?_=' + Date.now();
+  const url = CONFIG.DATA_BASE + '/cars.json?_=' + now;
+
   try {
     const json = await fetchJSON(url);
-    HISTORY_CACHE.set(date, { data: json, t: Date.now() });
+    carsCache = json;
+    carsCacheTime = now;
+    carsError = null;
+    console.log('[API] ✅ cars.json — ' + (json.cars?.length || 0) + ' خودرو');
     return json;
   } catch(err){
-    // اگه ۴۰۴ داد، به negative cache اضافه کن
-    if(err.message && err.message.indexOf('404') !== -1){
-      NEGATIVE_CACHE.add(date);
-      return null;
-    }
-    
-    // تلاش با raw
-    try {
-      const url2 = CONFIG.RAW_BASE + '/history/' + date + '.json?_=' + Date.now();
-      const json = await fetchJSON(url2);
-      HISTORY_CACHE.set(date, { data: json, t: Date.now() });
-      return json;
-    } catch(e){
-      NEGATIVE_CACHE.add(date);
-      return null;
-    }
+    carsError = err.message;
+    console.warn('[API] ❌ cars.json:', err.message);
+    if(carsCache) return carsCache;
+    return {
+      updated: null,
+      updatedTehran: null,
+      stats: { total: 0, available: 0, unavailable: 0, comingSoon: 0, discontinued: 0 },
+      cars: [],
+      byCategory: {}
+    };
   }
+}
+
+function getCars(){
+  return carsCache;
+}
+
+function getCarsError(){
+  return carsError;
 }
 
 /* ============================================================
@@ -322,16 +329,10 @@ function today(){
   return tehranTime.toISOString().slice(0, 10);
 }
 
-/**
- * تاریخچه یک نماد
- * ✅ اول از annual-history.json (۳۰ روز کامل)
- * ✅ پشتیبان: history/ (فقط ۲ روز اخیر)
- */
 async function getHistory(asset, days){
   if(!asset) return [];
   days = Math.max(1, Math.ceil(days || 30));
 
-  // ═══ تلاش اول: annual-history.json ═══
   try {
     const annual = await fetchAnnual();
 
@@ -362,9 +363,8 @@ async function getHistory(asset, days){
     console.warn('[API] annual failed:', err.message);
   }
 
-  // ═══ تلاش دوم: history/ (فقط پشتیبان) ═══
   console.log('[API] ⚠️ fallback to history/ for ' + asset.tgju);
-  
+
   const dates = [];
   const now = new Date();
   const maxBackupDays = CONFIG.historyBackupDays;
@@ -398,21 +398,46 @@ async function getHistory(asset, days){
   return allPoints;
 }
 
-/**
- * فقط قیمت‌ها (برای نمودار)
- */
+async function fetchHistory(date){
+  if(NEGATIVE_CACHE.has(date)) return null;
+
+  const cached = HISTORY_CACHE.get(date);
+  if(cached && (Date.now() - cached.t) < HISTORY_TTL){
+    return cached.data;
+  }
+
+  const url = CONFIG.DATA_BASE + '/history/' + date + '.json?_=' + Date.now();
+  try {
+    const json = await fetchJSON(url);
+    HISTORY_CACHE.set(date, { data: json, t: Date.now() });
+    return json;
+  } catch(err){
+    if(err.message && err.message.indexOf('404') !== -1){
+      NEGATIVE_CACHE.add(date);
+      return null;
+    }
+
+    try {
+      const url2 = CONFIG.RAW_BASE + '/history/' + date + '.json?_=' + Date.now();
+      const json = await fetchJSON(url2);
+      HISTORY_CACHE.set(date, { data: json, t: Date.now() });
+      return json;
+    } catch(e){
+      NEGATIVE_CACHE.add(date);
+      return null;
+    }
+  }
+}
+
 async function getHistoryPrices(asset, days){
   const history = await getHistory(asset, days);
   return history.map(function(h){ return h.p; });
 }
 
-/**
- * پیدا کردن نزدیک‌ترین قیمت به یک زمان مشخص
- */
 async function getPriceAt(asset, msAgo){
   const days = Math.max(1, Math.ceil(msAgo / (24 * 60 * 60 * 1000)) + 1);
   const history = await getHistory(asset, days);
-  
+
   if(!history || !history.length) return null;
 
   const targetTime = Date.now() - msAgo;
@@ -433,9 +458,6 @@ async function getPriceAt(asset, msAgo){
   return null;
 }
 
-/**
- * تاریخچه ساده برای sparkline
- */
 function history(asset, count, period){
   const live = getById(asset.id);
   const base = live && live.price != null ? live.price : 1000;
@@ -445,7 +467,6 @@ function history(asset, count, period){
     return real.map(function(h){ return h.p; });
   }
 
-  // fallback: داده مصنوعی
   const seed = (asset.id + (period || '1D')).split('').reduce(function(a, c){
     return a + c.charCodeAt(0);
   }, 0);
@@ -552,11 +573,17 @@ return {
   getHistoryPrices: getHistoryPrices,
   getPriceAt: getPriceAt,
   fetchAnnual: fetchAnnual,
+  fetchHistory: fetchHistory,
   preloadTodayHistory: preloadTodayHistory,
+  fetchCars: fetchCars,
+  getCars: getCars,
+  getCarsError: getCarsError,
   clearHistoryCache: function(){
     HISTORY_CACHE.clear();
     annualCache = null;
     annualCacheTime = 0;
+    carsCache = null;
+    carsCacheTime = 0;
   }
 };
 

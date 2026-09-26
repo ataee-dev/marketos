@@ -1,198 +1,590 @@
 /**
- * قیمتو 6.0 — DATA
- * ✅ ۱۰۷ نماد
- * ✅ واحدهای دقیق (گرم/اونس/بشکه/گالن/بوشل/پوند/تن)
- * ✅ هماهنگ با scraper و TGJU
+ * قیمتو 6.0 — API
+ * ✅ annual-history.json + history/ روزانه
+ * ✅ cars.json (قیمت خودرو)
+ * ✅ cache هوشمند
+ * ✅ بدون CORS
  */
-window.DATA = (function(){
+window.API = (function(){
 'use strict';
 
-const CATEGORIES = {
-  gold:       {label:'طلا و سکه',   icon:'coins',      color:'gold'},
-  currency:   {label:'ارز',         icon:'dollarSign', color:'blue'},
-  metal:      {label:'فلزات',       icon:'diamond',    color:'purple'},
-  energy:     {label:'انرژی',       icon:'zap',        color:'orange'},
-  crypto:     {label:'کریپتو',      icon:'bitcoin',    color:'orange'},
-  commodity:  {label:'کالا',        icon:'briefcase',  color:'green'},
-  index:      {label:'شاخص‌ها',     icon:'barChart',   color:'cyan'},
-  goldCrypto: {label:'توکن طلا',    icon:'coins',      color:'gold'},
-  ratio:      {label:'نسبت‌ها',     icon:'trendingUp', color:'purple'}
+/* ============================================================
+   CONFIG
+============================================================ */
+const CONFIG = {
+  DATA_BASE: 'https://ataee-dev.github.io/marketos/data',
+  RAW_BASE: 'https://raw.githubusercontent.com/ataee-dev/marketos/main/data',
+  cacheTTL: 30000,
+  annualCacheTTL: 5 * 60000,
+  carsCacheTTL: 5 * 60000,
+  poll: 60000,
+  timeout: 8000,
+  retries: 2,
+  historyBackupDays: 2
 };
 
-const ASSETS = [
-  /* ══════════════════════════════════════════════════════════
-     طلا و سکه (۱۵ نماد)
-  ══════════════════════════════════════════════════════════ */
-  {id:'gold18',      tgju:'geram18',              name:'طلای ۱۸ عیار',   short:'طلای ۱۸',    code:'GOLD18',  cat:'gold', ptype:'rial', unit:'گرم',    dec:0, popular:true,  icon:'gold'},
-  {id:'gold24',      tgju:'geram24',              name:'طلای ۲۴ عیار',   short:'طلای ۲۴',    code:'GOLD24',  cat:'gold', ptype:'rial', unit:'گرم',    dec:0, popular:true,  icon:'gold'},
-  {id:'gold17',      tgju:'gold_17',              name:'طلای ۱۷ عیار',   short:'طلای ۱۷',    code:'GOLD17',  cat:'gold', ptype:'rial', unit:'گرم',    dec:0, icon:'gold'},
-  {id:'mesghal',     tgju:'mesghal',              name:'مثقال طلا',      short:'مثقال',      code:'MESGHAL', cat:'gold', ptype:'rial', unit:'مثقال',  dec:0, popular:true,  icon:'gold'},
-  {id:'gold_melted', tgju:'gold_melted_wholesale',name:'آبشده عمده',     short:'آبشده عمده', code:'MELTED',  cat:'gold', ptype:'rial', unit:'گرم',    dec:0, popular:true,  icon:'gold'},
-  {id:'gold_transfer',tgju:'gold_melted_transfer',name:'آبشده حواله',    short:'آبشده حواله',code:'MELT-T',  cat:'gold', ptype:'rial', unit:'گرم',    dec:0, icon:'gold'},
-  {id:'gold_mini',   tgju:'gold_mini_size',       name:'طلای مینی ۷۴۰',  short:'مینی ۷۴۰',   code:'MINI740', cat:'gold', ptype:'rial', unit:'گرم',    dec:0, icon:'gold'},
-  {id:'gold_740k',   tgju:'gold_740k',            name:'طلای ۷۴۰ عیار',  short:'طلای ۷۴۰',   code:'GOLD740', cat:'gold', ptype:'rial', unit:'گرم',    dec:0, icon:'gold'},
-  {id:'ounce',       tgju:'ons',                  name:'انس طلای جهانی', short:'انس طلا',    code:'XAU',     cat:'gold', ptype:'usd',  unit:'اونس',   dec:2, popular:true,  icon:'gold'},
-  {id:'coin',        tgju:'sekeb',                name:'سکه امامی',      short:'سکه امامی',  code:'COIN',    cat:'gold', ptype:'rial', unit:'عدد',    dec:0, popular:true,  icon:'coin'},
-  {id:'coin_bahar',  tgju:'sekee',                name:'سکه بهار آزادی', short:'بهار آزادی', code:'BAHAR',   cat:'gold', ptype:'rial', unit:'عدد',    dec:0, popular:true,  icon:'coin'},
-  {id:'nim',         tgju:'nim',                  name:'نیم سکه',        short:'نیم سکه',    code:'HALF',    cat:'gold', ptype:'rial', unit:'عدد',    dec:0, popular:true,  icon:'coin'},
-  {id:'rob',         tgju:'rob',                  name:'ربع سکه',        short:'ربع سکه',    code:'QUARTER', cat:'gold', ptype:'rial', unit:'عدد',    dec:0, icon:'coin'},
-  {id:'gerami',      tgju:'gerami',               name:'سکه گرمی',       short:'گرمی',       code:'GERAMI',  cat:'gold', ptype:'rial', unit:'عدد',    dec:0, icon:'coin'},
+/* ============================================================
+   STATE
+============================================================ */
+let raw = null;
+let norm = {};
+let lastFetch = 0;
+let lastError = null;
+let fetching = false;
+let fallback = false;
+let timer = null;
+let subs = new Set();
+let currentSource = 'primary';
 
-  /* ══════════════════════════════════════════════════════════
-     ارز (۳۵ نماد)
-  ══════════════════════════════════════════════════════════ */
-  {id:'dollar',     tgju:'price_dollar_rl', name:'دلار آمریکا',  short:'دلار',        code:'USD',  cat:'currency', ptype:'rial', unit:'عدد', dec:0, flag:'us', popular:true},
-  {id:'dollar_dt',  tgju:'price_dollar_dt', name:'دلار دولتی',   short:'دلار دولتی',  code:'USD-G',cat:'currency', ptype:'rial', unit:'عدد', dec:0, flag:'us'},
-  {id:'dollar_ex',  tgju:'price_dollar_ex', name:'دلار صرافی',   short:'دلار صرافی',  code:'USD-E',cat:'currency', ptype:'rial', unit:'عدد', dec:0, flag:'us'},
-  {id:'euro',       tgju:'price_eur',       name:'یورو',          short:'یورو',        code:'EUR',  cat:'currency', ptype:'rial', unit:'عدد', dec:0, flag:'eu', popular:true},
-  {id:'gbp',        tgju:'price_gbp',       name:'پوند انگلیس',  short:'پوند',        code:'GBP',  cat:'currency', ptype:'rial', unit:'عدد', dec:0, flag:'gb'},
-  {id:'aed',        tgju:'price_aed',       name:'درهم امارات',  short:'درهم',        code:'AED',  cat:'currency', ptype:'rial', unit:'عدد', dec:0, flag:'ae'},
-  {id:'try_',       tgju:'price_try',       name:'لیر ترکیه',    short:'لیر',         code:'TRY',  cat:'currency', ptype:'rial', unit:'عدد', dec:0, flag:'tr'},
-  {id:'cny',        tgju:'price_cny',       name:'یوان چین',     short:'یوان',        code:'CNY',  cat:'currency', ptype:'rial', unit:'عدد', dec:0, flag:'cn'},
-  {id:'jpy',        tgju:'price_jpy',       name:'ین ژاپن',      short:'ین',          code:'JPY',  cat:'currency', ptype:'rial', unit:'عدد', dec:0, flag:'jp'},
-  {id:'cad',        tgju:'price_cad',       name:'دلار کانادا',  short:'کانادا',      code:'CAD',  cat:'currency', ptype:'rial', unit:'عدد', dec:0, flag:'ca'},
-  {id:'aud',        tgju:'price_aud',       name:'دلار استرالیا',short:'استرالیا',    code:'AUD',  cat:'currency', ptype:'rial', unit:'عدد', dec:0, flag:'au'},
-  {id:'chf',        tgju:'price_chf',       name:'فرانک سوئیس',  short:'فرانک',       code:'CHF',  cat:'currency', ptype:'rial', unit:'عدد', dec:0, flag:'ch'},
-  {id:'rub',        tgju:'price_rub',       name:'روبل روسیه',   short:'روبل',        code:'RUB',  cat:'currency', ptype:'rial', unit:'عدد', dec:0, flag:'ru'},
-  {id:'sar',        tgju:'price_sar',       name:'ریال سعودی',   short:'سعودی',       code:'SAR',  cat:'currency', ptype:'rial', unit:'عدد', dec:0, flag:'sa'},
-  {id:'kwd',        tgju:'price_kwd',       name:'دینار کویت',   short:'کویت',        code:'KWD',  cat:'currency', ptype:'rial', unit:'عدد', dec:0, flag:'kw'},
-  {id:'iqd',        tgju:'price_iqd',       name:'دینار عراق',   short:'عراق',        code:'IQD',  cat:'currency', ptype:'rial', unit:'عدد', dec:0, flag:'iq'},
-  {id:'afn',        tgju:'price_afn',       name:'افغانی',        short:'افغانی',      code:'AFN',  cat:'currency', ptype:'rial', unit:'عدد', dec:0, flag:'af'},
-  {id:'inr',        tgju:'price_inr',       name:'روپیه هند',    short:'هند',         code:'INR',  cat:'currency', ptype:'rial', unit:'عدد', dec:0, flag:'in'},
-  {id:'pkr',        tgju:'price_pkr',       name:'روپیه پاکستان',short:'پاکستان',     code:'PKR',  cat:'currency', ptype:'rial', unit:'عدد', dec:0, flag:'pk'},
-  {id:'qar',        tgju:'price_qar',       name:'ریال قطر',     short:'قطر',         code:'QAR',  cat:'currency', ptype:'rial', unit:'عدد', dec:0, flag:'qa'},
-  {id:'omr',        tgju:'price_omr',       name:'ریال عمان',    short:'عمان',        code:'OMR',  cat:'currency', ptype:'rial', unit:'عدد', dec:0, flag:'om'},
-  {id:'bhd',        tgju:'price_bhd',       name:'دینار بحرین',  short:'بحرین',       code:'BHD',  cat:'currency', ptype:'rial', unit:'عدد', dec:0, flag:'bh'},
-  {id:'krw',        tgju:'price_krw',       name:'وون کره',      short:'کره',         code:'KRW',  cat:'currency', ptype:'rial', unit:'عدد', dec:0, flag:'kr'},
-  {id:'thb',        tgju:'price_thb',       name:'بات تایلند',   short:'تایلند',      code:'THB',  cat:'currency', ptype:'rial', unit:'عدد', dec:0, flag:'th'},
-  {id:'myr',        tgju:'price_myr',       name:'رینگیت مالزی', short:'مالزی',       code:'MYR',  cat:'currency', ptype:'rial', unit:'عدد', dec:0, flag:'my'},
-  {id:'sgd',        tgju:'price_sgd',       name:'دلار سنگاپور', short:'سنگاپور',     code:'SGD',  cat:'currency', ptype:'rial', unit:'عدد', dec:0, flag:'sg'},
-  {id:'hkd',        tgju:'price_hkd',       name:'دلار هنگ‌کنگ', short:'هنگ‌کنگ',     code:'HKD',  cat:'currency', ptype:'rial', unit:'عدد', dec:0, flag:'hk'},
-  {id:'dkk',        tgju:'price_dkk',       name:'کرون دانمارک', short:'دانمارک',     code:'DKK',  cat:'currency', ptype:'rial', unit:'عدد', dec:0, flag:'dk'},
-  {id:'sek',        tgju:'price_sek',       name:'کرون سوئد',    short:'سوئد',        code:'SEK',  cat:'currency', ptype:'rial', unit:'عدد', dec:0, flag:'se'},
-  {id:'nok',        tgju:'price_nok',       name:'کرون نروژ',    short:'نروژ',        code:'NOK',  cat:'currency', ptype:'rial', unit:'عدد', dec:0, flag:'no'},
-  {id:'pln',        tgju:'price_pln',       name:'زلوتی لهستان', short:'لهستان',      code:'PLN',  cat:'currency', ptype:'rial', unit:'عدد', dec:0, flag:'pl'},
-  {id:'czk',        tgju:'price_czk',       name:'کرون چک',      short:'چک',          code:'CZK',  cat:'currency', ptype:'rial', unit:'عدد', dec:0, flag:'cz'},
-  {id:'huf',        tgju:'price_huf',       name:'فورینت مجارستان',short:'مجارستان',  code:'HUF',  cat:'currency', ptype:'rial', unit:'عدد', dec:0, flag:'hu'},
-  {id:'ron',        tgju:'price_ron',       name:'لئو رومانی',   short:'رومانی',      code:'RON',  cat:'currency', ptype:'rial', unit:'عدد', dec:0, flag:'ro'},
-  {id:'nzd',        tgju:'price_nzd',       name:'دلار نیوزیلند',short:'نیوزیلند',    code:'NZD',  cat:'currency', ptype:'rial', unit:'عدد', dec:0, flag:'nz'},
+let annualCache = null;
+let annualCacheTime = 0;
 
-  /* ══════════════════════════════════════════════════════════
-     فلزات (۱۲ نماد)
-  ══════════════════════════════════════════════════════════ */
-  {id:'silver',     tgju:'silver',        name:'نقره',        short:'نقره',      code:'XAG', cat:'metal', ptype:'usd', unit:'اونس',   dec:2, popular:true, icon:'silver'},
-  {id:'silver_999', tgju:'silver_999',    name:'نقره ۹۹۹',    short:'نقره ۹۹۹',  code:'AG999',cat:'metal', ptype:'rial', unit:'گرم',    dec:0, icon:'silver'},
-  {id:'silver_925', tgju:'silver_925',    name:'نقره ۹۲۵',    short:'نقره ۹۲۵',  code:'AG925',cat:'metal', ptype:'rial', unit:'گرم',    dec:0, icon:'silver'},
-  {id:'platinum',   tgju:'platinum',      name:'پلاتین',       short:'پلاتین',    code:'XPT', cat:'metal', ptype:'usd', unit:'اونس',   dec:2, icon:'platinum'},
-  {id:'palladium',  tgju:'palladium',     name:'پالادیوم',     short:'پالادیوم',  code:'XPD', cat:'metal', ptype:'usd', unit:'اونس',   dec:2, icon:'palladium'},
-  {id:'copper',     tgju:'copper',        name:'مس',           short:'مس',        code:'XCU', cat:'metal', ptype:'usd', unit:'تن',     dec:2, icon:'copper'},
-  {id:'aluminium',  tgju:'aluminium',     name:'آلومینیوم',    short:'آلومینیوم', code:'ALU', cat:'metal', ptype:'usd', unit:'تن',     dec:2, icon:'aluminium'},
-  {id:'nickel',     tgju:'nickel',        name:'نیکل',         short:'نیکل',      code:'NIC', cat:'metal', ptype:'usd', unit:'تن',     dec:2, icon:'diamond'},
-  {id:'zinc',       tgju:'zinc',          name:'روی',          short:'روی',       code:'ZNC', cat:'metal', ptype:'usd', unit:'تن',     dec:2, icon:'diamond'},
-  {id:'lead',       tgju:'lead',          name:'سرب',          short:'سرب',       code:'LED', cat:'metal', ptype:'usd', unit:'تن',     dec:2, icon:'diamond'},
-  {id:'cobalt',     tgju:'cobalt',        name:'کبالت',        short:'کبالت',     code:'COB', cat:'metal', ptype:'usd', unit:'تن',     dec:2, icon:'diamond'},
-  {id:'tin',        tgju:'base_global_tin',name:'قلع',         short:'قلع',       code:'TIN', cat:'metal', ptype:'usd', unit:'تن',     dec:2, icon:'diamond'},
+let carsCache = null;
+let carsCacheTime = 0;
+let carsError = null;
 
-  /* ══════════════════════════════════════════════════════════
-     انرژی (۸ نماد)
-  ══════════════════════════════════════════════════════════ */
-  {id:'oil',        tgju:'oil',                   name:'نفت WTI',   short:'WTI',    code:'WTI',   cat:'energy', ptype:'usd', unit:'بشکه',   dec:2, popular:true, icon:'oil'},
-  {id:'oil_brent',  tgju:'oil_brent',             name:'نفت برنت',  short:'برنت',   code:'BRENT', cat:'energy', ptype:'usd', unit:'بشکه',   dec:3, popular:true, icon:'brent'},
-  {id:'gas',        tgju:'energy_natural_gas',    name:'گاز طبیعی', short:'گاز',    code:'NG',    cat:'energy', ptype:'usd', unit:'MMBtu',  dec:3, icon:'gas'},
-  {id:'gasoline',   tgju:'energy_gasoline_rbob',  name:'بنزین',     short:'بنزین',  code:'RBOB',  cat:'energy', ptype:'usd', unit:'گالن',   dec:3, icon:'gas'},
-  {id:'oil_opec',   tgju:'oil_opec',              name:'سبد اوپک',  short:'اوپک',   code:'OPEC',  cat:'energy', ptype:'usd', unit:'بشکه',   dec:2, icon:'oil'},
-  {id:'oil_urals',  tgju:'energy_urals',          name:'نفت اورال', short:'اورال',  code:'URALS', cat:'energy', ptype:'usd', unit:'بشکه',   dec:2, icon:'oil'},
-  {id:'oil_azeri',  tgju:'energy_azeri_light',    name:'نفت آذری',  short:'آذری',   code:'AZERI', cat:'energy', ptype:'usd', unit:'بشکه',   dec:2, icon:'oil'},
-  {id:'methanol',   tgju:'energy_methanol',       name:'متانول',    short:'متانول', code:'MET',   cat:'energy', ptype:'usd', unit:'تن',     dec:2, icon:'oil'},
+const HISTORY_CACHE = new Map();
+const HISTORY_TTL = 5 * 60 * 1000;
 
-  /* ══════════════════════════════════════════════════════════
-     کریپتو (۲۰ نماد)
-  ══════════════════════════════════════════════════════════ */
-  {id:'btc',   tgju:'crypto-bitcoin',       name:'بیت‌کوین',   short:'بیت‌کوین', code:'BTC',  cat:'crypto', ptype:'usd', unit:'عدد', dec:2,  popular:true, icon:'btc'},
-  {id:'eth',   tgju:'crypto-ethereum',      name:'اتریوم',     short:'اتریوم',   code:'ETH',  cat:'crypto', ptype:'usd', unit:'عدد', dec:2,  popular:true, icon:'eth'},
-  {id:'usdt',  tgju:'crypto-tether',        name:'تتر',        short:'تتر',      code:'USDT', cat:'crypto', ptype:'usd', unit:'عدد', dec:4,  popular:true, icon:'usdt'},
-  {id:'bnb',   tgju:'crypto-binance-coin',  name:'بایننس کوین',short:'BNB',      code:'BNB',  cat:'crypto', ptype:'usd', unit:'عدد', dec:2,  icon:'bnb'},
-  {id:'xrp',   tgju:'crypto-ripple',        name:'ریپل',       short:'ریپل',     code:'XRP',  cat:'crypto', ptype:'usd', unit:'عدد', dec:4,  icon:'xrp'},
-  {id:'ada',   tgju:'crypto-cardano',       name:'کاردانو',    short:'کاردانو',  code:'ADA',  cat:'crypto', ptype:'usd', unit:'عدد', dec:4,  icon:'ada'},
-  {id:'sol',   tgju:'crypto-solana',        name:'سولانا',     short:'سولانا',   code:'SOL',  cat:'crypto', ptype:'usd', unit:'عدد', dec:2,  icon:'sol'},
-  {id:'doge',  tgju:'crypto-dogecoin',      name:'دوج‌کوین',   short:'دوج',      code:'DOGE', cat:'crypto', ptype:'usd', unit:'عدد', dec:8,  icon:'doge'},
-  {id:'ltc',   tgju:'crypto-litecoin',      name:'لایت‌کوین',  short:'لایت',     code:'LTC',  cat:'crypto', ptype:'usd', unit:'عدد', dec:2,  icon:'ltc'},
-  {id:'dot',   tgju:'crypto-polkadot',      name:'پولکادات',   short:'پولکا',    code:'DOT',  cat:'crypto', ptype:'usd', unit:'عدد', dec:4,  icon:'dot'},
-  {id:'link',  tgju:'crypto-chainlink',     name:'چین‌لینک',   short:'چین‌لینک', code:'LINK', cat:'crypto', ptype:'usd', unit:'عدد', dec:4,  icon:'btc'},
-  {id:'avax',  tgju:'crypto-avalanche',     name:'آوالانچ',    short:'آوالانچ',  code:'AVAX', cat:'crypto', ptype:'usd', unit:'عدد', dec:4,  icon:'btc'},
-  {id:'xmr',   tgju:'crypto-monero',        name:'مونرو',      short:'مونرو',    code:'XMR',  cat:'crypto', ptype:'usd', unit:'عدد', dec:2,  icon:'btc'},
-  {id:'dash',  tgju:'crypto-dash',          name:'دش',         short:'دش',       code:'DASH', cat:'crypto', ptype:'usd', unit:'عدد', dec:2,  icon:'btc'},
-  {id:'xlm',   tgju:'crypto-stellar',       name:'استلار',     short:'استلار',   code:'XLM',  cat:'crypto', ptype:'usd', unit:'عدد', dec:4,  icon:'btc'},
-  {id:'xtz',   tgju:'crypto-tezos',         name:'تزوس',       short:'تزوس',     code:'XTZ',  cat:'crypto', ptype:'usd', unit:'عدد', dec:4,  icon:'btc'},
-  {id:'eos',   tgju:'crypto-eos',           name:'EOS',        short:'EOS',      code:'EOS',  cat:'crypto', ptype:'usd', unit:'عدد', dec:4,  icon:'btc'},
-  {id:'trx',   tgju:'crypto-tron',          name:'ترون',       short:'ترون',     code:'TRX',  cat:'crypto', ptype:'usd', unit:'عدد', dec:6,  icon:'btc'},
-  {id:'ton',   tgju:'crypto-toncoin',       name:'تون‌کوین',   short:'تون',      code:'TON',  cat:'crypto', ptype:'usd', unit:'عدد', dec:2,  icon:'btc'},
-  {id:'shib',  tgju:'crypto-shiba-inu',     name:'شیبا اینو',  short:'شیبا',     code:'SHIB', cat:'crypto', ptype:'usd', unit:'عدد', dec:10, icon:'btc'},
+const NEGATIVE_CACHE = new Set();
 
-  /* ══════════════════════════════════════════════════════════
-     کالا (۱۰ نماد)
-  ══════════════════════════════════════════════════════════ */
-  {id:'wheat',    tgju:'commodity_us_wheat',     name:'گندم',    short:'گندم',    code:'WHEAT',  cat:'commodity', ptype:'usd', unit:'بوشل',   dec:2, icon:'wheat'},
-  {id:'corn',     tgju:'commodity_corn',         name:'ذرت',     short:'ذرت',     code:'CORN',   cat:'commodity', ptype:'usd', unit:'بوشل',   dec:2, icon:'corn'},
-  {id:'soybeans', tgju:'commodity_soybeans',     name:'سویا',    short:'سویا',    code:'SOY',    cat:'commodity', ptype:'usd', unit:'بوشل',   dec:2, icon:'corn'},
-  {id:'sugar',    tgju:'commodity_us_sugar_no11',name:'شکر',     short:'شکر',     code:'SUGAR',  cat:'commodity', ptype:'usd', unit:'پوند',   dec:2, icon:'sugar'},
-  {id:'coffee',   tgju:'commodity_us_coffee_c',  name:'قهوه',    short:'قهوه',    code:'COFFEE', cat:'commodity', ptype:'usd', unit:'پوند',   dec:2, icon:'coffee'},
-  {id:'cocoa',    tgju:'commodity_us_cocoa',     name:'کاکائو',  short:'کاکائو',  code:'COCOA',  cat:'commodity', ptype:'usd', unit:'تن',     dec:2, icon:'coffee'},
-  {id:'cotton',   tgju:'commodity_cotton',       name:'پنبه',    short:'پنبه',    code:'COTTON', cat:'commodity', ptype:'usd', unit:'پوند',   dec:2, icon:'sugar'},
-  {id:'rice',     tgju:'commodity_rough_rice',   name:'برنج',    short:'برنج',    code:'RICE',   cat:'commodity', ptype:'usd', unit:'cwt',    dec:2, icon:'wheat'},
-  {id:'oats',     tgju:'commodity_oats',         name:'جو دوسر', short:'جو',      code:'OATS',   cat:'commodity', ptype:'usd', unit:'بوشل',   dec:2, icon:'wheat'},
-  {id:'lumber',   tgju:'commodity_lumber',       name:'الوار',   short:'الوار',   code:'LUMBER', cat:'commodity', ptype:'usd', unit:'MBF',    dec:2, icon:'briefcase'},
+/* ============================================================
+   HELPERS
+============================================================ */
+function cleanNum(v){
+  if(v == null || v === '') return null;
+  const n = Number(v);
+  return isNaN(n) ? null : n;
+}
 
-  /* ══════════════════════════════════════════════════════════
-     شاخص‌ها (۴ نماد)
-  ══════════════════════════════════════════════════════════ */
-  {id:'bourse',   tgju:'bourse',        name:'بورس تهران', short:'بورس تهران',code:'TSE', cat:'index', ptype:'rial', unit:'واحد',   dec:0, popular:true, icon:'barChart'},
-  {id:'dowjones', tgju:'dow_jones_us',  name:'داو جونز',   short:'داو جونز',  code:'DJI', cat:'index', ptype:'usd',  unit:'واحد',   dec:2, icon:'barChart'},
-  {id:'nasdaq',   tgju:'nasdaq_us',     name:'نزدک',       short:'نزدک',      code:'IXIC',cat:'index', ptype:'usd',  unit:'واحد',   dec:2, icon:'barChart'},
-  {id:'sp500',    tgju:'s_p_500_us',    name:'S&P 500',    short:'S&P 500',   code:'SPX', cat:'index', ptype:'usd',  unit:'واحد',   dec:2, icon:'barChart'},
+function normalize(key, item){
+  if(!item) return null;
+  return {
+    key: key,
+    price: cleanNum(item.p),
+    high: cleanNum(item.h),
+    low: cleanNum(item.l),
+    open: cleanNum(item.o),
+    change: cleanNum(item.d),
+    changePercent: cleanNum(item.dp),
+    time: item.t || '',
+    timeEn: item.t_en || '',
+    timestamp: item.ts || ''
+  };
+}
 
-  /* ══════════════════════════════════════════════════════════
-     توکن طلا (۵ نماد)
-  ══════════════════════════════════════════════════════════ */
-  {id:'xaut',  tgju:'tether_gold_xaut',  name:'تتر گلد',  short:'XAUT',  code:'XAUT',  cat:'goldCrypto', ptype:'usd', unit:'توکن', dec:2, popular:true, icon:'gold'},
-  {id:'paxg',  tgju:'crypto_paxg_gold',  name:'پکس گلد',  short:'PAXG',  code:'PAXG',  cat:'goldCrypto', ptype:'usd', unit:'توکن', dec:2, icon:'gold'},
-  {id:'ugold', tgju:'crypto_ugold_inc',  name:'یوگلد',    short:'UGOLD', code:'UGOLD', cat:'goldCrypto', ptype:'usd', unit:'توکن', dec:2, icon:'gold'},
-  {id:'kau',   tgju:'crypto_gold_kau',   name:'کائو',     short:'KAU',   code:'KAU',   cat:'goldCrypto', ptype:'usd', unit:'توکن', dec:2, icon:'gold'},
-  {id:'gdao',  tgju:'crypto_gold_dao',   name:'گلد دائو', short:'GDAO',  code:'GDAO',  cat:'goldCrypto', ptype:'usd', unit:'توکن', dec:6, icon:'gold'}
-];
+function parseGregorianDate(gd){
+  if(!gd) return null;
+  const parts = String(gd).split('/');
+  if(parts.length !== 3) return null;
+  const y = parseInt(parts[0]);
+  const m = parseInt(parts[1]) - 1;
+  const d = parseInt(parts[2]);
+  if(isNaN(y) || isNaN(m) || isNaN(d)) return null;
+  return new Date(y, m, d).getTime();
+}
 
-/* ═══════════════════════════════════════════════════════════
-   INDEX MAPS
-═══════════════════════════════════════════════════════════ */
-const BY_ID = {};
-const BY_TGJU = {};
-ASSETS.forEach(a => {
-  BY_ID[a.id] = a;
-  BY_TGJU[a.tgju] = a;
-});
+/* ============================================================
+   LOCAL CACHE
+============================================================ */
+const LCKEY = 'gheymato.last.v10';
 
-const FEATURED = ASSETS.filter(a => a.popular).map(a => a.id);
+function saveLocal(){
+  try {
+    if(norm && Object.keys(norm).length){
+      localStorage.setItem(LCKEY, JSON.stringify({
+        d: norm,
+        t: lastFetch
+      }));
+    }
+  } catch(e){}
+}
 
-const MOST_USED = [
-  'gold18', 'coin', 'dollar', 'euro', 'ounce', 'mesghal',
-  'btc', 'eth', 'usdt', 'silver', 'oil_brent', 'bourse'
-];
+function loadLocal(){
+  try {
+    const raw2 = localStorage.getItem(LCKEY);
+    if(!raw2) return false;
+    const p = JSON.parse(raw2);
+    if(!p || !p.d) return false;
+    norm = p.d;
+    lastFetch = p.t || Date.now();
+    fallback = true;
+    return true;
+  } catch(e){ return false; }
+}
 
+/* ============================================================
+   FETCH
+============================================================ */
+async function fetchJSON(url, attempt){
+  attempt = attempt || 0;
+  try {
+    const ctrl = new AbortController();
+    const tid = setTimeout(function(){ ctrl.abort(); }, CONFIG.timeout);
+
+    const res = await fetch(url, {
+      cache: 'no-store',
+      signal: ctrl.signal,
+      headers: { 'Accept': 'application/json' }
+    });
+    clearTimeout(tid);
+
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const txt = await res.text();
+    if(txt.length < 50) throw new Error('پاسخ کوچک');
+    return JSON.parse(txt);
+
+  } catch(err){
+    if(attempt < CONFIG.retries){
+      await new Promise(function(r){ setTimeout(r, 800 * (attempt + 1)); });
+      return fetchJSON(url, attempt + 1);
+    }
+    throw err;
+  }
+}
+
+async function fetchLatest(){
+  const url = CONFIG.DATA_BASE + '/latest.json?_=' + Date.now();
+  try {
+    const json = await fetchJSON(url);
+    currentSource = 'primary';
+    return json;
+  } catch(err){
+    console.warn('[API] Primary failed, trying raw...');
+    const url2 = CONFIG.RAW_BASE + '/latest.json?_=' + Date.now();
+    const json = await fetchJSON(url2);
+    currentSource = 'raw';
+    return json;
+  }
+}
+
+async function fetchAnnual(){
+  if(annualCache && (Date.now() - annualCacheTime) < CONFIG.annualCacheTTL){
+    return annualCache;
+  }
+
+  const url = CONFIG.DATA_BASE + '/annual-history.json';
+  try {
+    const json = await fetchJSON(url);
+    annualCache = json;
+    annualCacheTime = Date.now();
+    console.log('[API] ✅ annual-history: ' + Object.keys(json.symbols || {}).length + ' symbols');
+    return json;
+  } catch(err){
+    console.warn('[API] ⚠️ annual-history failed:', err.message);
+    return null;
+  }
+}
+
+/**
+ * دریافت خودروها
+ */
+async function fetchCars(force){
+  force = force || false;
+  const now = Date.now();
+
+  if(!force && carsCache && (now - carsCacheTime) < CONFIG.carsCacheTTL){
+    return carsCache;
+  }
+
+  const url = CONFIG.DATA_BASE + '/cars.json?_=' + now;
+
+  try {
+    const json = await fetchJSON(url);
+    carsCache = json;
+    carsCacheTime = now;
+    carsError = null;
+    console.log('[API] ✅ cars.json — ' + (json.cars?.length || 0) + ' خودرو');
+    return json;
+  } catch(err){
+    carsError = err.message;
+    console.warn('[API] ❌ cars.json:', err.message);
+    if(carsCache) return carsCache;
+    return {
+      updated: null,
+      updatedTehran: null,
+      stats: { total: 0, available: 0, unavailable: 0, comingSoon: 0, discontinued: 0 },
+      cars: [],
+      byCategory: {}
+    };
+  }
+}
+
+function getCars(){
+  return carsCache;
+}
+
+function getCarsError(){
+  return carsError;
+}
+
+/* ============================================================
+   MAIN FETCH (latest)
+============================================================ */
+async function fetchData(force){
+  force = force || false;
+  const now = Date.now();
+
+  if(!force && raw && (now - lastFetch) < CONFIG.cacheTTL) return raw;
+  if(fetching) return raw;
+
+  fetching = true;
+
+  try {
+    const json = await fetchLatest();
+
+    if(!json || !json.data){
+      throw new Error('ساختار نامعتبر');
+    }
+
+    const out = {};
+    for(const k in json.data){
+      out[k] = normalize(k, json.data[k]);
+    }
+
+    raw = json;
+    norm = out;
+    lastFetch = now;
+    lastError = null;
+    fallback = false;
+
+    console.log('[API] ✅ ' + Object.keys(out).length + ' نماد از ' + currentSource);
+    saveLocal();
+    notify();
+    return json;
+
+  } catch(err){
+    lastError = err.message;
+    console.warn('[API] ❌', err.message);
+
+    if(raw) return raw;
+    if(loadLocal()){ notify(); return { data:{} }; }
+
+    const fb = makeFallback();
+    raw = fb;
+    norm = {};
+    for(const k in fb.data) norm[k] = normalize(k, fb.data[k]);
+    lastFetch = Date.now();
+    fallback = true;
+    notify();
+    return fb;
+
+  } finally {
+    fetching = false;
+  }
+}
+
+/* ============================================================
+   ACCESSORS
+============================================================ */
+function get(k){ return norm[k] || null; }
+
+function getById(id){
+  const a = window.DATA.find(id);
+  if(!a) return null;
+  return get(a.tgju);
+}
+
+function getAll(){ return norm; }
+function getLastFetch(){ return lastFetch; }
+function getLastError(){ return lastError; }
+function isFallback(){ return fallback; }
+function getSource(){ return currentSource; }
+
+function subscribe(fn){
+  subs.add(fn);
+  return function(){ subs.delete(fn); };
+}
+
+function notify(){
+  subs.forEach(function(fn){
+    try { fn(raw); } catch(e){}
+  });
+}
+
+function start(ms){
+  stop();
+  const interval = ms || CONFIG.poll;
+  if(loadLocal()) notify();
+  fetchData().catch(function(){});
+  fetchAnnual().catch(function(){});
+  timer = setInterval(function(){
+    if(document.hidden) return;
+    fetchData().catch(function(){});
+  }, interval);
+  console.log('[API] ▶ ' + interval + 'ms — ' + currentSource);
+}
+
+function stop(){
+  if(timer){ clearInterval(timer); timer = null; }
+}
+
+/* ============================================================
+   HISTORY
+============================================================ */
+function today(){
+  const now = new Date();
+  const tehranOffset = 3.5 * 60 * 60 * 1000;
+  const tehranTime = new Date(now.getTime() + tehranOffset);
+  return tehranTime.toISOString().slice(0, 10);
+}
+
+async function getHistory(asset, days){
+  if(!asset) return [];
+  days = Math.max(1, Math.ceil(days || 30));
+
+  try {
+    const annual = await fetchAnnual();
+
+    if(annual && annual.symbols && annual.symbols[asset.tgju]){
+      const symbolData = annual.symbols[asset.tgju];
+
+      const converted = symbolData.map(function(item){
+        return {
+          t: parseGregorianDate(item.gd) || Date.now(),
+          p: item.p,
+          h: item.h,
+          l: item.l,
+          o: item.o,
+          d: item.d,
+          dp: item.dp,
+          pd: item.pd,
+          gd: item.gd
+        };
+      }).filter(function(x){ return x.p != null; });
+
+      converted.sort(function(a, b){ return a.t - b.t; });
+
+      if(converted.length >= 2){
+        return converted.slice(-days);
+      }
+    }
+  } catch(err){
+    console.warn('[API] annual failed:', err.message);
+  }
+
+  console.log('[API] ⚠️ fallback to history/ for ' + asset.tgju);
+
+  const dates = [];
+  const now = new Date();
+  const maxBackupDays = CONFIG.historyBackupDays;
+
+  for(let i = 0; i < maxBackupDays; i++){
+    const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+    const tehranOffset = 3.5 * 60 * 60 * 1000;
+    const tehranTime = new Date(d.getTime() + tehranOffset);
+    dates.push(tehranTime.toISOString().slice(0, 10));
+  }
+
+  const allPoints = [];
+
+  for(let i = 0; i < dates.length; i++){
+    const history = await fetchHistory(dates[i]);
+    if(!history || !history.symbols) continue;
+
+    const points = history.symbols[asset.tgju];
+    if(points && points.length){
+      for(let j = 0; j < points.length; j++){
+        allPoints.push({
+          t: points[j].t,
+          p: points[j].p,
+          dp: points[j].dp
+        });
+      }
+    }
+  }
+
+  allPoints.sort(function(a, b){ return a.t - b.t; });
+  return allPoints;
+}
+
+async function fetchHistory(date){
+  if(NEGATIVE_CACHE.has(date)) return null;
+
+  const cached = HISTORY_CACHE.get(date);
+  if(cached && (Date.now() - cached.t) < HISTORY_TTL){
+    return cached.data;
+  }
+
+  const url = CONFIG.DATA_BASE + '/history/' + date + '.json?_=' + Date.now();
+  try {
+    const json = await fetchJSON(url);
+    HISTORY_CACHE.set(date, { data: json, t: Date.now() });
+    return json;
+  } catch(err){
+    if(err.message && err.message.indexOf('404') !== -1){
+      NEGATIVE_CACHE.add(date);
+      return null;
+    }
+
+    try {
+      const url2 = CONFIG.RAW_BASE + '/history/' + date + '.json?_=' + Date.now();
+      const json = await fetchJSON(url2);
+      HISTORY_CACHE.set(date, { data: json, t: Date.now() });
+      return json;
+    } catch(e){
+      NEGATIVE_CACHE.add(date);
+      return null;
+    }
+  }
+}
+
+async function getHistoryPrices(asset, days){
+  const history = await getHistory(asset, days);
+  return history.map(function(h){ return h.p; });
+}
+
+async function getPriceAt(asset, msAgo){
+  const days = Math.max(1, Math.ceil(msAgo / (24 * 60 * 60 * 1000)) + 1);
+  const history = await getHistory(asset, days);
+
+  if(!history || !history.length) return null;
+
+  const targetTime = Date.now() - msAgo;
+  let closest = null;
+  let minDiff = Infinity;
+
+  for(let i = 0; i < history.length; i++){
+    const diff = Math.abs(history[i].t - targetTime);
+    if(diff < minDiff){
+      minDiff = diff;
+      closest = history[i];
+    }
+  }
+
+  if(closest && minDiff < 3 * 24 * 60 * 60 * 1000){
+    return closest;
+  }
+  return null;
+}
+
+function history(asset, count, period){
+  const live = getById(asset.id);
+  const base = live && live.price != null ? live.price : 1000;
+
+  const real = getCachedHistory(asset.tgju);
+  if(real && real.length >= 2){
+    return real.map(function(h){ return h.p; });
+  }
+
+  const seed = (asset.id + (period || '1D')).split('').reduce(function(a, c){
+    return a + c.charCodeAt(0);
+  }, 0);
+  let s = seed;
+  const rand = function(){ s = (s * 9301 + 49297) % 233280; return s / 233280; };
+  const out = [];
+  let v = base * 0.94;
+  const cnt = count || 60;
+  for(let i = 0; i < cnt; i++){
+    v += (rand() - 0.45) * base * 0.012;
+    out.push(v);
+  }
+  out[out.length - 1] = base;
+  return out;
+}
+
+function getCachedHistory(tgju){
+  const todayStr = today();
+  const cached = HISTORY_CACHE.get(todayStr);
+  if(!cached) return null;
+  const points = cached.data.symbols[tgju];
+  return points || null;
+}
+
+async function preloadTodayHistory(){
+  const date = today();
+  await fetchHistory(date);
+  console.log('[API] ✅ today history preloaded');
+}
+
+/* ============================================================
+   FALLBACK
+============================================================ */
+function makeFallback(){
+  const now = Date.now();
+  const t = new Date(now).toLocaleTimeString('fa-IR', { hour:'2-digit', minute:'2-digit' });
+  const base = {
+    geram18: 241246000, geram24: 321658000, mesghal: 1044990000,
+    sekeb: 2360750000, sekee: 2400100000, nim: 1230000000,
+    rob: 650000000, gerami: 340000000, ons: 4261.39,
+    price_dollar_rl: 2346150, price_eur: 2671400,
+    price_gbp: 3105800, price_aed: 639000, price_try: 48965,
+    price_cny: 351500, price_jpy: 1491000, price_cad: 1660400,
+    price_aud: 1651800, price_chf: 2837000, price_rub: 27680,
+    price_sar: 624690, price_kwd: 7616200, price_iqd: 1503,
+    price_afn: 37350, silver: 63.41, platinum: 1745,
+    palladium: 1276.5, copper: 13632.97, aluminium: 3255.63,
+    oil: 81.73, oil_brent: 106.747, energy_natural_gas: 3.2873,
+    'crypto-bitcoin': 84031.56, 'crypto-ethereum': 2669.46,
+    'crypto-tether': 1, 'crypto-binance-coin': 778.41,
+    'crypto-ripple': 1.53, 'crypto-cardano': 0.24625904,
+    'crypto-solana': 116.72, 'crypto-dogecoin': 0.09592597,
+    'crypto-litecoin': 71.64, 'crypto-polkadot': 1.16,
+    commodity_us_wheat: 704.84, commodity_corn: 526.13,
+    commodity_us_sugar_no11: 18.65, commodity_us_coffee_c: 276.46,
+    bourse: 7257043.4, dow_jones_us: 52900.07,
+    nasdaq_us: 25832.67, s_p_500_us: 7483.24,
+    tether_gold_xaut: 4265.4
+  };
+
+  const data = {};
+  for(const k in base){
+    const p = base[k];
+    const abs = Math.abs(p);
+    const dec = abs < 10 ? 6 : (abs < 1000 ? 2 : 0);
+    data[k] = {
+      p: p,
+      h: p * 1.02,
+      l: p * 0.98,
+      d: 0,
+      dp: 0,
+      t: t,
+      ts: new Date(now).toISOString().slice(0, 19).replace('T', ' ')
+    };
+  }
+
+  return {
+    updated: new Date(now).toISOString(),
+    updatedTehran: t,
+    count: Object.keys(data).length,
+    data: data,
+    __fallback: true
+  };
+}
+
+/* ============================================================
+   EXPORT
+============================================================ */
 return {
-  CATEGORIES: CATEGORIES,
-  ASSETS: ASSETS,
-  FEATURED: FEATURED,
-  MOST_USED: MOST_USED,
-  find: function(id){ return BY_ID[id] || null; },
-  byTgju: function(k){ return BY_TGJU[k] || null; },
-  byCat: function(c){ return ASSETS.filter(function(a){ return a.cat === c; }); },
-  countByCat: function(){
-    const o = {};
-    Object.keys(CATEGORIES).forEach(function(c){ o[c] = 0; });
-    ASSETS.forEach(function(a){ o[a.cat] = (o[a.cat] || 0) + 1; });
-    return o;
-  },
-  count: function(){ return ASSETS.length; }
+  CFG: CONFIG,
+  fetchData: fetchData,
+  start: start,
+  stop: stop,
+  get: get,
+  getById: getById,
+  getAll: getAll,
+  getLastFetch: getLastFetch,
+  getLastError: getLastError,
+  isFallback: isFallback,
+  getSource: getSource,
+  subscribe: subscribe,
+  history: history,
+  getHistory: getHistory,
+  getHistoryPrices: getHistoryPrices,
+  getPriceAt: getPriceAt,
+  fetchAnnual: fetchAnnual,
+  fetchHistory: fetchHistory,
+  preloadTodayHistory: preloadTodayHistory,
+  fetchCars: fetchCars,
+  getCars: getCars,
+  getCarsError: getCarsError,
+  clearHistoryCache: function(){
+    HISTORY_CACHE.clear();
+    annualCache = null;
+    annualCacheTime = 0;
+    carsCache = null;
+    carsCacheTime = 0;
+  }
 };
 
 })();

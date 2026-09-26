@@ -1,14 +1,17 @@
 {
   "name": "gheymato-scraper",
   "version": "1.0.0",
-  "description": "TGJU data scraper for Gheymato",
+  "description": "TGJU + Car data + Car images scraper for Gheymato",
   "type": "module",
   "main": "scraper.js",
   "scripts": {
-    "scrape": "node scraper.js"
+    "scrape": "node scraper.js",
+    "scrape-cars": "node scraper-cars.js",
+    "scrape-images": "node scraper-images.js"
   },
   "dependencies": {
-    "node-fetch": "^3.3.2"
+    "node-fetch": "^3.3.2",
+    "cheerio": "^1.0.0-rc.12"
   },
   "engines": {
     "node": ">=20.0.0"

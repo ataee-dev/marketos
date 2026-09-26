@@ -1,10 +1,12 @@
 /**
- * قیمتو 6.0 — UI (کامل)
+ * قیمتو 6.0 — UI (کامل و تست‌شده)
  * ✅ کارت بانکی پرتفوی
  * ✅ جدول خودروها
  * ✅ نمودار + Tooltip
+ * ✅ سوالات TGJU
+ * ✅ تحلیل حباب
  * ✅ جستجوی همه‌کاره
- * ✅ تمام ابزارها
+ * ✅ تمام ابزارها (محاسبه‌گرها)
  */
 
 window.UI = (function(){
@@ -165,20 +167,22 @@ function renderCats(){
   if(!c) return;
   const counts = window.DATA.countByCat();
 
-  c.innerHTML = Object.entries(window.DATA.CATEGORIES).map(([k, cat]) => `
-    <button class="cat-chip" data-filter-jump="${k}" type="button">
-      <span class="cat-chip-icon">${window.Icons.get(cat.icon)}</span>
-      <span>${cat.label}</span>
-      <small style="opacity:.6">${counts[k] || 0}</small>
-    </button>
-  `).join('');
+  c.innerHTML = Object.entries(window.DATA.CATEGORIES).map(function(entry){
+    const k = entry[0];
+    const cat = entry[1];
+    return '<button class="cat-chip" data-filter-jump="' + k + '" type="button">' +
+      '<span class="cat-chip-icon">' + window.Icons.get(cat.icon) + '</span>' +
+      '<span>' + cat.label + '</span>' +
+      '<small style="opacity:.6">' + (counts[k] || 0) + '</small>' +
+    '</button>';
+  }).join('');
 
-  c.querySelectorAll('[data-filter-jump]').forEach(btn => {
-    btn.addEventListener('click', e => {
+  c.querySelectorAll('[data-filter-jump]').forEach(function(btn){
+    btn.addEventListener('click', function(e){
       e.preventDefault();
       e.stopPropagation();
       filter = btn.dataset.filterJump;
-      $$('[data-filters] .chip').forEach(b => {
+      $$('[data-filters] .chip').forEach(function(b){
         b.classList.toggle('is-active', b.dataset.filter === filter);
       });
       go('markets');
@@ -210,12 +214,12 @@ function renderTools(){
     { id:'export',      name:'خروجی داده',      icon:'download' }
   ];
 
-  c.innerHTML = tools.map(t => `
-    <button type="button" class="tool-chip" data-tool="${t.id}">
-      <span class="tool-chip-icon">${window.Icons.get(t.icon)}</span>
-      <span class="tool-chip-name">${t.name}</span>
-    </button>
-  `).join('');
+  c.innerHTML = tools.map(function(t){
+    return '<button type="button" class="tool-chip" data-tool="' + t.id + '">' +
+      '<span class="tool-chip-icon">' + window.Icons.get(t.icon) + '</span>' +
+      '<span class="tool-chip-name">' + t.name + '</span>' +
+    '</button>';
+  }).join('');
 }
 
 /* ============================================================
@@ -240,7 +244,7 @@ function renderBankCard(){
   let totalBuy = 0, totalNow = 0;
 
   if(!isEmpty){
-    list.forEach(item => {
+    list.forEach(function(item){
       const a = window.DATA.find(item.id);
       const l = window.API.getById(item.id);
       if(!a) return;
@@ -261,46 +265,41 @@ function renderBankCard(){
     const unitText = unitLabel();
     const val = baseToUser(totalNow);
     displayValue = window.U.num(val, 0) + ' ' + unitText;
-    displayChange = `
-      <span class="bank-card-change">
-        ${up ? '▲' : '▼'} ${up ? '+' : ''}${plPct.toFixed(2)}%
-      </span>
-    `;
+    displayChange = '<span class="bank-card-change">' +
+      (up ? '▲' : '▼') + ' ' + (up ? '+' : '') + plPct.toFixed(2) + '%' +
+    '</span>';
   }
 
-  wrap.innerHTML = `
-    <div class="bank-card ${isEmpty ? 'is-empty' : ''}" data-tool="portfolio">
-      <div class="bank-card-top">
-        <div class="bank-card-brand">
-          <img src="assets/logo.png" alt="قیمتو">
-          <div class="bank-card-brand-text">
-            <strong>قیمتو</strong>
-            <small>${isEmpty ? 'پرتفوی خالی' : window.U.num(list.length) + ' دارایی'}</small>
-          </div>
-        </div>
-        <div class="bank-card-chip"></div>
-      </div>
-
-      <div class="bank-card-center">
-        <span class="bank-card-label">ارزش کل پرتفوی</span>
-        <span class="bank-card-value">${displayValue}</span>
-        ${displayChange}
-      </div>
-
-      <div class="bank-card-bottom">
-        <div class="bank-card-user">
-          <div class="bank-card-avatar">${firstChar}</div>
-          <div class="bank-card-user-info">
-            <strong>${window.U.esc(userName)}</strong>
-            <small>${isEmpty ? 'برای شروع دارایی اضافه کنید' : 'دارایی‌های شما'}</small>
-          </div>
-        </div>
-        <button type="button" class="bank-card-add" data-tool="portfolio" aria-label="افزودن">
-          ${window.Icons.get('plus')}
-        </button>
-      </div>
-    </div>
-  `;
+  wrap.innerHTML =
+    '<div class="bank-card ' + (isEmpty ? 'is-empty' : '') + '" data-tool="portfolio">' +
+      '<div class="bank-card-top">' +
+        '<div class="bank-card-brand">' +
+          '<img src="assets/logo.png" alt="قیمتو">' +
+          '<div class="bank-card-brand-text">' +
+            '<strong>قیمتو</strong>' +
+            '<small>' + (isEmpty ? 'پرتفوی خالی' : window.U.num(list.length) + ' دارایی') + '</small>' +
+          '</div>' +
+        '</div>' +
+        '<div class="bank-card-chip"></div>' +
+      '</div>' +
+      '<div class="bank-card-center">' +
+        '<span class="bank-card-label">ارزش کل پرتفوی</span>' +
+        '<span class="bank-card-value">' + displayValue + '</span>' +
+        displayChange +
+      '</div>' +
+      '<div class="bank-card-bottom">' +
+        '<div class="bank-card-user">' +
+          '<div class="bank-card-avatar">' + firstChar + '</div>' +
+          '<div class="bank-card-user-info">' +
+            '<strong>' + window.U.esc(userName) + '</strong>' +
+            '<small>' + (isEmpty ? 'برای شروع دارایی اضافه کنید' : 'دارایی‌های شما') + '</small>' +
+          '</div>' +
+        '</div>' +
+        '<button type="button" class="bank-card-add" data-tool="portfolio" aria-label="افزودن">' +
+          window.Icons.get('plus') +
+        '</button>' +
+      '</div>' +
+    '</div>';
 }
 
 /* ============================================================
@@ -311,14 +310,14 @@ function renderMarkets(){
   if(!g) return;
 
   let list = window.DATA.ASSETS;
-  if(filter !== 'all') list = list.filter(a => a.cat === filter);
+  if(filter !== 'all') list = list.filter(function(a){ return a.cat === filter; });
   if(search){
     const q = search.toLowerCase();
-    list = list.filter(a =>
-      a.name.toLowerCase().includes(q) ||
-      a.code.toLowerCase().includes(q) ||
-      a.id.toLowerCase().includes(q)
-    );
+    list = list.filter(function(a){
+      return a.name.toLowerCase().indexOf(q) !== -1 ||
+             a.code.toLowerCase().indexOf(q) !== -1 ||
+             a.id.toLowerCase().indexOf(q) !== -1;
+    });
   }
 
   const cnt = $('[data-count]');
@@ -336,7 +335,7 @@ function renderFavs(){
   const cnt = $('[data-fav-count]');
   if(!g) return;
 
-  const list = window.Storage.fav.get().map(id => window.DATA.find(id)).filter(Boolean);
+  const list = window.Storage.fav.get().map(function(id){ return window.DATA.find(id); }).filter(Boolean);
 
   if(cnt) cnt.textContent = list.length + ' مورد';
   if(empty) empty.hidden = list.length > 0;
@@ -357,27 +356,25 @@ function renderHdrTicker(){
     'gold24', 'coin_bahar', 'gbp', 'aed', 'sol'
   ];
 
-  const items = ids.map(id => {
+  const items = ids.map(function(id){
     const a = window.DATA.find(id);
     if(!a) return '';
     const l = window.API.getById(id);
     if(!l || l.price == null) return '';
     const cp = l.changePercent || 0;
     const up = cp >= 0;
-    return `
-      <div class="hdr-ticker-item">
-        <span class="name">${window.U.esc(a.short || a.name)}</span>
-        <span class="price">${formatPrice(a, l.price)}</span>
-        <span class="chg ${up?'up':'down'}">${up?'▲':'▼'} ${Math.abs(cp).toFixed(2)}%</span>
-      </div>
-    `;
+    return '<div class="hdr-ticker-item">' +
+      '<span class="name">' + window.U.esc(a.short || a.name) + '</span>' +
+      '<span class="price">' + formatPrice(a, l.price) + '</span>' +
+      '<span class="chg ' + (up ? 'up' : 'down') + '">' + (up ? '▲' : '▼') + ' ' + Math.abs(cp).toFixed(2) + '%</span>' +
+    '</div>';
   }).filter(Boolean).join('');
 
   track.innerHTML = items + items;
 }
 
 /* ============================================================
-   CARS TABLE
+   CARS
 ============================================================ */
 async function loadCarsData(force){
   if(carsLoading) return;
@@ -419,18 +416,18 @@ function renderCarsTable(el, limit, showMore){
 
   if(carsFilter !== 'all'){
     if(carsFilter === 'discontinued'){
-      cars = cars.filter(c => c.status === 'discontinued' || c.status === 'not-selling');
+      cars = cars.filter(function(c){ return c.status === 'discontinued' || c.status === 'not-selling'; });
     } else {
-      cars = cars.filter(c => c.status === carsFilter);
+      cars = cars.filter(function(c){ return c.status === carsFilter; });
     }
   }
 
   if(carsSearch){
     const q = carsSearch.toLowerCase().trim();
-    cars = cars.filter(c =>
-      (c.name && c.name.toLowerCase().includes(q)) ||
-      (c.category && c.category.toLowerCase().includes(q))
-    );
+    cars = cars.filter(function(c){
+      return (c.name && c.name.toLowerCase().indexOf(q) !== -1) ||
+             (c.category && c.category.toLowerCase().indexOf(q) !== -1);
+    });
   }
 
   if(!cars.length){
@@ -480,7 +477,7 @@ function renderHomeCars(){
   if(!el) return;
 
   if(!carsData){
-    loadCarsData(false).then(() => {
+    loadCarsData(false).then(function(){
       renderCarsTable(el, 10, true);
     });
     return;
@@ -497,7 +494,7 @@ function renderCarsPage(){
 
   if(!carsData){
     el.innerHTML = '<div class="empty"><h3>در حال بارگذاری...</h3></div>';
-    loadCarsData(false).then(() => renderCarsPage());
+    loadCarsData(false).then(function(){ renderCarsPage(); });
     return;
   }
 
@@ -570,7 +567,7 @@ async function renderChartPage(){
   const relEl = $('[data-c-related]');
   if(relEl){
     const related = window.DATA.byCat(asset.cat)
-      .filter(a => a.id !== asset.id)
+      .filter(function(a){ return a.id !== asset.id; })
       .slice(0, 10);
     relEl.innerHTML = related.map(marketCardHTML).join('');
   }
@@ -610,7 +607,7 @@ async function renderChartQuestions(asset, live){
     console.warn('[Questions] history failed:', e.message);
   }
 
-  const sortedHistory = (history || []).slice().sort((a, b) => a.t - b.t);
+  const sortedHistory = (history || []).slice().sort(function(a, b){ return a.t - b.t; });
 
   function findPriceAt(msAgo){
     if(!sortedHistory.length) return null;
@@ -837,24 +834,28 @@ async function drawChartAsync(canvas, asset){
       try {
         const history = await window.API.getHistory(asset, 30);
         if(history && history.length >= 2){
-          chartData = history.map(h => ({
-            t: h.t,
-            p: h.p,
-            gd: h.gd || '',
-            pd: h.pd || ''
-          }));
+          chartData = history.map(function(h){
+            return {
+              t: h.t,
+              p: h.p,
+              gd: h.gd || '',
+              pd: h.pd || ''
+            };
+          });
         }
       } catch(e){}
     }
 
     if(!chartData || chartData.length < 2){
       const prices = window.API.history(asset, 60, window.CFG.get('chartPeriod') || '1D');
-      chartData = prices.map((p, i) => ({
-        t: Date.now() - (prices.length - i) * 86400000,
-        p: p,
-        gd: '',
-        pd: ''
-      }));
+      chartData = prices.map(function(p, i){
+        return {
+          t: Date.now() - (prices.length - i) * 86400000,
+          p: p,
+          gd: '',
+          pd: ''
+        };
+      });
     }
 
     if(!chartData || chartData.length < 2) return;
@@ -869,7 +870,7 @@ async function drawChartAsync(canvas, asset){
       paddingTop: 30,
       lineWidth: 2.5,
       color: color,
-      formatter: v => formatPrice(asset, v)
+      formatter: function(v){ return formatPrice(asset, v); }
     });
   } catch(e){
     console.warn('[Chart] Failed:', e.message);
@@ -885,7 +886,7 @@ function renderCompare(){
   if(!sA || !sB) return;
 
   if(!sA.options.length){
-    window.DATA.ASSETS.forEach(a => {
+    window.DATA.ASSETS.forEach(function(a){
       sA.add(new Option(a.name, a.id));
       sB.add(new Option(a.name, a.id));
     });
@@ -934,8 +935,8 @@ function go(page){
   if(!PAGES.includes(page)) page = 'home';
   currentPage = page;
 
-  $$('.page').forEach(p => p.classList.toggle('is-active', p.dataset.page === page));
-  $$('[data-route]').forEach(b => b.classList.toggle('is-active', b.dataset.route === page));
+  $$('.page').forEach(function(p){ p.classList.toggle('is-active', p.dataset.page === page); });
+  $$('[data-route]').forEach(function(b){ b.classList.toggle('is-active', b.dataset.route === page); });
 
   try { history.replaceState(null, '', '#' + page); } catch(e){}
 
@@ -984,47 +985,625 @@ function toast(msg, type = ''){
   t.textContent = msg;
   t.className = 'toast is-show ' + type;
   clearTimeout(t._t);
-  t._t = setTimeout(() => t.classList.remove('is-show'), 2400);
+  t._t = setTimeout(function(){ t.classList.remove('is-show'); }, 2400);
 }
 
 /* ============================================================
-   TOOLS — ساده
+   TOOLS
 ============================================================ */
 function money(v){ return formatPrice({ptype:'rial'}, v); }
 
-function toolGold(){ toast('محاسبه‌گر طلا در حال توسعه'); }
-function toolCoin(){ toast('محاسبه‌گر سکه در حال توسعه'); }
-function toolOunce(){ toast('محاسبه‌گر انس در حال توسعه'); }
-function toolSilver(){ toast('محاسبه‌گر نقره در حال توسعه'); }
-function toolConv(){ toast('مبدل ارز در حال توسعه'); }
-function toolCryptoConv(){ toast('مبدل کریپتو در حال توسعه'); }
-function toolUnitConv(){ toast('مبدل واحد در حال توسعه'); }
-function toolVolumeConv(){ toast('مبدل حجم در حال توسعه'); }
-function toolPortfolio(){ toast('پرتفوی در حال توسعه'); }
-function toolAlerts(){ toast('هشدار قیمت در حال توسعه'); }
-function toolNotes(){ toast('یادداشت‌ها در حال توسعه'); }
-function toolProfit(){ toast('محاسبه سود در حال توسعه'); }
-function toolZakat(){ toast('محاسبه زکات در حال توسعه'); }
-function toolAvgBuy(){ toast('میانگین خرید در حال توسعه'); }
+/* ═══ محاسبه‌گر طلا ═══ */
+function toolGold(){
+  const gold = window.API.getById('gold18');
+  if(!gold || gold.price == null){ toast('در حال دریافت قیمت...', 'warning'); return; }
 
+  openModal('<span data-icon="calculator"></span> محاسبه‌گر طلا',
+    '<div class="form-grid">' +
+      '<div class="form-group"><label>وزن (گرم)</label><input class="input" type="number" value="10" step="0.01" data-gw></div>' +
+      '<div class="form-group"><label>عیار</label><select class="select" data-gk>' +
+        '<option value="18" selected>۱۸</option><option value="24">۲۴</option><option value="22">۲۲</option><option value="21">۲۱</option><option value="14">۱۴</option>' +
+      '</select></div>' +
+      '<div class="form-group"><label>اجرت ساخت (%)</label><input class="input" type="number" value="7" step="0.1" data-gwg></div>' +
+      '<div class="form-group"><label>سود فروشنده (%)</label><input class="input" type="number" value="5" step="0.1" data-gp></div>' +
+      '<div class="form-group" style="grid-column:1/-1"><label>مالیات (%)</label><input class="input" type="number" value="9" step="0.1" data-gt></div>' +
+    '</div>' +
+    '<div class="result-box" data-gold-out></div>');
+
+  function calc(){
+    const w = parseFloat($('[data-gw]') ? $('[data-gw]').value : 0) || 0;
+    const k = parseFloat($('[data-gk]') ? $('[data-gk]').value : 18) || 18;
+    const wg = parseFloat($('[data-gwg]') ? $('[data-gwg]').value : 0) || 0;
+    const pr = parseFloat($('[data-gp]') ? $('[data-gp]').value : 0) || 0;
+    const tx = parseFloat($('[data-gt]') ? $('[data-gt]').value : 0) || 0;
+
+    const base = gold.price * (k / 18);
+    const val = w * base;
+    const wA = val * (wg / 100);
+    const pA = (val + wA) * (pr / 100);
+    const tA = (val + wA + pA) * (tx / 100);
+    const tot = val + wA + pA + tA;
+
+    const out = $('[data-gold-out]');
+    if(out) out.innerHTML =
+      '<div class="result-row"><span>ارزش طلا</span><strong>' + money(val) + '</strong></div>' +
+      '<div class="result-row"><span>اجرت (' + wg + '%)</span><strong>' + money(wA) + '</strong></div>' +
+      '<div class="result-row"><span>سود (' + pr + '%)</span><strong>' + money(pA) + '</strong></div>' +
+      '<div class="result-row"><span>مالیات (' + tx + '%)</span><strong>' + money(tA) + '</strong></div>' +
+      '<div class="result-row result-total"><span>مبلغ نهایی</span><strong>' + money(tot) + '</strong></div>';
+  }
+
+  ['data-gw','data-gk','data-gwg','data-gp','data-gt'].forEach(function(attr){
+    const el = document.querySelector('[' + attr + ']');
+    if(el){
+      el.addEventListener('input', calc);
+      el.addEventListener('change', calc);
+    }
+  });
+  calc();
+}
+
+/* ═══ محاسبه‌گر سکه ═══ */
+function toolCoin(){
+  const sel = window.DATA.ASSETS.filter(function(a){
+    return ['coin','coin_bahar','nim','rob','gerami'].indexOf(a.id) !== -1;
+  });
+
+  openModal('<span data-icon="coins"></span> محاسبه‌گر سکه',
+    '<div class="form-group"><label>نوع سکه</label><select class="select" data-ct>' +
+      sel.map(function(a){ return '<option value="' + a.id + '">' + a.name + '</option>'; }).join('') +
+    '</select></div>' +
+    '<div class="form-group"><label>تعداد</label><input class="input" type="number" value="1" min="1" data-cc></div>' +
+    '<div class="result-box" data-coin-out></div>');
+
+  function calc(){
+    const id = $('[data-ct]') ? $('[data-ct]').value : null;
+    const n = parseInt($('[data-cc]') ? $('[data-cc]').value : 1) || 1;
+    const live = window.API.getById(id);
+    const out = $('[data-coin-out]');
+    if(!live || live.price == null){
+      if(out) out.innerHTML = '<div class="result-row"><span>در حال دریافت...</span></div>';
+      return;
+    }
+    const tot = live.price * n;
+    if(out) out.innerHTML =
+      '<div class="result-row"><span>قیمت واحد</span><strong>' + money(live.price) + '</strong></div>' +
+      '<div class="result-row"><span>تعداد</span><strong>' + window.U.num(n) + ' عدد</strong></div>' +
+      '<div class="result-row result-total"><span>ارزش کل</span><strong>' + money(tot) + '</strong></div>';
+  }
+
+  ['data-ct','data-cc'].forEach(function(attr){
+    const el = document.querySelector('[' + attr + ']');
+    if(el){
+      el.addEventListener('input', calc);
+      el.addEventListener('change', calc);
+    }
+  });
+  calc();
+}
+
+/* ═══ محاسبه‌گر انس ═══ */
+function toolOunce(){
+  const ounce = window.API.getById('ounce');
+  if(!ounce || ounce.price == null){ toast('در حال دریافت قیمت...', 'warning'); return; }
+
+  openModal('<span data-icon="diamond"></span> محاسبه‌گر انس',
+    '<div class="form-grid">' +
+      '<div class="form-group"><label>تعداد انس</label><input class="input" type="number" value="1" step="0.01" data-oc></div>' +
+      '<div class="form-group"><label>عیار</label><select class="select" data-ok>' +
+        '<option value="24">۲۴ عیار</option><option value="18" selected>۱۸ عیار</option><option value="21">۲۱ عیار</option>' +
+      '</select></div>' +
+    '</div>' +
+    '<div class="result-box" data-ounce-out></div>');
+
+  function calc(){
+    const n = parseFloat($('[data-oc]') ? $('[data-oc]').value : 1) || 1;
+    const k = parseFloat($('[data-ok]') ? $('[data-ok]').value : 18) || 18;
+    const dollar = window.API.getById('dollar');
+    if(!dollar || dollar.price == null) return;
+
+    const totalUSD = ounce.price * n;
+    const totalRial = totalUSD * dollar.price;
+    const gramPrice = totalRial / 31.1035;
+    const gramK = gramPrice * (k / 24);
+
+    const out = $('[data-ounce-out]');
+    if(out) out.innerHTML =
+      '<div class="result-row"><span>ارزش دلاری</span><strong>$' + window.U.num(totalUSD, 2) + '</strong></div>' +
+      '<div class="result-row"><span>ارزش ' + unitLabel() + '</span><strong>' + money(totalRial) + '</strong></div>' +
+      '<div class="result-row"><span>هر گرم ۲۴ عیار</span><strong>' + money(gramPrice) + '</strong></div>' +
+      '<div class="result-row result-total"><span>هر گرم ' + k + ' عیار</span><strong>' + money(gramK) + '</strong></div>';
+  }
+
+  ['data-oc','data-ok'].forEach(function(attr){
+    const el = document.querySelector('[' + attr + ']');
+    if(el){
+      el.addEventListener('input', calc);
+      el.addEventListener('change', calc);
+    }
+  });
+  calc();
+}
+
+/* ═══ محاسبه‌گر نقره ═══ */
+function toolSilver(){
+  const silver = window.API.getById('silver');
+  if(!silver || silver.price == null){ toast('در حال دریافت قیمت...', 'warning'); return; }
+
+  openModal('<span data-icon="diamond"></span> محاسبه‌گر نقره',
+    '<div class="form-group"><label>وزن (گرم)</label><input class="input" type="number" value="100" step="0.01" data-sv></div>' +
+    '<div class="result-box" data-silver-out></div>');
+
+  function calc(){
+    const w = parseFloat($('[data-sv]') ? $('[data-sv]').value : 0) || 0;
+    const dollar = window.API.getById('dollar');
+    if(!dollar || dollar.price == null) return;
+    const pricePerGram = (silver.price * dollar.price) / 31.1035;
+    const total = w * pricePerGram;
+
+    const out = $('[data-silver-out]');
+    if(out) out.innerHTML =
+      '<div class="result-row"><span>هر گرم</span><strong>' + money(pricePerGram) + '</strong></div>' +
+      '<div class="result-row result-total"><span>ارزش ' + w + ' گرم</span><strong>' + money(total) + '</strong></div>';
+  }
+
+  const el = document.querySelector('[data-sv]');
+  if(el) el.addEventListener('input', calc);
+  calc();
+}
+
+/* ═══ مبدل ارز ═══ */
+function toolConv(){
+  const currencies = window.DATA.ASSETS.filter(function(a){
+    return a.cat === 'currency' || a.id === 'ounce' || a.id === 'gold18';
+  });
+  const opts = currencies.map(function(a){ return '<option value="' + a.id + '">' + a.name + '</option>'; }).join('');
+
+  openModal('<span data-icon="exchange"></span> مبدل ارز',
+    '<div class="form-group"><label>مقدار (' + unitLabel() + ')</label><input class="input" type="number" value="1000000" data-va></div>' +
+    '<div style="display:grid;grid-template-columns:1fr 48px 1fr;gap:10px;align-items:center">' +
+      '<select class="select" data-vf>' + opts + '</select>' +
+      '<button type="button" class="btn btn-primary" data-vs style="padding:10px;width:48px;height:48px;border-radius:14px">⇄</button>' +
+      '<select class="select" data-vt>' + opts + '</select>' +
+    '</div>' +
+    '<div class="result-box" data-conv-out></div>');
+
+  const selF = $('[data-vf]');
+  const selT = $('[data-vt]');
+  if(selF) selF.value = 'dollar';
+  if(selT) selT.value = 'euro';
+
+  function calc(){
+    const userAmt = parseFloat($('[data-va]') ? $('[data-va]').value : 0) || 0;
+    const amtBase = userToBase(userAmt);
+    const f = window.DATA.find($('[data-vf]') ? $('[data-vf]').value : null);
+    const t = window.DATA.find($('[data-vt]') ? $('[data-vt]').value : null);
+    if(!f || !t) return;
+    const lf = window.API.getById(f.id);
+    const lt = window.API.getById(t.id);
+    const out = $('[data-conv-out]');
+    if(!lf || !lt || lf.price == null || lt.price == null){
+      if(out) out.innerHTML = '<div class="result-row"><span>در حال دریافت...</span></div>';
+      return;
+    }
+    const res = (amtBase * lf.price) / lt.price;
+    if(out) out.innerHTML =
+      '<div class="result-row"><span>' + window.U.num(userAmt, 2) + ' ' + f.code + '</span><strong>' + window.U.num(res, 4) + ' ' + t.code + '</strong></div>' +
+      '<div class="result-row"><span>نرخ تبدیل</span><strong>۱ ' + f.code + ' = ' + window.U.num(lf.price / lt.price, 4) + ' ' + t.code + '</strong></div>';
+  }
+
+  ['data-va','data-vf','data-vt'].forEach(function(attr){
+    const el = document.querySelector('[' + attr + ']');
+    if(el){
+      el.addEventListener('input', calc);
+      el.addEventListener('change', calc);
+    }
+  });
+  const swapBtn = $('[data-vs]');
+  if(swapBtn) swapBtn.addEventListener('click', function(e){
+    e.preventDefault();
+    e.stopPropagation();
+    const a = selF.value;
+    selF.value = selT.value;
+    selT.value = a;
+    calc();
+  });
+  calc();
+}
+
+/* ═══ مبدل کریپتو ═══ */
+function toolCryptoConv(){
+  const cryptos = window.DATA.ASSETS.filter(function(a){ return a.cat === 'crypto'; });
+  const opts = cryptos.map(function(a){ return '<option value="' + a.id + '">' + a.name + ' (' + a.code + ')</option>'; }).join('');
+
+  openModal('<span data-icon="bitcoin"></span> مبدل کریپتو',
+    '<div class="form-group"><label>مقدار</label><input class="input" type="number" value="1" step="0.0001" data-cca></div>' +
+    '<div style="display:grid;grid-template-columns:1fr 48px 1fr;gap:10px;align-items:center">' +
+      '<select class="select" data-ccf>' + opts + '</select>' +
+      '<button type="button" class="btn btn-primary" data-ccs style="padding:10px;width:48px;height:48px;border-radius:14px">⇄</button>' +
+      '<select class="select" data-cct>' + opts + '</select>' +
+    '</div>' +
+    '<div class="result-box" data-crypto-out></div>');
+
+  const f = $('[data-ccf]');
+  const t = $('[data-cct]');
+  if(f) f.value = 'btc';
+  if(t) t.value = 'usdt';
+
+  function calc(){
+    const amt = parseFloat($('[data-cca]') ? $('[data-cca]').value : 0) || 0;
+    const from = window.DATA.find($('[data-ccf]') ? $('[data-ccf]').value : null);
+    const to = window.DATA.find($('[data-cct]') ? $('[data-cct]').value : null);
+    if(!from || !to) return;
+    const lf = window.API.getById(from.id);
+    const lt = window.API.getById(to.id);
+    const out = $('[data-crypto-out]');
+    if(!lf || !lt || lf.price == null || lt.price == null){
+      if(out) out.innerHTML = '<div class="result-row"><span>در حال دریافت...</span></div>';
+      return;
+    }
+    const res = (amt * lf.price) / lt.price;
+    const usdVal = amt * lf.price;
+    const dollar = window.API.getById('dollar');
+    const tomanVal = dollar ? usdVal * dollar.price : 0;
+
+    if(out) out.innerHTML =
+      '<div class="result-row"><span>' + window.U.num(amt, 4) + ' ' + from.code + '</span><strong>' + window.U.num(res, 6) + ' ' + to.code + '</strong></div>' +
+      '<div class="result-row"><span>ارزش دلاری</span><strong>$' + window.U.num(usdVal, 2) + '</strong></div>' +
+      (tomanVal ? '<div class="result-row result-total"><span>ارزش ' + unitLabel() + '</span><strong>' + money(tomanVal) + '</strong></div>' : '');
+  }
+
+  ['data-cca','data-ccf','data-cct'].forEach(function(attr){
+    const el = document.querySelector('[' + attr + ']');
+    if(el){
+      el.addEventListener('input', calc);
+      el.addEventListener('change', calc);
+    }
+  });
+  const swapBtn = $('[data-ccs]');
+  if(swapBtn) swapBtn.addEventListener('click', function(e){
+    e.preventDefault();
+    e.stopPropagation();
+    const a = f.value;
+    f.value = t.value;
+    t.value = a;
+    calc();
+  });
+  calc();
+}
+
+/* ═══ مبدل واحد ═══ */
+function toolUnitConv(){
+  openModal('<span data-icon="swap"></span> مبدل واحد',
+    '<div class="form-group"><label>دسته</label><select class="select" data-ucat>' +
+      '<option value="weight">وزن</option>' +
+      '<option value="length">طول</option>' +
+      '<option value="volume">حجم</option>' +
+    '</select></div>' +
+    '<div class="form-group"><label>مقدار</label><input class="input" type="number" value="1" step="0.01" data-ua></div>' +
+    '<div style="display:grid;grid-template-columns:1fr 48px 1fr;gap:10px;align-items:center">' +
+      '<select class="select" data-uf></select>' +
+      '<button type="button" class="btn btn-primary" data-us style="padding:10px;width:48px;height:48px;border-radius:14px">⇄</button>' +
+      '<select class="select" data-ut></select>' +
+    '</div>' +
+    '<div class="result-box" data-unit-out></div>');
+
+  const units = {
+    weight: {
+      label: 'وزن',
+      units: {
+        gram:    { name: 'گرم',        factor: 1 },
+        kg:      { name: 'کیلوگرم',    factor: 1000 },
+        mg:      { name: 'میلی‌گرم',   factor: 0.001 },
+        ton:     { name: 'تن',         factor: 1000000 },
+        mesghal: { name: 'مثقال',      factor: 4.6083 },
+        ounce:   { name: 'انس',        factor: 31.1035 },
+        pound:   { name: 'پوند',       factor: 453.592 }
+      }
+    },
+    length: {
+      label: 'طول',
+      units: {
+        meter:   { name: 'متر',         factor: 1 },
+        cm:      { name: 'سانتی‌متر',   factor: 0.01 },
+        km:      { name: 'کیلومتر',    factor: 1000 },
+        inch:    { name: 'اینچ',        factor: 0.0254 },
+        foot:    { name: 'فوت',         factor: 0.3048 },
+        mile:    { name: 'مایل',        factor: 1609.344 }
+      }
+    },
+    volume: {
+      label: 'حجم',
+      units: {
+        liter:       { name: 'لیتر',          factor: 1 },
+        ml:          { name: 'میلی‌لیتر',     factor: 0.001 },
+        m3:          { name: 'متر مکعب',      factor: 1000 },
+        gallon_us:   { name: 'گالن آمریکایی', factor: 3.785411784 },
+        barrel_oil:  { name: 'بشکه نفت',      factor: 158.987294928 }
+      }
+    }
+  };
+
+  function getLabels(catKey){
+    const cat = units[catKey];
+    return Object.entries(cat.units).map(function(entry){
+      return '<option value="' + entry[0] + '">' + entry[1].name + '</option>';
+    }).join('');
+  }
+
+  function updateSelects(){
+    const catKey = $('[data-ucat]') ? $('[data-ucat]').value : 'weight';
+    const fSel = $('[data-uf]');
+    const tSel = $('[data-ut]');
+    if(!fSel || !tSel) return;
+
+    const html = getLabels(catKey);
+    fSel.innerHTML = html;
+    tSel.innerHTML = html;
+
+    if(catKey === 'weight'){ fSel.value = 'gram'; tSel.value = 'mesghal'; }
+    else if(catKey === 'length'){ fSel.value = 'meter'; tSel.value = 'foot'; }
+    else if(catKey === 'volume'){ fSel.value = 'liter'; tSel.value = 'gallon_us'; }
+    calc();
+  }
+
+  function calc(){
+    const catKey = $('[data-ucat]') ? $('[data-ucat]').value : 'weight';
+    const cat = units[catKey];
+    const amt = parseFloat($('[data-ua]') ? $('[data-ua]').value : 0) || 0;
+    const from = $('[data-uf]') ? $('[data-uf]').value : null;
+    const to = $('[data-ut]') ? $('[data-ut]').value : null;
+    if(!from || !to || !cat.units[from] || !cat.units[to]) return;
+
+    const inBase = amt * cat.units[from].factor;
+    const res = inBase / cat.units[to].factor;
+
+    const out = $('[data-unit-out]');
+    if(out) out.innerHTML =
+      '<div class="result-row"><span>دسته</span><strong>' + cat.label + '</strong></div>' +
+      '<div class="result-row"><span>مقدار ورودی</span><strong>' + window.U.num(amt, 4) + ' ' + cat.units[from].name + '</strong></div>' +
+      '<div class="result-row result-total"><span>معادل</span><strong>' + window.U.num(res, 4) + ' ' + cat.units[to].name + '</strong></div>';
+  }
+
+  const catSel = $('[data-ucat]');
+  if(catSel) catSel.addEventListener('change', updateSelects);
+
+  ['data-ua','data-uf','data-ut'].forEach(function(attr){
+    const el = document.querySelector('[' + attr + ']');
+    if(el){
+      el.addEventListener('input', calc);
+      el.addEventListener('change', calc);
+    }
+  });
+
+  const swapBtn = $('[data-us]');
+  if(swapBtn) swapBtn.addEventListener('click', function(e){
+    e.preventDefault();
+    e.stopPropagation();
+    const f = $('[data-uf]');
+    const t = $('[data-ut]');
+    const a = f.value;
+    f.value = t.value;
+    t.value = a;
+    calc();
+  });
+
+  updateSelects();
+}
+
+/* ═══ مبدل حجم ═══ */
+function toolVolumeConv(){
+  openModal('<span data-icon="swap"></span> مبدل حجم',
+    '<div class="form-group"><label>مقدار</label><input class="input" type="number" value="1" step="0.01" data-vola></div>' +
+    '<div style="display:grid;grid-template-columns:1fr 48px 1fr;gap:10px;align-items:center">' +
+      '<select class="select" data-volf>' +
+        '<option value="liter">لیتر</option>' +
+        '<option value="ml">میلی‌لیتر</option>' +
+        '<option value="m3">متر مکعب</option>' +
+        '<option value="gallon_us">گالن آمریکایی</option>' +
+        '<option value="barrel_oil">بشکه نفت</option>' +
+      '</select>' +
+      '<button type="button" class="btn btn-primary" data-vols style="padding:10px;width:48px;height:48px;border-radius:14px">⇄</button>' +
+      '<select class="select" data-volt>' +
+        '<option value="liter" selected>لیتر</option>' +
+        '<option value="ml">میلی‌لیتر</option>' +
+        '<option value="m3">متر مکعب</option>' +
+        '<option value="gallon_us">گالن آمریکایی</option>' +
+        '<option value="barrel_oil">بشکه نفت</option>' +
+      '</select>' +
+    '</div>' +
+    '<div class="result-box" data-vol-out></div>');
+
+  const toLiter = {
+    liter: 1, ml: 0.001, m3: 1000,
+    gallon_us: 3.785411784, barrel_oil: 158.987294928
+  };
+  const labels = {
+    liter: 'لیتر', ml: 'میلی‌لیتر', m3: 'متر مکعب',
+    gallon_us: 'گالن آمریکایی', barrel_oil: 'بشکه نفت'
+  };
+
+  function calc(){
+    const amt = parseFloat($('[data-vola]') ? $('[data-vola]').value : 0) || 0;
+    const from = $('[data-volf]') ? $('[data-volf]').value : null;
+    const to = $('[data-volt]') ? $('[data-volt]').value : null;
+    if(!from || !to) return;
+
+    const inLiter = amt * toLiter[from];
+    const res = inLiter / toLiter[to];
+
+    const out = $('[data-vol-out]');
+    if(out) out.innerHTML =
+      '<div class="result-row"><span>مقدار ورودی</span><strong>' + window.U.num(amt, 4) + ' ' + labels[from] + '</strong></div>' +
+      '<div class="result-row"><span>معادل لیتر</span><strong>' + window.U.num(inLiter, 4) + ' لیتر</strong></div>' +
+      '<div class="result-row result-total"><span>معادل</span><strong>' + window.U.num(res, 4) + ' ' + labels[to] + '</strong></div>';
+  }
+
+  ['data-vola','data-volf','data-volt'].forEach(function(attr){
+    const el = document.querySelector('[' + attr + ']');
+    if(el){
+      el.addEventListener('input', calc);
+      el.addEventListener('change', calc);
+    }
+  });
+
+  const swapBtn = $('[data-vols]');
+  if(swapBtn) swapBtn.addEventListener('click', function(e){
+    e.preventDefault();
+    e.stopPropagation();
+    const f = $('[data-volf]');
+    const t = $('[data-volt]');
+    const a = f.value;
+    f.value = t.value;
+    t.value = a;
+    calc();
+  });
+  calc();
+}
+
+/* ═══ پرتفوی ═══ */
+function toolPortfolio(){
+  toast('پرتفوی در حال توسعه');
+}
+
+/* ═══ هشدار قیمت ═══ */
+function toolAlerts(){
+  toast('هشدار قیمت در حال توسعه');
+}
+
+/* ═══ یادداشت‌ها ═══ */
+function toolNotes(){
+  const notes = window.Storage.notes.get() || '';
+  openModal('<span data-icon="note"></span> یادداشت‌ها',
+    '<textarea class="textarea" data-notes placeholder="یادداشت خود را بنویسید..." style="min-height:220px">' + notes + '</textarea>' +
+    '<button type="button" class="btn btn-primary btn-block" data-notes-save>' +
+      '<span data-icon="check"></span> ذخیره' +
+    '</button>');
+
+  const saveBtn = $('[data-notes-save]');
+  if(saveBtn) saveBtn.addEventListener('click', function(e){
+    e.preventDefault();
+    e.stopPropagation();
+    const val = $('[data-notes]') ? $('[data-notes]').value : '';
+    window.Storage.notes.save(val);
+    toast('ذخیره شد ✓', 'success');
+    closeModal();
+  });
+}
+
+/* ═══ محاسبه سود ═══ */
+function toolProfit(){
+  const opts = window.DATA.ASSETS.slice(0, 50).map(function(a){
+    return '<option value="' + a.id + '">' + a.name + '</option>';
+  }).join('');
+
+  openModal('<span data-icon="trendingUp"></span> محاسبه سود / زیان',
+    '<div class="form-group"><label>دارایی</label><select class="select" data-pr-a>' + opts + '</select></div>' +
+    '<div class="form-grid">' +
+      '<div class="form-group"><label>قیمت خرید (' + unitLabel() + ')</label><input class="input" type="number" placeholder="قیمت واحد" data-pr-buy></div>' +
+      '<div class="form-group"><label>مقدار</label><input class="input" type="number" value="1" data-pr-qty></div>' +
+    '</div>' +
+    '<div class="result-box" data-profit-out></div>');
+
+  function calc(){
+    const id = $('[data-pr-a]') ? $('[data-pr-a]').value : null;
+    const buyUser = parseFloat($('[data-pr-buy]') ? $('[data-pr-buy]').value : 0) || 0;
+    const buyBase = userToBase(buyUser);
+    const qty = parseFloat($('[data-pr-qty]') ? $('[data-pr-qty]').value : 0) || 0;
+    const a = window.DATA.find(id);
+    const l = window.API.getById(id);
+    const out = $('[data-profit-out]');
+    if(!a || !l || l.price == null || !buyBase || !qty){
+      if(out) out.innerHTML = '<div class="result-row"><span>قیمت خرید و مقدار را وارد کنید</span></div>';
+      return;
+    }
+    const nowVal = l.price * qty;
+    const buyVal = buyBase * qty;
+    const pl = nowVal - buyVal;
+    const pct = (pl / buyVal) * 100;
+    const up = pl >= 0;
+
+    if(out) out.innerHTML =
+      '<div class="result-row"><span>ارزش خرید</span><strong>' + formatPrice(a, buyVal) + '</strong></div>' +
+      '<div class="result-row"><span>ارزش فعلی</span><strong>' + formatPrice(a, nowVal) + '</strong></div>' +
+      '<div class="result-row result-total"><span>' + (up ? 'سود' : 'زیان') + '</span>' +
+        '<strong style="color:' + (up ? 'var(--up)' : 'var(--down)') + '">' +
+        (up ? '+' : '') + formatPrice(a, Math.abs(pl)) + ' (' + (up ? '+' : '') + pct.toFixed(2) + '%)</strong>' +
+      '</div>';
+  }
+
+  ['data-pr-a','data-pr-buy','data-pr-qty'].forEach(function(attr){
+    const el = document.querySelector('[' + attr + ']');
+    if(el){
+      el.addEventListener('input', calc);
+      el.addEventListener('change', calc);
+    }
+  });
+  calc();
+}
+
+/* ═══ محاسبه زکات ═══ */
+function toolZakat(){
+  const gold = window.API.getById('gold18');
+  if(!gold || gold.price == null){ toast('در حال دریافت...', 'warning'); return; }
+
+  openModal('<span data-icon="check"></span> محاسبه زکات طلا',
+    '<div class="form-grid">' +
+      '<div class="form-group"><label>وزن طلا (گرم)</label><input class="input" type="number" value="100" step="0.1" data-zw></div>' +
+      '<div class="form-group"><label>عیار</label><select class="select" data-zk>' +
+        '<option value="18" selected>۱۸ عیار</option>' +
+        '<option value="24">۲۴ عیار</option>' +
+        '<option value="21">۲۱ عیار</option>' +
+        '<option value="14">۱۴ عیار</option>' +
+      '</select></div>' +
+    '</div>' +
+    '<div class="result-box" data-zakat-out></div>');
+
+  const NISAB = 87.48;
+
+  function calc(){
+    const w = parseFloat($('[data-zw]') ? $('[data-zw]').value : 0) || 0;
+    const k = parseFloat($('[data-zk]') ? $('[data-zk]').value : 18) || 18;
+    const w24 = w * (k / 24);
+    const out = $('[data-zakat-out]');
+    const reached = w24 >= NISAB;
+
+    if(!reached){
+      if(out) out.innerHTML =
+        '<div class="result-row"><span>معادل ۲۴ عیار</span><strong>' + window.U.num(w24, 2) + ' گرم</strong></div>' +
+        '<div class="result-row"><span>نصاب شرعی</span><strong>' + window.U.num(NISAB, 2) + ' گرم</strong></div>' +
+        '<div class="result-row result-total"><span>وضعیت</span><strong style="color:var(--warn)">به نصاب نرسیده</strong></div>';
+      return;
+    }
+
+    const pricePerGram = gold.price * (k / 18);
+    const totalValue = w * pricePerGram;
+    const zakat = totalValue * 0.025;
+
+    if(out) out.innerHTML =
+      '<div class="result-row"><span>معادل ۲۴ عیار</span><strong>' + window.U.num(w24, 2) + ' گرم</strong></div>' +
+      '<div class="result-row"><span>ارزش کل</span><strong>' + money(totalValue) + '</strong></div>' +
+      '<div class="result-row"><span>نرخ زکات</span><strong>۲.۵٪</strong></div>' +
+      '<div class="result-row result-total"><span>زکات واجب</span><strong>' + money(zakat) + '</strong></div>';
+  }
+
+  ['data-zw','data-zk'].forEach(function(attr){
+    const el = document.querySelector('[' + attr + ']');
+    if(el){
+      el.addEventListener('input', calc);
+      el.addEventListener('change', calc);
+    }
+  });
+  calc();
+}
+
+/* ═══ میانگین خرید ═══ */
+function toolAvgBuy(){
+  toast('میانگین خرید در حال توسعه');
+}
+
+/* ═══ Open Tool ═══ */
 function openTool(tool){
-  if(tool === 'tv'){
-    if(window.TV){
-      if(TV.isActive()) TV.close();
-      else TV.open();
-    } else {
-      toast('حالت TV در دسترس نیست', 'warning');
-    }
-    return;
-  }
-  if(tool === 'fullscreen'){
-    if(!document.fullscreenElement){
-      document.documentElement.requestFullscreen?.().catch(() => {});
-    } else {
-      document.exitFullscreen?.().catch(() => {});
-    }
-    return;
-  }
   if(tool === 'gold') return toolGold();
   if(tool === 'coin') return toolCoin();
   if(tool === 'ounce') return toolOunce();
@@ -1039,6 +1618,23 @@ function openTool(tool){
   if(tool === 'profit') return toolProfit();
   if(tool === 'zakat') return toolZakat();
   if(tool === 'avg') return toolAvgBuy();
+  if(tool === 'tv'){
+    if(window.TV){
+      if(TV.isActive()) TV.close();
+      else TV.open();
+    } else {
+      toast('حالت TV در دسترس نیست', 'warning');
+    }
+    return;
+  }
+  if(tool === 'fullscreen'){
+    if(!document.fullscreenElement){
+      document.documentElement.requestFullscreen && document.documentElement.requestFullscreen().catch(function(){});
+    } else {
+      document.exitFullscreen && document.exitFullscreen().catch(function(){});
+    }
+    return;
+  }
   if(tool === 'export'){
     const btn = document.querySelector('[data-action="export"]');
     if(btn) btn.click();
@@ -1065,10 +1661,10 @@ function doSearch(query){
 
   const results = [];
 
-  window.DATA.ASSETS.forEach(a => {
-    if(a.name.toLowerCase().includes(q) ||
-       a.code.toLowerCase().includes(q) ||
-       a.id.toLowerCase().includes(q)){
+  window.DATA.ASSETS.forEach(function(a){
+    if(a.name.toLowerCase().indexOf(q) !== -1 ||
+       a.code.toLowerCase().indexOf(q) !== -1 ||
+       a.id.toLowerCase().indexOf(q) !== -1){
       results.push({
         type: 'asset',
         id: a.id,
@@ -1081,9 +1677,9 @@ function doSearch(query){
   });
 
   if(carsData && carsData.cars){
-    carsData.cars.forEach(c => {
-      if(c.name.toLowerCase().includes(q) ||
-         (c.category && c.category.toLowerCase().includes(q))){
+    carsData.cars.forEach(function(c){
+      if(c.name.toLowerCase().indexOf(q) !== -1 ||
+         (c.category && c.category.toLowerCase().indexOf(q) !== -1)){
         results.push({
           type: 'car',
           id: c.id,
@@ -1106,7 +1702,7 @@ function doSearch(query){
     return;
   }
 
-  res.innerHTML = limited.map((r, i) => {
+  res.innerHTML = limited.map(function(r, i){
     let price = '';
     if(r.type === 'asset'){
       const live = window.API.getById(r.id);
@@ -1126,8 +1722,8 @@ function doSearch(query){
   }).join('');
   res.hidden = false;
 
-  res.querySelectorAll('.ms-item').forEach(el => {
-    el.addEventListener('click', e => {
+  res.querySelectorAll('.ms-item').forEach(function(el){
+    el.addEventListener('click', function(e){
       e.stopPropagation();
       const item = searchResults[+el.dataset.idx];
       if(item.type === 'asset'){
@@ -1137,7 +1733,7 @@ function doSearch(query){
       } else if(item.type === 'car'){
         closeSearch();
         go('cars');
-        setTimeout(() => {
+        setTimeout(function(){
           const inp = $('[data-cars-search]');
           if(inp) inp.value = item.name;
           carsSearch = item.name;
@@ -1184,11 +1780,11 @@ function handleClick(e){
     e.stopPropagation();
     if(refreshBtn.dataset.loading === '1') return;
     refreshBtn.dataset.loading = '1';
-    window.API.fetchData(true).then(() => {
+    window.API.fetchData(true).then(function(){
       toast('بروزرسانی شد ✓', 'success');
-    }).catch(() => {
+    }).catch(function(){
       toast('خطا در بروزرسانی', 'error');
-    }).finally(() => {
+    }).finally(function(){
       refreshBtn.dataset.loading = '';
     });
     return;
@@ -1265,7 +1861,7 @@ function handleClick(e){
   if(chip){
     e.preventDefault();
     e.stopPropagation();
-    $$('[data-filters] .chip').forEach(c => c.classList.remove('is-active'));
+    $$('[data-filters] .chip').forEach(function(c){ c.classList.remove('is-active'); });
     chip.classList.add('is-active');
     filter = chip.dataset.filter;
     renderMarkets();
@@ -1276,7 +1872,7 @@ function handleClick(e){
   if(carsChip){
     e.preventDefault();
     e.stopPropagation();
-    $$('[data-cars-filter]').forEach(c => c.classList.remove('is-active'));
+    $$('[data-cars-filter]').forEach(function(c){ c.classList.remove('is-active'); });
     carsChip.classList.add('is-active');
     carsFilter = carsChip.dataset.carsFilter;
     if(currentPage === 'cars') renderCarsPage();
@@ -1300,7 +1896,7 @@ function handleClick(e){
     const newUnit = unitBtn.dataset.unit;
     if(getUnit() === newUnit) return;
     window.CFG.set('currency', newUnit);
-    $$('[data-unit]').forEach(b => b.classList.toggle('is-active', b.dataset.unit === newUnit));
+    $$('[data-unit]').forEach(function(b){ b.classList.toggle('is-active', b.dataset.unit === newUnit); });
     refreshAll();
     toast(newUnit === 'toman' ? 'واحد: تومان' : 'واحد: ریال', 'success');
     return;
@@ -1327,7 +1923,7 @@ function handleClick(e){
     e.preventDefault();
     e.stopPropagation();
     const parent = pill.parentElement;
-    parent.querySelectorAll('button').forEach(b => b.classList.remove('is-active'));
+    parent.querySelectorAll('button').forEach(function(b){ b.classList.remove('is-active'); });
     pill.classList.add('is-active');
     window.CFG.set('chartPeriod', pill.dataset.period);
     if(currentPage === 'chart') renderChartPage();
@@ -1403,12 +1999,12 @@ function init(){
   if(window.Icons && window.Icons.installImageFallback) window.Icons.installImageFallback();
 
   const unit = getUnit();
-  $$('[data-unit]').forEach(b => b.classList.toggle('is-active', b.dataset.unit === unit));
+  $$('[data-unit]').forEach(function(b){ b.classList.toggle('is-active', b.dataset.unit === unit); });
 
   const unInput = $('[data-input="userName"]');
   if(unInput){
     unInput.value = getUserName() === 'کاربر مهمان' ? '' : getUserName();
-    unInput.addEventListener('input', window.U.debounce(e => {
+    unInput.addEventListener('input', window.U.debounce(function(e){
       const v = e.target.value.trim();
       saveUserName(v);
       if(currentPage === 'home') renderBankCard();
@@ -1416,11 +2012,11 @@ function init(){
   }
 
   const hash = (location.hash || '').replace('#', '');
-  go(PAGES.includes(hash) ? hash : 'home');
+  go(PAGES.indexOf(hash) !== -1 ? hash : 'home');
 
   document.addEventListener('click', handleClick, true);
 
-  document.addEventListener('keydown', e => {
+  document.addEventListener('keydown', function(e){
     if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k'){
       e.preventDefault();
       const input = $('[data-search-input]');
@@ -1435,12 +2031,12 @@ function init(){
 
   const si = $('[data-search-input]');
   if(si){
-    si.addEventListener('input', window.U.debounce(e => doSearch(e.target.value), 150));
+    si.addEventListener('input', window.U.debounce(function(e){ doSearch(e.target.value); }, 150));
   }
 
   const carsSearchInp = $('[data-cars-search]');
   if(carsSearchInp){
-    carsSearchInp.addEventListener('input', window.U.debounce(e => {
+    carsSearchInp.addEventListener('input', window.U.debounce(function(e){
       carsSearch = e.target.value.trim();
       if(currentPage === 'cars') renderCarsPage();
     }, 200));
@@ -1449,7 +2045,7 @@ function init(){
   const iv = $('[data-input="interval"]');
   if(iv){
     iv.value = window.CFG.get('refreshInterval');
-    iv.addEventListener('change', e => {
+    iv.addEventListener('change', function(e){
       const v = parseInt(e.target.value);
       window.CFG.set('refreshInterval', v);
       window.API.start(v);
@@ -1457,22 +2053,22 @@ function init(){
     });
   }
 
-  window.addEventListener('online', () => {
+  window.addEventListener('online', function(){
     toast('اتصال برقرار شد ✓', 'success');
-    window.API.fetchData(true).catch(() => {});
+    window.API.fetchData(true).catch(function(){});
   });
 
-  window.addEventListener('offline', () => {
+  window.addEventListener('offline', function(){
     toast('حالت آفلاین', 'warning');
   });
 
-  window.API.subscribe(() => {
+  window.API.subscribe(function(){
     refreshAll();
   });
 
   renderHdrTicker();
 
-  loadCarsData(false).then(() => {
+  loadCarsData(false).then(function(){
     if(currentPage === 'home') renderHomeCars();
     if(currentPage === 'cars') renderCarsPage();
   });

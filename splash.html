@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0a1310">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>قیمتو</title>
+<link rel="icon" type="image/png" href="assets/logo.png">
+
+<style>
+/* ═══════════════ FONT FACE ═══════════════ */
+@font-face {
+  font-family: 'Dana';
+  src: url('assets/fonts/dana-regular.woff') format('woff');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Dana';
+  src: url('assets/fonts/dana-medium.woff') format('woff');
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Dana';
+  src: url('assets/fonts/dana-demibold.woff') format('woff');
+  font-weight: 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Dana';
+  src: url('assets/fonts/dana-bold.woff') format('woff');
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Dana';
+  src: url('assets/fonts/dana-black.woff') format('woff');
+  font-weight: 900;
+  font-display: swap;
+}
+
+/* ═══════════════ RESET ═══════════════ */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ═══════════════ VARIABLES — Dark (پیش‌فرض) ═══════════════ */
+:root {
+  --bg: #0a1310;
+  --text: #e8f0ec;
+  --text-muted: #7a8a83;
+  --accent: #10b981;
+  --loader-track: rgba(255, 255, 255, 0.08);
+}
+
+/* ═══════════════ LIGHT MODE ═══════════════ */
+body.light {
+  --bg: #f5f7f6;
+  --text: #0a1310;
+  --text-muted: #5a6a63;
+  --accent: #10b981;
+  --loader-track: rgba(0, 0, 0, 0.08);
+}
+
+/* ═══════════════ BODY ═══════════════ */
+body {
+  font-family: 'Dana', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background 0.3s ease, color 0.3s ease;
+  overscroll-behavior: none;
+}
+
+/* ═══════════════ CONTAINER ═══════════════ */
+.splash {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 30px;
+  position: relative;
+}
+
+/* ═══════════════ LOGO ═══════════════ */
+.splash-logo {
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+  animation: logoFadeIn 0.8s ease;
+}
+
+.splash-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+@keyframes logoFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ═══════════════ BRAND NAME — سفید کامل ═══════════════ */
+.splash-name {
+  font-size: 32px;
+  font-weight: 900;
+  color: var(--text);
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+  animation: nameFadeIn 0.8s ease 0.2s backwards;
+}
+
+/* در دارک، سفید کامل */
+body:not(.light) .splash-name {
+  color: #ffffff;
+}
+
+body.light .splash-name {
+  color: #0a1310;
+}
+
+@keyframes nameFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ═══════════════ SUBTITLE ═══════════════ */
+.splash-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-bottom: 40px;
+  animation: nameFadeIn 0.8s ease 0.35s backwards;
+}
+
+/* ═══════════════ MESSAGE — لطفاً شکیبا باشید ═══════════════ */
+.splash-message {
+  font-size: 14px;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-bottom: 20px;
+  animation: nameFadeIn 0.8s ease 0.5s backwards;
+  text-align: center;
+}
+
+/* ═══════════════ LOADER — پایین صفحه ═══════════════ */
+.splash-loader {
+  position: absolute;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  height: 3px;
+  background: var(--loader-track);
+  border-radius: 3px;
+  overflow: hidden;
+  animation: loaderFadeIn 0.8s ease 0.6s backwards;
+}
+
+.splash-loader-bar {
+  width: 40%;
+  height: 100%;
+  background: var(--accent);
+  border-radius: 3px;
+  animation: loaderMove 1.4s cubic-bezier(0.65, 0.05, 0.36, 1) infinite;
+}
+
+@keyframes loaderFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes loaderMove {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(500%);
+  }
+}
+
+/* ═══════════════ HIDDEN STATE ═══════════════ */
+.splash.is-hidden {
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+
+/* ═══════════════ RESPONSIVE ═══════════════ */
+@media (max-width: 380px) {
+  .splash-logo {
+    width: 100px;
+    height: 100px;
+    margin-bottom: 20px;
+  }
+  .splash-name {
+    font-size: 26px;
+  }
+  .splash-subtitle {
+    font-size: 12px;
+    margin-bottom: 32px;
+  }
+  .splash-message {
+    font-size: 13px;
+  }
+  .splash-loader {
+    width: 160px;
+    bottom: 50px;
+  }
+}
+
+@media (min-width: 768px) {
+  .splash-logo {
+    width: 140px;
+    height: 140px;
+  }
+  .splash-name {
+    font-size: 36px;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="splash" id="splash">
+
+  <!-- لوگو -->
+  <div class="splash-logo">
+    <img src="assets/logo.png" alt="قیمتو">
+  </div>
+
+  <!-- نام برند — سفید کامل -->
+  <div class="splash-name">قیمتو</div>
+
+  <!-- زیرنویس -->
+  <div class="splash-subtitle">پایش زنده بازار</div>
+
+  <!-- پیام -->
+  <div class="splash-message">لطفاً شکیبا باشید...</div>
+
+  <!-- لودینگ پایین -->
+  <div class="splash-loader">
+    <div class="splash-loader-bar"></div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  var splash = document.getElementById('splash');
+
+  /* ─── تشخیص تم ─── */
+  try {
+    var cfg = JSON.parse(localStorage.getItem('gheymato.cfg.v6') || '{}');
+    if(cfg.theme === 'light'){
+      document.body.classList.add('light');
+    }
+  } catch(e){}
+
+  /* ─── گوش دادن به تنظیمات تم ─── */
+  window.addEventListener('storage', function(e){
+    if(e.key === 'gheymato.cfg.v6'){
+      try {
+        var cfg = JSON.parse(e.newValue || '{}');
+        document.body.classList.toggle('light', cfg.theme === 'light');
+      } catch(err){}
+    }
+  });
+
+  /* ─── پیام از والد ─── */
+  window.addEventListener('message', function(e){
+    if(e.data === 'splash:hide'){
+      hide();
+    }
+  });
+
+  /* ─── مخفی کردن ─── */
+  function hide(){
+    if(!splash) return;
+    splash.classList.add('is-hidden');
+    setTimeout(function(){
+      if(window.parent !== window.self){
+        try {
+          window.parent.postMessage('splash:hidden', '*');
+        } catch(e){}
+      }
+    }, 400);
+  }
+
+  /* ─── API ─── */
+  window.Splash = {
+    hide: hide,
+    show: function(){
+      if(splash) splash.classList.remove('is-hidden');
+    }
+  };
+
+  /* ─── اعلام آماده بودن ─── */
+  if(window.parent !== window.self){
+    try {
+      window.parent.postMessage('splash:ready', '*');
+    } catch(e){}
+  }
+
+  /* ─── اگر مستقل بود، پس از ۳ ثانیه پنهان شود ─── */
+  if(window.self === window.top){
+    setTimeout(hide, 3000);
+  }
+})();
+</script>
+
+</body>
+</html>

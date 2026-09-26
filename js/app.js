@@ -122,7 +122,7 @@ function initOnlineStatus(){
    BOOT
 ============================================================ */
 function boot(){
-  console.log('%cقیمتو 5.5', 'color:#10b981;font-size:20px;font-weight:900');
+  console.log('%cقیمتو 6.0', 'color:#10b981;font-size:20px;font-weight:900');
 
   try {
     // 1. Config
@@ -138,36 +138,101 @@ function boot(){
     // 3. UI
     if(window.UI?.init) UI.init();
 
-    // 4. Anim
+    // 4. TV
+    if(window.TV?.init) TV.init();
+
+    // 5. Anim
     if(window.Anim?.init) Anim.init();
 
-    // 5. Gestures
+    // 6. Gestures
     if(window.Gestures?.init) Gestures.init();
 
-    // 6. Online/Offline
+    // 7. Online/Offline
     initOnlineStatus();
 
-    // 7. API
+    // 8. API
     if(window.API){
       const interval = CFG.get('refreshInterval') || 60000;
       if(CFG.get('autoRefresh') !== false) API.start(interval);
       else API.fetchData().catch(() => {});
     }
 
-    // 8. Hide splash
-    hideSplash();
+    // ═══ 9. Hide Splash ═══
+    hideSplashIframe();
 
     console.log('%c[قیمتو] ✓ آماده', 'color:#10b981;font-weight:900');
   } catch(err){
     console.error('[Boot]', err);
-    hideSplash();
+    hideSplashIframe();
   }
 }
 
-if(document.readyState === 'loading'){
-  document.addEventListener('DOMContentLoaded', boot);
-} else {
-  boot();
+/* ═══ Splash Iframe ═══ */
+function hideSplashIframe(){
+  const frame = document.getElementById('splashFrame');
+  if(!frame) return;
+
+  try {
+    frame.contentWindow.postMessage('splash:hide', '*');
+  } catch(e){}
+
+  // حذف کامل iframe پس از انیمیشن
+  setTimeout(() => {
+    if(frame.parentNode) frame.parentNode.removeChild(frame);
+  }, 1000);
+}
+
+/* ═══ Online/Offline Iframe ═══ */
+function initOnlineStatus(){
+  const offlineFrame = document.getElementById('offlineFrame');
+  if(!offlineFrame) return;
+
+  function showOffline(){
+    offlineFrame.style.display = 'block';
+    offlineFrame.style.pointerEvents = 'auto';
+    try {
+      offlineFrame.contentWindow.postMessage('offline:show', '*');
+    } catch(e){}
+  }
+
+  function hideOffline(){
+    offlineFrame.style.display = 'none';
+    offlineFrame.style.pointerEvents = 'none';
+    try {
+      offlineFrame.contentWindow.postMessage('offline:hide', '*');
+    } catch(e){}
+  }
+
+  function update(){
+    if(navigator.onLine){
+      hideOffline();
+    } else {
+      showOffline();
+    }
+  }
+
+  window.addEventListener('online', () => {
+    if(window.UI) UI.toast('اتصال برقرار شد ✓', 'success');
+    setTimeout(update, 800);
+  });
+
+  window.addEventListener('offline', () => {
+    showOffline();
+  });
+
+  // پیام از iframe
+  window.addEventListener('message', (e) => {
+    if(e.data === 'offline:reconnect'){
+      setTimeout(hideOffline, 500);
+    }
+    if(e.data === 'offline:retry-success'){
+      if(window.UI) UI.toast('اتصال برقرار شد ✓', 'success');
+      setTimeout(hideOffline, 500);
+    }
+  });
+
+  // بررسی اولیه
+  update();
 }
 
 })();
