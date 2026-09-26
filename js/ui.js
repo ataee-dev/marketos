@@ -381,27 +381,37 @@ async function renderCars(){
     if(emptyEl) emptyEl.hidden = list.length > 0;
 
 function carRowHTML(car){
+  // ═══ قیمت: اول بازار، بعد کارخانه ═══
   const priceValue = car.priceMarket != null ? car.priceMarket
                     : car.priceFactory != null ? car.priceFactory
                     : null;
 
+  // ═══════════════════════════════════════════════════
+  // ✅ استفاده از formatPrice برای تبدیل واحد درست
+  // (cars.json به ریال است — همان واحد پایه‌ی پروژه)
+  // ═══════════════════════════════════════════════════
   const priceText = priceValue != null
-    ? window.U.num(priceValue / 10, 0) + ' تومان'
+    ? window.UI.formatPrice({ ptype: 'rial', dec: 0 }, priceValue)
     : (car.status === 'coming-soon' ? 'به زودی'
       : car.status === 'unavailable' ? 'ناموجود'
       : car.status === 'discontinued' ? 'توقف تولید'
       : car.status === 'not-selling' ? 'توقف فروش'
       : '—');
 
-  const changePercent = car.changePercent != null ? car.changePercent : null;
-  const up = (changePercent || 0) >= 0;
+  // ═══ تغییرات (درصد — بدون تبدیل) ═══
+  const changePercent = car.changePercent != null ? car.changePercent
+                       : (car.change != null && car.priceMarket != null && car.priceMarket !== 0)
+                         ? (car.change / (car.priceMarket - car.change)) * 100
+                         : null;
 
+  const up = (changePercent || 0) >= 0;
   const changeText = changePercent != null && changePercent !== 0
     ? `<span class="car-row-change ${up ? 'up' : 'down'}">
          ${up ? '▲' : '▼'} ${Math.abs(changePercent).toFixed(2)}%
        </span>`
     : '';
 
+  // ═══ رنگ قیمت بر اساس وضعیت ═══
   const isPlaceholder = priceValue == null;
   const rowClass = car.status === 'unavailable' || car.status === 'discontinued'
     ? 'car-row is-unavailable'
