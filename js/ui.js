@@ -392,35 +392,56 @@ async function renderCars(){
 }
 
 function carRowHTML(car){
-  const priceText = car.price != null
-    ? window.U.num(car.price, 0) + ' تومان'
-    : (car.statusText || '—');
+  // ═══ قیمت: اول بازار، بعد کارخانه ═══
+  const priceValue = car.priceMarket != null ? car.priceMarket
+                    : car.priceFactory != null ? car.priceFactory
+                    : null;
 
-  const statusClass = car.status === 'available' ? 'up'
-                     : car.status === 'coming-soon' ? 'warn'
-                     : 'muted';
+  const priceText = priceValue != null
+    ? window.U.num(priceValue / 10, 0) + ' تومان'
+    : (car.status === 'coming-soon' ? 'به زودی'
+      : car.status === 'unavailable' ? 'ناموجود'
+      : car.status === 'discontinued' ? 'توقف تولید'
+      : car.status === 'not-selling' ? 'توقف فروش'
+      : '—');
 
-  const changeText = car.change != null && car.change !== 0
-    ? ((car.change >= 0 ? '▲ ' : '▼ ') + Math.abs(car.change).toFixed(1) + '%')
+  // ═══ تغییرات ═══
+  const changePercent = car.changePercent != null ? car.changePercent
+                       : (car.change != null && car.priceMarket != null && car.priceMarket !== 0)
+                         ? (car.change / (car.priceMarket - car.change)) * 100
+                         : null;
+
+  const up = (changePercent || 0) >= 0;
+  const changeText = changePercent != null && changePercent !== 0
+    ? `<span style="display:block;font-size:11px;font-weight:700;color:${up ? 'var(--up)' : 'var(--down)'};margin-top:2px">
+         ${up ? '▲' : '▼'} ${Math.abs(changePercent).toFixed(2)}%
+       </span>`
     : '';
+
+  // ═══ رنگ قیمت بر اساس وضعیت ═══
+  const priceColor = car.status === 'available' ? 'var(--text)'
+                    : car.status === 'coming-soon' ? 'var(--warn)'
+                    : 'var(--muted)';
 
   return `
     <div class="car-row" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border)">
       <div style="flex:1;min-width:0">
-        <strong style="display:block;font-size:13.5px;font-weight:700">${window.U.esc(car.name || '—')}</strong>
-        <small style="display:block;font-size:11px;color:var(--muted);margin-top:2px">${window.U.esc(car.brand || '')} ${car.model ? '· ' + window.U.esc(car.model) : ''}</small>
+        <strong style="display:block;font-size:13.5px;font-weight:700;line-height:1.4">
+          ${window.U.esc(car.name || '—')}
+        </strong>
+        <small style="display:block;font-size:11px;color:var(--muted);margin-top:3px">
+          ${window.U.esc(car.category || '')}
+        </small>
       </div>
       <div style="text-align:left;flex-shrink:0">
-        <strong style="display:block;font-size:13px;font-weight:800;direction:ltr">${priceText}</strong>
-        ${changeText ? `<small style="display:block;font-size:11px;font-weight:700;color:var(--up);margin-top:2px">${changeText}</small>` : ''}
+        <strong style="display:block;font-size:13px;font-weight:800;direction:ltr;color:${priceColor}">
+          ${priceText}
+        </strong>
+        ${changeText}
       </div>
     </div>
   `;
 }
-
-
-
-
 
 
 /* ============================================================
