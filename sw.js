@@ -1,4 +1,4 @@
-const CACHE = 'gheymato-v3';
+const CACHE = 'gheymato-v4';
 
 const CORE = [
   './',
