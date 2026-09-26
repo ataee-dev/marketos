@@ -380,9 +380,50 @@ async function renderCars(){
 
     if(emptyEl) emptyEl.hidden = list.length > 0;
 
-    if(updatedEl && data.updatedTehran){
-      updatedEl.textContent = 'آخرین به‌روزرسانی: ' + data.updatedTehran;
-    }
+function carRowHTML(car){
+  const priceValue = car.priceMarket != null ? car.priceMarket
+                    : car.priceFactory != null ? car.priceFactory
+                    : null;
+
+  const priceText = priceValue != null
+    ? window.U.num(priceValue / 10, 0) + ' تومان'
+    : (car.status === 'coming-soon' ? 'به زودی'
+      : car.status === 'unavailable' ? 'ناموجود'
+      : car.status === 'discontinued' ? 'توقف تولید'
+      : car.status === 'not-selling' ? 'توقف فروش'
+      : '—');
+
+  const changePercent = car.changePercent != null ? car.changePercent : null;
+  const up = (changePercent || 0) >= 0;
+
+  const changeText = changePercent != null && changePercent !== 0
+    ? `<span class="car-row-change ${up ? 'up' : 'down'}">
+         ${up ? '▲' : '▼'} ${Math.abs(changePercent).toFixed(2)}%
+       </span>`
+    : '';
+
+  const isPlaceholder = priceValue == null;
+  const rowClass = car.status === 'unavailable' || car.status === 'discontinued'
+    ? 'car-row is-unavailable'
+    : car.status === 'coming-soon'
+    ? 'car-row is-coming'
+    : 'car-row';
+
+  return `
+    <div class="${rowClass}" data-car-id="${window.U.esc(car.id || '')}">
+      <div class="car-row-name">${window.U.esc(car.name || '—')}</div>
+      <div class="car-row-price ${isPlaceholder ? 'is-placeholder' : ''}">
+        ${priceText}
+        ${changeText}
+      </div>
+    </div>
+  `;
+}
+
+    // شمارنده خودروها
+    const countEl = $('[data-cars-count]');
+    if(countEl) countEl.textContent = list.length + ' خودرو';
+
 
   } catch(err){
     console.error('[Cars]', err);

@@ -3727,3 +3727,140 @@ body:not(.dark) .tv-ticker {
   }
   .content { padding: 0; }
 }
+
+
+/* ═══════════════════════════════════════════════════════════
+   47. BANNER HERO — بنرهای افقی 610×343
+═══════════════════════════════════════════════════════════ */
+.banner-hero {
+  margin: 16px 0;
+  border-radius: 18px;
+  overflow: hidden;
+  background: var(--card);
+  border: 1px solid var(--border);
+  position: relative;
+  aspect-ratio: 610 / 343;
+  animation: cardSlideIn .45s var(--ease-ios) backwards;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.banner-hero img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  transition: transform .5s var(--ease-ios);
+}
+
+.banner-hero:active img {
+  transform: scale(1.02);
+}
+
+/* در حالت دسکتاپ، بنر کوچک‌تر و در وسط */
+@media (min-width: 1024px) {
+  .banner-hero {
+    max-width: 610px;
+    margin: 20px auto;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   48. TOOLS HORIZONTAL — ابزارها به صورت افقی
+═══════════════════════════════════════════════════════════ */
+.tools-horizontal {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px 0 12px;
+  margin: 0 -14px;
+  padding-left: 14px;
+  padding-right: 14px;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.tools-horizontal::-webkit-scrollbar {
+  display: none;
+}
+
+.tools-horizontal .tool-chip {
+  flex: 0 0 auto;
+  min-width: 90px;
+  scroll-snap-align: start;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   49. CARS TABLE FULL — صفحه کامل خودروها═══════════════════════════════════════════════════════════ */
+.cars-table-full {
+  max-height: none;
+}
+
+/* ردیف خودرو — بهبود طراحی */
+.car-row {
+  display: grid !important;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  transition: background .25s var(--ease-ios), transform .15s;
+  cursor: pointer;
+  position: relative;
+}
+
+.car-row::before {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 20%;
+  bottom: 20%;
+  width: 3px;
+  background: var(--accent);
+  border-radius: 2px;
+  opacity: 0;
+  transition: opacity .25s var(--ease-ios);
+}
+
+.car-row:active {
+  background: var(--card-2);
+}
+
+.car-row:active::before {
+  opacity: 1;
+}
+
+.car-row:last-child {
+  border-bottom: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   50. RESPONSIVE — تنظیمات ریسپانسیو
+═══════════════════════════════════════════════════════════ */
+@media (max-width: 480px) {
+  .banner-hero {
+    margin: 12px 0;
+    border-radius: 14px;
+  }
+
+  .tools-horizontal {
+    gap: 8px;
+  }
+
+  .tools-horizontal .tool-chip {
+    min-width: 80px;
+    padding: 12px 6px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   51. OFFLINE IFRAME — نمایش iframe تمام‌صفحه
+═══════════════════════════════════════════════════════════ */
+#offlineScreen {
+  background: var(--bg);
+}
