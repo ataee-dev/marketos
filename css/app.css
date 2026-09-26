@@ -3739,9 +3739,9 @@ body:not(.dark) .tv-ticker {
   background: var(--card);
   border: 1px solid var(--border);
   position: relative;
-  aspect-ratio: 610 / 343;
+  aspect-ratio: 4 / 1;              /* ← 800:200 */
   animation: cardSlideIn .45s var(--ease-ios) backwards;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  
 }
 
 .banner-hero img {

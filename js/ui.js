@@ -22,7 +22,7 @@ let search = '';
 let currentPage = 'home';
 let activeChartId = 'gold18';
 
-const PAGES = ['home', 'markets', 'chart', 'compare', 'favorites', 'settings'];
+const PAGES = ['home', 'markets', 'chart', 'cars', 'settings'];
 
 /* ============================================================
    NUMBER FORMATTING — جداکننده هزارگان
@@ -380,7 +380,12 @@ async function renderCars(){
   }
 
   try {
-    const data = await window.API.fetchCars();
+    // ═══ از کش استفاده کن (از API.getCars) ═══
+    let data = window.API.getCars && window.API.getCars();
+    if(!data){
+      data = await window.API.fetchCars();
+    }
+
     if(!data || !data.cars || !data.cars.length){
       if(wrap) wrap.innerHTML = '<div class="empty"><h3>داده‌ای موجود نیست</h3></div>';
       if(listEl) listEl.innerHTML = '<div class="empty"><h3>داده‌ای موجود نیست</h3></div>';
@@ -2604,7 +2609,7 @@ function refreshAll(){
     renderCats();
     renderTools();
     renderHomeChart();
-    renderCars();
+    // ❌ renderCars() را حذف کن
   }
   if(currentPage === 'markets') renderMarkets();
   if(currentPage === 'chart') renderChartPage();
