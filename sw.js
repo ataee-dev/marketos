@@ -1,65 +1,23 @@
-const CACHE = 'gheymato-v4';
-
-const CORE = [
-  './',
-  './index.html',
-  './manifest.json',
-  './assets/logo.svg',
-  './css/app.css',
-  './js/core.js',
-  './js/api.js',
-  './js/charts.js',
-  './js/ui.js',
-  './js/app.js'
-];
-
-self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(CORE).catch(() => {}))
-  );
+/**
+ * Service Worker — موقتاً غیرفعال
+ * خودش را unregister می‌کند
+ */
+self.addEventListener('install', function(e){
+  console.log('[SW] installing (temp disabled)');
   self.skipWaiting();
 });
 
-self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-    )
-  );
-  self.clients.claim();
+self.addEventListener('activate', function(e){
+  console.log('[SW] activating — unregistering itself');
+  self.registration.unregister()
+    .then(function(){
+      return self.clients.matchAll();
+    })
+    .then(function(clients){
+      clients.forEach(function(client){
+        client.navigate(client.url);
+      });
+    });
 });
 
-self.addEventListener('fetch', e => {
-  const req = e.request;
-  if(req.method !== 'GET') return;
-
-  const url = new URL(req.url);
-  const sameOrigin = url.origin === location.origin;
-  const isAPI = url.hostname.includes('tgju.org');
-
-  if(isAPI){
-    e.respondWith(
-      fetch(req).then(res => {
-        const clone = res.clone();
-        caches.open(CACHE).then(c => c.put(req, clone));
-        return res;
-      }).catch(() => caches.match(req))
-    );
-    return;
-  }
-
-  if(sameOrigin){
-    e.respondWith(
-      caches.match(req).then(cached => {
-        if(cached) return cached;
-        return fetch(req).then(res => {
-          if(res.status === 200){
-            const clone = res.clone();
-            caches.open(CACHE).then(c => c.put(req, clone));
-          }
-          return res;
-        });
-      })
-    );
-  }
-});
+// هیچ fetch handler نگذار — این باعث می‌شود همه چیز از شبکه لود شود
