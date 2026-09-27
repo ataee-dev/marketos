@@ -539,10 +539,82 @@ async function history(asset, count, period){
 
       const sliced = converted.slice(-sliceCount);
 
-      if(sliced.length >= 2){
-        console.log('[API] history: ' + asset.tgju + ' / ' + period + ' → annual (' + sliced.length + ' نقاط)');
-        return sliced.map(function(h){ return h.p; });
+      // ═══ اگر تعداد کافی بود، مستقیم برگردان ═══
+if(sliced.length >= sliceCount * 0.8){
+  console.log('[API] history: ' + asset.tgju + ' / ' + period + ' → annual (' + sliced.length + ' نقاط)');
+  return sliced.map(function(h){ return h.p; });
+}
+
+// ═══ اگر کم بود، از history/ هم کمک بگیر ═══
+if(sliced.length >= 2){
+  console.log('[API] history: ' + asset.tgju + ' / ' + period + ' → annual ناکافی (' + sliced.length + ' از ' + sliceCount + ') → ترکیب با history/');
+
+  // از history/ روزانه چند روز اخیر جمع کن
+  const needed = sliceCount - sliced.length;
+  const daysBack = Math.min(365, Math.ceil(needed / 2) + 5);
+
+  try {
+    const dates = [];
+    const now = new Date();
+    const tehranOffset = 3.5 * 60 * 60 * 1000;
+
+    for(let i = 0; i < daysBack; i++){
+      const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+      const tehranTime = new Date(d.getTime() + tehranOffset);
+      dates.push(tehranTime.toISOString().slice(0, 10));
+    }
+
+    const oldPoints = [];
+
+    for(let i = 0; i < dates.length; i++){
+      const hist = await fetchHistory(dates[i]);
+      if(!hist || !hist.symbols) continue;
+
+      const points = hist.symbols[asset.tgju];
+      if(points && points.length){
+        for(let j = 0; j < points.length; j++){
+          oldPoints.push({
+            t: points[j].t,
+            p: points[j].p
+          });
+        }
       }
+    }
+
+    // ترکیب oldPoints + sliced
+    const annualTimes = converted.map(function(x){ return x.t; });
+    const merged = sliced.slice();  // از annual
+
+    for(let i = 0; i < oldPoints.length; i++){
+      const pt = oldPoints[i];
+      // اگر تکراری نبود، اضافه کن
+      let isDup = false;
+      for(let k = 0; k < annualTimes.length; k++){
+        if(Math.abs(annualTimes[k] - pt.t) < 60 * 60 * 1000){
+          isDup = true;
+          break;
+        }
+      }
+      if(!isDup){
+        merged.push(pt);
+      }
+    }
+
+    merged.sort(function(a, b){ return a.t - b.t; });
+    const final = merged.slice(-sliceCount);
+
+    if(final.length >= 2){
+      console.log('[API] history: ' + asset.tgju + ' / ' + period + ' → ترکیبی (' + final.length + ' نقاط)');
+      return final.map(function(h){ return h.p; });
+    }
+  } catch(e){
+    console.warn('[API] merge failed:', e.message);
+  }
+
+  // اگر ترکیب نشد، همان annual را برگردان
+  console.log('[API] history: ' + asset.tgju + ' / ' + period + ' → annual فقط (' + sliced.length + ' نقاط)');
+  return sliced.map(function(h){ return h.p; });
+}
     }
   } catch(e){
     console.warn('[API] annual failed:', e.message);
