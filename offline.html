@@ -119,14 +119,8 @@ body {
 }
 
 @keyframes iconFadeIn {
-  from {
-    opacity: 0;
-    transform: scale(0.9);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 /* ═══════════════ TITLE ═══════════════ */
@@ -138,20 +132,11 @@ body {
   animation: fadeInUp 0.6s ease 0.15s backwards;
 }
 
-/* در دارک، سفید کامل */
-body:not(.light) .offline-title {
-  color: #ffffff;
-}
+body:not(.light) .offline-title { color: #ffffff; }
 
 @keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* ═══════════════ DESCRIPTION ═══════════════ */
@@ -236,30 +221,15 @@ body:not(.light) .offline-title {
 
 /* ═══════════════ RESPONSIVE ═══════════════ */
 @media (max-width: 380px) {
-  .offline-icon {
-    width: 76px;
-    height: 76px;
-  }
-  .offline-title {
-    font-size: 19px;
-  }
-  .offline-desc {
-    font-size: 12.5px;
-  }
-  .offline-btn {
-    padding: 12px 30px;
-    font-size: 13px;
-  }
+  .offline-icon { width: 76px; height: 76px; }
+  .offline-title { font-size: 19px; }
+  .offline-desc { font-size: 12.5px; }
+  .offline-btn { padding: 12px 30px; font-size: 13px; }
 }
 
 @media (min-width: 768px) {
-  .offline-icon {
-    width: 100px;
-    height: 100px;
-  }
-  .offline-title {
-    font-size: 24px;
-  }
+  .offline-icon { width: 100px; height: 100px; }
+  .offline-title { font-size: 24px; }
 }
 </style>
 </head>
@@ -314,6 +284,10 @@ body:not(.light) .offline-title {
   var status = document.getElementById('status');
   var statusText = document.getElementById('statusText');
 
+  // ═══ ردیابی وضعیت قبلی برای جلوگیری از پیام‌های تکراری ═══
+  var wasOnline = navigator.onLine;
+  var lastReconnectSent = 0;
+
   /* ─── تشخیص تم ─── */
   try {
     var cfg = JSON.parse(localStorage.getItem('gheymato.cfg.v6') || '{}');
@@ -350,14 +324,24 @@ body:not(.light) .offline-title {
       status.classList.add('online');
       statusText.textContent = 'اتصال برقرار است';
 
-      setTimeout(function(){
+      // ═══════════════════════════════════════════════════
+      // ✅ postMessage فقط اگر تازه آنلاین شدیم (نه هر بار)
+      // و حداقل ۳۰ ثانیه از آخرین ارسال گذشته باشد
+      // ═══════════════════════════════════════════════════
+      var now = Date.now();
+      if(!wasOnline && (now - lastReconnectSent) > 30000){
+        wasOnline = true;
+        lastReconnectSent = now;
+
+        // پیام به parent — فقط یک بار
         if(window.parent !== window.self){
           try {
             window.parent.postMessage('offline:reconnect', '*');
           } catch(e){}
         }
-      }, 1000);
+      }
     } else {
+      wasOnline = false;
       status.classList.remove('online');
       statusText.textContent = 'اتصال قطع است';
     }
@@ -382,6 +366,8 @@ body:not(.light) .offline-title {
         .then(function(res){
           if(res.ok){
             updateStatus();
+
+            // ═══ پیام موفقیت — فقط یک بار ═══
             if(window.parent !== window.self){
               try {
                 window.parent.postMessage('offline:retry-success', '*');
@@ -416,8 +402,10 @@ body:not(.light) .offline-title {
   /* ─── بررسی اولیه ─── */
   updateStatus();
 
-  /* ─── بررسی دوره‌ای ─── */
-  setInterval(updateStatus, 5000);
+  // ═══════════════════════════════════════════════════
+  // ✅ setInterval از ۵ ثانیه به ۳۰ ثانیه (کاهش ۶ برابر)
+  // ═══════════════════════════════════════════════════
+  setInterval(updateStatus, 30000);
 
   /* ─── اعلام آماده بودن ─── */
   if(window.parent !== window.self){

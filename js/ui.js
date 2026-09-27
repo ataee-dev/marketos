@@ -2753,10 +2753,7 @@ function init(){
   // ═══ Online/Offline ═══
 let lastOnlineTime = 0;
 window.addEventListener('online', () => {
-  const now = Date.now();
-  if(now - lastOnlineTime < 10000) return;
-  lastOnlineTime = now;
-  toast('اتصال برقرار شد ✓', 'success');
+  // ❌ toast حذف شد — فقط داده را بروزرسانی کن
   window.API.fetchData(true).catch(() => {});
 });
 
