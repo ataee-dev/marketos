@@ -504,16 +504,98 @@ async function getPriceAt(asset, msAgo){
   return null;
 }
 
-function history(asset, count, period){
+/**
+ * history — داده تاریخی بر اساس period
+ * ✅ async — منتظر annual-history می‌ماند
+ * ✅ اگر کافی نبود، از history/ روزانه جمع می‌کند
+ * ✅ اگر باز کافی نبود، آخرین resort شبیه‌سازی
+ */
+async function history(asset, count, period){
+  period = period || '1D';
   const live = getById(asset.id);
   const base = live && live.price != null ? live.price : 1000;
 
-  const real = getCachedHistory(asset.tgju);
-  if(real && real.length >= 2){
-    return real.map(function(h){ return h.p; });
+  // ═══ مرحله ۱: annual-history ═══
+  try {
+    const annual = await fetchAnnual();
+
+    if(annual && annual.symbols && annual.symbols[asset.tgju]){
+      const symbolData = annual.symbols[asset.tgju];
+
+      const converted = symbolData.map(function(item){
+        return {
+          t: parseGregorianDate(item.gd) || 0,
+          p: item.p
+        };
+      }).filter(function(x){ return x.p != null && x.t > 0; });
+
+      converted.sort(function(a, b){ return a.t - b.t; });
+
+      let sliceCount;
+      if(period === '1D') sliceCount = 30;
+      else if(period === '1W') sliceCount = 90;
+      else if(period === '1M') sliceCount = 365;
+      else sliceCount = 30;
+
+      const sliced = converted.slice(-sliceCount);
+
+      if(sliced.length >= 2){
+        console.log('[API] history: ' + asset.tgju + ' / ' + period + ' → annual (' + sliced.length + ' نقاط)');
+        return sliced.map(function(h){ return h.p; });
+      }
+    }
+  } catch(e){
+    console.warn('[API] annual failed:', e.message);
   }
 
-  const seed = (asset.id + (period || '1D')).split('').reduce(function(a, c){
+  // ═══ مرحله ۲: history/ روزانه ═══
+  try {
+    let daysBack;
+    if(period === '1D') daysBack = 2;
+    else if(period === '1W') daysBack = 7;
+    else if(period === '1M') daysBack = 30;
+    else daysBack = 2;
+
+    const dates = [];
+    const now = new Date();
+    const tehranOffset = 3.5 * 60 * 60 * 1000;
+
+    for(let i = 0; i < daysBack; i++){
+      const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+      const tehranTime = new Date(d.getTime() + tehranOffset);
+      dates.push(tehranTime.toISOString().slice(0, 10));
+    }
+
+    const allPoints = [];
+
+    for(let i = 0; i < dates.length; i++){
+      const hist = await fetchHistory(dates[i]);
+      if(!hist || !hist.symbols) continue;
+
+      const points = hist.symbols[asset.tgju];
+      if(points && points.length){
+        for(let j = 0; j < points.length; j++){
+          allPoints.push({
+            t: points[j].t,
+            p: points[j].p
+          });
+        }
+      }
+    }
+
+    allPoints.sort(function(a, b){ return a.t - b.t; });
+
+    if(allPoints.length >= 2){
+      console.log('[API] history: ' + asset.tgju + ' / ' + period + ' → history/ (' + allPoints.length + ' نقاط)');
+      return allPoints.map(function(h){ return h.p; });
+    }
+  } catch(e){
+    console.warn('[API] history/ failed:', e.message);
+  }
+
+  // ═══ مرحله ۳: شبیه‌سازی (نباید برسد) ═══
+  console.warn('[API] history: ❌ هیچ داده واقعی نیست — شبیه‌سازی');
+  const seed = (asset.id + '_' + period).split('').reduce(function(a, c){
     return a + c.charCodeAt(0);
   }, 0);
   let s = seed;
@@ -527,20 +609,6 @@ function history(asset, count, period){
   }
   out[out.length - 1] = base;
   return out;
-}
-
-function getCachedHistory(tgju){
-  const todayStr = today();
-  const cached = HISTORY_CACHE.get(todayStr);
-  if(!cached) return null;
-  const points = cached.data.symbols[tgju];
-  return points || null;
-}
-
-async function preloadTodayHistory(){
-  const date = today();
-  await fetchHistory(date);
-  console.log('[API] ✅ today history preloaded');
 }
 
 /* ============================================================
