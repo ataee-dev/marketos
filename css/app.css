@@ -3864,3 +3864,932 @@ body:not(.dark) .tv-ticker {
 #offlineScreen {
   background: var(--bg);
 }
+/* ============================================================================
+   قیمتو — iOS POLISH PATCH v7
+   هدف: حس اپ بومی iPhone، رفع overflow / sizing / safe-area و انیمیشن نرم
+   این بخش عمداً در انتهای فایل قرار گرفته تا بدون تغییر HTML/JS، استایل‌های
+   قبلی را امن override کند.
+   ============================================================================ */
+
+:root {
+  --ios-bg: #f5f7f6;
+  --ios-surface: rgba(255,255,255,.78);
+  --ios-surface-solid: #ffffff;
+  --ios-fill: rgba(118,118,128,.10);
+  --ios-fill-strong: rgba(118,118,128,.16);
+  --ios-separator: rgba(60,60,67,.12);
+  --ios-accent: #10b981;
+  --ios-accent-pressed: #079f70;
+  --ios-shadow: 0 8px 30px rgba(15, 23, 20, .07);
+  --ios-shadow-soft: 0 3px 16px rgba(15, 23, 20, .055);
+  --ios-shadow-float: 0 14px 38px rgba(15, 23, 20, .13);
+  --ios-radius-card: 20px;
+  --ios-radius-control: 14px;
+  --ios-radius-small: 12px;
+  --ios-spring: cubic-bezier(.22, 1, .36, 1);
+  --ios-spring-tight: cubic-bezier(.25, 1, .35, 1);
+  --ios-duration: .34s;
+  --ios-fast: .18s;
+}
+
+body.dark {
+  --ios-bg: #0b1210;
+  --ios-surface: rgba(22,29,26,.78);
+  --ios-surface-solid: #151d1a;
+  --ios-fill: rgba(118,118,128,.16);
+  --ios-fill-strong: rgba(118,118,128,.23);
+  --ios-separator: rgba(235,235,245,.12);
+  --ios-shadow: 0 10px 34px rgba(0,0,0,.22);
+  --ios-shadow-soft: 0 4px 18px rgba(0,0,0,.18);
+  --ios-shadow-float: 0 18px 46px rgba(0,0,0,.30);
+}
+
+/* ---------- Global mobile/browser correctness ---------- */
+html {
+  min-height: 100%;
+  background: var(--bg);
+  scroll-padding-top: calc(72px + var(--safe-top));
+}
+
+body {
+  min-width: 0;
+  min-height: 100%;
+  background:
+    radial-gradient(circle at 50% -15%, rgba(16,185,129,.055), transparent 34%),
+    var(--bg);
+  overflow-x: clip;
+}
+
+body, button, input, textarea, select {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+input, textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+button, a, .m-card, .cat-chip, .tool-chip, .chip, .nav-link,
+.car-row, .bank-card, .mobile-nav, .hdr-btn, .icon-btn {
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+}
+
+button, a, .m-card, .cat-chip, .tool-chip, .chip, .nav-link,
+.car-row, .bank-card, .hdr-btn, .icon-btn {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ---------- Main shell ---------- */
+.app {
+  width: 100%;
+  min-width: 0;
+  min-height: 100dvh;
+}
+
+.main {
+  width: 100%;
+  min-width: 0;
+  min-height: 100dvh;
+}
+
+.content {
+  width: 100%;
+  min-width: 0;
+  overflow-x: clip;
+  padding-top: 14px;
+  padding-left: max(14px, env(safe-area-inset-left));
+  padding-right: max(14px, env(safe-area-inset-right));
+  padding-bottom: calc(104px + var(--safe-bottom));
+}
+
+.page {
+  width: 100%;
+  min-width: 0;
+  contain: layout style;
+}
+
+.page.is-active {
+  animation: iosPageEnter .46s var(--ios-spring) both;
+}
+
+@keyframes iosPageEnter {
+  from { opacity: 0; transform: translate3d(0, 10px, 0) scale(.992); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+/* ---------- iOS-style top bar ---------- */
+.app-header {
+  position: sticky;
+  top: 0;
+  height: calc(60px + var(--safe-top));
+  min-height: calc(60px + var(--safe-top));
+  padding: var(--safe-top) max(12px, env(safe-area-inset-left)) 0 max(12px, env(safe-area-inset-right));
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  border-bottom: 1px solid var(--ios-separator);
+  box-shadow: 0 1px 0 rgba(255,255,255,.25);
+  backdrop-filter: saturate(180%) blur(26px);
+  -webkit-backdrop-filter: saturate(180%) blur(26px);
+  isolation: isolate;
+}
+
+.app-header::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,.08), transparent 70%);
+  z-index: -1;
+}
+
+.hdr-btn,
+.hdr-search {
+  border-color: transparent;
+  background: var(--ios-fill);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.10);
+}
+
+.hdr-btn {
+  width: 42px;
+  min-width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  transition:
+    transform var(--ios-fast) var(--ios-spring-tight),
+    background var(--ios-duration) var(--ios-spring),
+    box-shadow var(--ios-duration) var(--ios-spring);
+}
+
+.hdr-btn:active {
+  transform: scale(.91);
+  background: var(--ios-fill-strong);
+}
+
+.hdr-search {
+  min-width: 0;
+  height: 42px;
+  border-radius: 14px;
+  transition:
+    transform var(--ios-duration) var(--ios-spring),
+    background var(--ios-duration) var(--ios-spring),
+    box-shadow var(--ios-duration) var(--ios-spring);
+}
+
+.hdr-search:focus-within {
+  border-color: transparent;
+  background: var(--ios-fill-strong);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* ---------- ticker: less visual noise ---------- */
+.hdr-ticker {
+  height: 32px;
+  min-height: 32px;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  border-bottom: 1px solid var(--ios-separator);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+}
+
+.hdr-ticker-track {
+  gap: 26px;
+  padding-inline: 12px;
+}
+
+/* ---------- Section rhythm ---------- */
+.sec-head {
+  margin: 24px 0 11px;
+}
+
+.sec-head:first-child {
+  margin-top: 2px;
+}
+
+.sec-title {
+  font-size: 16px;
+  letter-spacing: -.15px;
+}
+
+.sec-head .link {
+  min-height: 36px;
+  padding-inline: 10px;
+  border-radius: 10px;
+}
+
+/* ---------- Cards: flatter, cleaner, more iOS ---------- */
+.panel,
+.m-card,
+.cat-chip,
+.tool-chip,
+.chart-header,
+.chart-main,
+.chart-questions-full,
+.bubble-analysis,
+.cars-table-wrap,
+.modal-sheet {
+  border-color: var(--ios-separator);
+  box-shadow: var(--ios-shadow-soft);
+}
+
+.panel,
+.chart-header,
+.chart-main,
+.chart-questions-full,
+.bubble-analysis {
+  border-radius: var(--ios-radius-card);
+}
+
+.m-card,
+.cat-chip,
+.tool-chip {
+  border-radius: 18px;
+  transition:
+    transform var(--ios-fast) var(--ios-spring-tight),
+    background var(--ios-duration) var(--ios-spring),
+    box-shadow var(--ios-duration) var(--ios-spring),
+    border-color var(--ios-duration) var(--ios-spring);
+}
+
+.m-card:active,
+.cat-chip:active,
+.tool-chip:active {
+  transform: scale(.965);
+  box-shadow: none;
+}
+
+.m-card {
+  width: clamp(148px, 43vw, 170px);
+  min-height: 108px;
+  padding: 13px;
+}
+
+.m-card-price {
+  font-size: clamp(13px, 3.5vw, 15px);
+  line-height: 1.25;
+  letter-spacing: -.35px;
+}
+
+.m-card-change {
+  border-radius: 999px;
+  padding: 4px 8px;
+}
+
+.m-card-icon,
+.cat-chip-icon,
+.tool-chip-icon {
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.16);
+}
+
+/* ---------- Horizontal scrollers ---------- */
+.scroll-wrap,
+.tools-horizontal {
+  width: calc(100% + 28px);
+  max-width: none;
+  margin-inline: -14px;
+  padding-inline: 14px;
+}
+
+.scroll-row,
+.tools-horizontal,
+.chips,
+.pills {
+  overscroll-behavior-inline: contain;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scroll-row::-webkit-scrollbar,
+.tools-horizontal::-webkit-scrollbar,
+.chips::-webkit-scrollbar,
+.pills::-webkit-scrollbar {
+  display: none;
+}
+
+/* ---------- Categories: compact and touch friendly ---------- */
+.cat-chip {
+  min-width: 88px;
+  min-height: 88px;
+  padding: 11px 9px;
+}
+
+.cat-chip-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+}
+
+/* ---------- Tools grid ---------- */
+.tools-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.tool-chip {
+  min-width: 0;
+  min-height: 94px;
+  padding: 13px 7px;
+}
+
+.tool-chip-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- Banners: never distort 800×200 assets ---------- */
+.banner-hero {
+  width: 100%;
+  max-width: none;
+  aspect-ratio: 4 / 1;
+  min-height: 0;
+  margin: 14px 0;
+  border-radius: 17px;
+  box-shadow: var(--ios-shadow-soft);
+}
+
+.banner-hero img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.banner-single {
+  border-radius: 17px;
+  box-shadow: var(--ios-shadow-soft);
+}
+
+/* ---------- Portfolio card ---------- */
+.bank-card {
+  width: 100%;
+  max-width: 520px;
+  margin-inline: auto;
+  aspect-ratio: 1.62 / 1;
+  min-height: 190px;
+  border-radius: 22px;
+  padding: clamp(17px, 5vw, 22px);
+  box-shadow:
+    0 16px 36px rgba(16,185,129,.16),
+    0 3px 12px rgba(0,0,0,.08),
+    inset 0 1px 0 rgba(255,255,255,.20);
+  transition: transform var(--ios-fast) var(--ios-spring-tight), box-shadow var(--ios-duration) var(--ios-spring);
+}
+
+.bank-card:active {
+  transform: scale(.985);
+  box-shadow:
+    0 10px 26px rgba(16,185,129,.17),
+    0 2px 8px rgba(0,0,0,.07),
+    inset 0 1px 0 rgba(255,255,255,.18);
+}
+
+.bank-card-value {
+  font-size: clamp(22px, 7vw, 30px);
+  line-height: 1.12;
+}
+
+/* ---------- Buttons / controls ---------- */
+.btn,
+.icon-btn,
+.unit-toggle button,
+.pills button,
+.chip {
+  transition:
+    transform var(--ios-fast) var(--ios-spring-tight),
+    background var(--ios-duration) var(--ios-spring),
+    color var(--ios-duration) var(--ios-spring),
+    border-color var(--ios-duration) var(--ios-spring),
+    box-shadow var(--ios-duration) var(--ios-spring);
+}
+
+.btn:active,
+.icon-btn:active,
+.unit-toggle button:active,
+.pills button:active,
+.chip:active {
+  transform: scale(.95);
+}
+
+.chip,
+.pills,
+.unit-toggle {
+  border-radius: 999px;
+}
+
+.chip {
+  min-height: 36px;
+  padding: 7px 14px;
+}
+
+.pills {
+  padding: 3px;
+}
+
+.pills button,
+.unit-toggle button {
+  min-height: 34px;
+  border-radius: 999px;
+}
+
+/* ---------- Bottom navigation: floating glass bar ---------- */
+.mobile-nav {
+  left: max(10px, env(safe-area-inset-left));
+  right: max(10px, env(safe-area-inset-right));
+  bottom: max(8px, env(safe-area-inset-bottom));
+  width: auto;
+  height: 66px;
+  padding: 5px;
+  padding-bottom: 5px;
+  border: 1px solid var(--ios-separator);
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--ios-surface-solid) 72%, transparent);
+  box-shadow: var(--ios-shadow-float);
+  backdrop-filter: saturate(180%) blur(26px);
+  -webkit-backdrop-filter: saturate(180%) blur(26px);
+  justify-content: stretch;
+}
+
+.mnav-btn {
+  position: relative;
+  min-width: 0;
+  min-height: 54px;
+  padding: 6px 5px;
+  border-radius: 17px;
+  gap: 2px;
+  color: var(--text-muted);
+  transition:
+    color var(--ios-duration) var(--ios-spring),
+    transform var(--ios-fast) var(--ios-spring-tight),
+    background var(--ios-duration) var(--ios-spring);
+}
+
+.mnav-btn svg {
+  width: 21px;
+  height: 21px;
+  transition: transform var(--ios-duration) var(--ios-spring);
+}
+
+.mnav-btn.is-active {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.mnav-btn.is-active svg {
+  transform: translateY(-1px) scale(1.04);
+}
+
+.mnav-btn:active {
+  transform: scale(.92);
+}
+
+/* ---------- Toast: floating island ---------- */
+.toast {
+  bottom: calc(88px + var(--safe-bottom));
+  max-width: min(90vw, 420px);
+  padding: 11px 16px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ios-surface-solid) 84%, transparent);
+  border-color: var(--ios-separator);
+  box-shadow: var(--ios-shadow-float);
+  backdrop-filter: blur(22px) saturate(170%);
+  -webkit-backdrop-filter: blur(22px) saturate(170%);
+}
+
+/* ---------- Modal: iOS sheet on phones, centered on large screens ---------- */
+.modal {
+  align-items: flex-end;
+  padding: 0;
+}
+
+.modal-sheet {
+  width: 100%;
+  max-width: 560px;
+  max-height: min(88dvh, 760px);
+  border-radius: 24px 24px 0 0;
+  margin: 0 auto;
+  transform: translate3d(0, 28px, 0) scale(.985);
+  transition: transform .42s var(--ios-spring);
+  padding-bottom: var(--safe-bottom);
+}
+
+.modal.is-open .modal-sheet {
+  transform: translate3d(0,0,0) scale(1);
+}
+
+.modal-head {
+  min-height: 58px;
+  padding: 11px 16px;
+}
+
+.modal-head::before {
+  content: '';
+  position: absolute;
+  top: 7px;
+  left: 50%;
+  width: 38px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--text-muted);
+  opacity: .35;
+  transform: translateX(-50%);
+}
+
+.modal-body {
+  padding: 16px;
+  padding-bottom: max(18px, var(--safe-bottom));
+  overscroll-behavior: contain;
+}
+
+.modal-backdrop {
+  background: rgba(0,0,0,.36);
+  backdrop-filter: blur(9px) saturate(115%);
+  -webkit-backdrop-filter: blur(9px) saturate(115%);
+}
+
+/* ---------- Search result / menus ---------- */
+.hdr-search-results {
+  max-height: min(60dvh, 520px);
+  border-radius: 18px;
+  border-color: var(--ios-separator);
+  background: color-mix(in srgb, var(--ios-surface-solid) 90%, transparent);
+  box-shadow: var(--ios-shadow-float);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+}
+
+/* ---------- Chart sizing: never overflow narrow phones ---------- */
+.chart-header,
+.chart-main,
+.chart-questions-full,
+.bubble-analysis {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.chart-header {
+  min-height: 70px;
+  padding: 12px;
+}
+
+.chart-main {
+  padding: clamp(18px, 5vw, 26px) 14px 16px;
+}
+
+.chart-price {
+  max-width: 100%;
+  font-size: clamp(25px, 7.5vw, 38px);
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.chart-canvas-wrap {
+  height: clamp(210px, 58vw, 300px);
+  min-height: 190px;
+}
+
+.chart-canvas-wrap canvas {
+  max-width: 100%;
+}
+
+/* ---------- Car rows: price never pushes name off screen ---------- */
+.car-row {
+  grid-template-columns: minmax(0,1fr) minmax(0,auto);
+  gap: 10px;
+  min-width: 0;
+  padding: 13px 14px;
+}
+
+.car-row-name,
+.car-row-price {
+  min-width: 0;
+}
+
+.car-row-name > span,
+.car-row-name strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.car-row-price {
+  max-width: 52%;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  white-space: normal;
+}
+
+/* ---------- Desktop layout ---------- */
+@media (min-width: 1024px) {
+  .content {
+    width: min(100%, 980px);
+    max-width: 980px;
+    padding: 24px 28px 44px;
+  }
+
+  .banner-hero {
+    max-width: 800px;
+    margin-inline: auto;
+  }
+
+  .tools-grid {
+    grid-template-columns: repeat(6, minmax(0,1fr));
+  }
+
+  .mobile-nav {
+    display: none;
+  }
+}
+
+/* ---------- Tablet ---------- */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .content {
+    padding-inline: 20px;
+    padding-bottom: 104px;
+  }
+
+  .tools-grid {
+    grid-template-columns: repeat(5, minmax(0,1fr));
+  }
+
+  .m-card {
+    width: 168px;
+  }
+}
+
+/* ---------- Small phones: solve the screenshot's cramped layouts ---------- */
+@media (max-width: 480px) {
+  .content {
+    padding-top: 11px;
+    padding-inline: 12px;
+    padding-bottom: calc(98px + var(--safe-bottom));
+  }
+
+  .app-header {
+    gap: 7px;
+    padding-inline: 10px;
+  }
+
+  .hdr-btn {
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    border-radius: 13px;
+  }
+
+  .hdr-search {
+    height: 40px;
+    border-radius: 13px;
+    padding-inline: 11px;
+  }
+
+  .hdr-search input {
+    font-size: 12.5px;
+  }
+
+  .sec-head {
+    margin-top: 20px;
+  }
+
+  .banner-hero {
+    margin: 12px 0;
+    border-radius: 15px;
+  }
+
+  .tools-grid {
+    grid-template-columns: repeat(4, minmax(0,1fr));
+    gap: 8px;
+  }
+
+  .tool-chip {
+    min-height: 88px;
+    padding: 11px 5px;
+    border-radius: 16px;
+  }
+
+  .tool-chip-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+  }
+
+  .m-card {
+    width: 154px;
+    min-height: 104px;
+  }
+
+  .cat-chip {
+    min-width: 82px;
+    min-height: 84px;
+  }
+
+  .bank-card {
+    min-height: 184px;
+    border-radius: 20px;
+  }
+
+  .bank-card-value {
+    font-size: clamp(20px, 6.5vw, 27px);
+  }
+
+  .mobile-nav {
+    left: 8px;
+    right: 8px;
+    bottom: max(7px, var(--safe-bottom));
+    height: 64px;
+    border-radius: 21px;
+  }
+
+  .mnav-btn {
+    min-height: 52px;
+    font-size: 9.5px;
+  }
+
+  .chart-header-info strong {
+    font-size: 14px;
+  }
+
+  .chart-header-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 13px;
+  }
+
+  .chart-canvas-wrap {
+    height: 220px;
+  }
+
+  .chart-q-item {
+    border-radius: 14px;
+  }
+}
+
+@media (max-width: 380px) {
+  .content {
+    padding-inline: 10px;
+  }
+
+  .scroll-wrap,
+  .tools-horizontal {
+    width: calc(100% + 20px);
+    margin-inline: -10px;
+    padding-inline: 10px;
+  }
+
+  .app-header {
+    height: calc(56px + var(--safe-top));
+    min-height: calc(56px + var(--safe-top));
+    padding-inline: 8px;
+  }
+
+  .hdr-btn {
+    width: 38px;
+    min-width: 38px;
+    height: 38px;
+    border-radius: 12px;
+  }
+
+  .hdr-search {
+    height: 38px;
+    border-radius: 12px;
+  }
+
+  .tools-grid {
+    gap: 7px;
+  }
+
+  .tool-chip {
+    min-height: 82px;
+    padding-inline: 3px;
+  }
+
+  .tool-chip-icon {
+    width: 34px;
+    height: 34px;
+  }
+
+  .m-card {
+    width: 146px;
+    min-height: 98px;
+  }
+
+  .m-card-price {
+    font-size: 12.5px;
+  }
+
+  .mobile-nav {
+    left: 6px;
+    right: 6px;
+  }
+
+  .mnav-btn {
+    font-size: 9px;
+  }
+
+  .mnav-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .car-row {
+    padding: 11px 10px;
+    gap: 7px;
+  }
+
+  .car-row-name {
+    font-size: 11.5px;
+  }
+
+  .car-row-price {
+    max-width: 55%;
+    font-size: 11.5px;
+  }
+}
+
+/* ---------- iOS landscape / very short screens ---------- */
+@media (orientation: landscape) and (max-height: 500px) {
+  .mobile-nav {
+    height: 54px;
+    border-radius: 17px;
+  }
+
+  .mnav-btn {
+    min-height: 44px;
+    padding-block: 3px;
+  }
+
+  .content {
+    padding-bottom: calc(78px + var(--safe-bottom));
+  }
+
+  .bank-card {
+    max-width: 560px;
+  }
+}
+
+/* ---------- Accessibility / interaction polish ---------- */
+@media (hover: hover) and (pointer: fine) {
+  .hdr-btn:hover,
+  .m-card:hover,
+  .cat-chip:hover,
+  .tool-chip:hover,
+  .chip:hover,
+  .nav-link:hover {
+    background: var(--card-hover);
+  }
+
+  .m-card:hover,
+  .cat-chip:hover,
+  .tool-chip:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--ios-shadow);
+  }
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---------- Performance: animate only composited properties ---------- */
+.page.is-active,
+.bank-card,
+.m-card,
+.cat-chip,
+.tool-chip,
+.mobile-nav,
+.modal-sheet,
+.toast {
+  will-change: transform, opacity;
+}
+
+/* ---------- Reduced motion remains fully respected ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .page.is-active,
+  .bank-card,
+  .m-card,
+  .cat-chip,
+  .tool-chip,
+  .mobile-nav,
+  .modal-sheet,
+  .toast {
+    will-change: auto;
+  }
+}
+
+/* ---------- Fallback when color-mix is unavailable ---------- */
+@supports not (background: color-mix(in srgb, white, black)) {
+  .app-header { background: var(--bg-glass); }
+  .mobile-nav { background: var(--bg-glass); }
+  .toast { background: var(--card); }
+  .hdr-search-results { background: var(--card); }
+}
+
+/* ---------- Safe-area fallback ---------- */
+@supports not (height: 100dvh) {
+  .app,
+  .main { min-height: 100vh; }
+  .modal-sheet { max-height: 88vh; }
+}
