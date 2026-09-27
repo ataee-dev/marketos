@@ -611,6 +611,39 @@ async function history(asset, count, period){
   return out;
 }
 
+
+
+
+
+
+
+/* ============================================================
+   HELPERS — today history
+============================================================ */
+function getCachedHistory(tgju){
+  const todayStr = today();
+  const cached = HISTORY_CACHE.get(todayStr);
+  if(!cached) return null;
+  const points = cached.data.symbols ? cached.data.symbols[tgju] : null;
+  return points || null;
+}
+
+async function preloadTodayHistory(){
+  const date = today();
+  await fetchHistory(date);
+  console.log('[API] ✅ today history preloaded');
+}
+
+
+
+
+
+
+
+
+
+
+
 /* ============================================================
    FALLBACK
 ============================================================ */
@@ -689,6 +722,7 @@ return {
   fetchAnnual: fetchAnnual,
   fetchHistory: fetchHistory,
   preloadTodayHistory: preloadTodayHistory,
+  getCachedHistory: getCachedHistory,
   fetchCars: fetchCars,
   getCars: getCars,
   getCarsError: getCarsError,
