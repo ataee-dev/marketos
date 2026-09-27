@@ -1019,35 +1019,48 @@ function renderBubbleAnalysis(asset, live){
 async function drawChartAsync(canvas, asset){
   try {
     let chartData = null;
+    const period = window.CFG.get('chartPeriod') || '1D';
 
-    if(window.API.getHistory){
-      try {
-        const history = await window.API.getHistory(asset, 30);
-        if(history && history.length >= 2){
-          chartData = history.map(function(h){
-            return {
-              t: h.t,
-              p: h.p,
-              gd: h.gd || '',
-              pd: h.pd || ''
-            };
-          });
-        }
-      } catch(e){
-        console.warn('[Chart] history failed:', e.message);
+    // ═══════════════════════════════════════════════════════
+    // ✅ مرحله ۱: history() — با period (1D/1W/1M)
+    // ═══════════════════════════════════════════════════════
+    try {
+      const prices = await window.API.history(asset, 60, period);
+      if(prices && prices.length >= 2){
+        chartData = prices.map(function(p, i){
+          return {
+            t: Date.now() - (prices.length - i) * 86400000,
+            p: p,
+            gd: '',
+            pd: ''
+          };
+        });
       }
+    } catch(e){
+      console.warn('[Chart] history failed:', e.message);
     }
 
+    // ═══════════════════════════════════════════════════════
+    // ✅ مرحله ۲: fallback به getHistory (با gd/pd واقعی)
+    // ═══════════════════════════════════════════════════════
     if(!chartData || chartData.length < 2){
-      const prices = window.API.history(asset, 60, window.CFG.get('chartPeriod') || '1D');
-      chartData = prices.map(function(p, i){
-        return {
-          t: Date.now() - (prices.length - i) * 86400000,
-          p: p,
-          gd: '',
-          pd: ''
-        };
-      });
+      if(window.API.getHistory){
+        try {
+          const history = await window.API.getHistory(asset, 30);
+          if(history && history.length >= 2){
+            chartData = history.map(function(h){
+              return {
+                t: h.t,
+                p: h.p,
+                gd: h.gd || '',
+                pd: h.pd || ''
+              };
+            });
+          }
+        } catch(e){
+          console.warn('[Chart] getHistory failed:', e.message);
+        }
+      }
     }
 
     if(!chartData || chartData.length < 2) return;
@@ -1057,7 +1070,8 @@ async function drawChartAsync(canvas, asset){
     const up = last >= first;
     const color = up ? '#10b981' : '#ef4444';
 
-    window.Charts.drawLine(canvas, chartData, {
+    // ✅ await برای drawLine (اگر async شده باشد)
+    await window.Charts.drawLine(canvas, chartData, {
       padding: 20,
       paddingTop: 30,
       lineWidth: 2.5,
@@ -1066,18 +1080,9 @@ async function drawChartAsync(canvas, asset){
         return formatPrice(asset, v);
       }
     });
+
   } catch(e){
     console.warn('[Chart] Failed:', e.message);
-    const prices = window.API.history(asset, 60, '1D');
-    const fallbackData = prices.map(function(p, i){
-      return {
-        t: Date.now() - (prices.length - i) * 86400000,
-        p: p,
-        gd: '',
-        pd: ''
-      };
-    });
-    window.Charts.drawLine(canvas, fallbackData, { padding: 20, lineWidth: 2.5 });
   }
 }
 
@@ -1102,15 +1107,21 @@ function renderCompare(){
   const B = window.DATA.find(sB.value);
   if(!A || !B) return;
 
+  // ═══ نمودار مقایسه — async ═══
   const c = $('[data-cmp-chart]');
   if(c){
-    window.Charts.drawCompare(
-      c,
-      window.API.history(A, 60, '1D'),
-      window.API.history(B, 60, '1D')
-    );
+    (async function(){
+      try {
+        const histA = await window.API.history(A, 60, '1D');
+        const histB = await window.API.history(B, 60, '1D');
+        await window.Charts.drawCompare(c, histA, histB);
+      } catch(e){
+        console.warn('[Compare] failed:', e.message);
+      }
+    })();
   }
 
+  // ═══ آمار مقایسه ═══
   const st = $('[data-cmp-stats]');
   if(st){
     const lA = window.API.getById(A.id);
@@ -1143,12 +1154,12 @@ function renderCompare(){
   sB.onchange = renderCompare;
 }
 
-function renderHomeChart(){
+async function renderHomeChart(){
   const c = $('[data-home-chart]');
   if(!c) return;
   const asset = window.DATA.find('gold18');
   if(!asset) return;
-  drawChartAsync(c, asset);
+  await drawChartAsync(c, asset);
 }
 
 /* ============================================================
@@ -1179,14 +1190,14 @@ function go(page){
 
   try {
     if(page === 'home'){
-      renderBankCard();
-      renderFeatured();
-      renderMostUsed();
-      renderCats();
-      renderTools();
-      renderHomeChart();
-      renderCars();
-    }
+     renderBankCard();
+     renderFeatured();
+     renderMostUsed();
+     renderCats();
+     renderTools();
+     renderHomeChart().catch(function(){});
+     renderCars().catch(function(){});
+     }
     else if(page === 'markets'){
       renderMarkets();
     }
@@ -1194,7 +1205,7 @@ function go(page){
       if(!activeChartId && window.DATA.ASSETS.length){
         activeChartId = window.DATA.ASSETS[0].id;
       }
-      renderChartPage();
+      renderChartPage().catch(function(){});
     }
     else if(page === 'compare'){
       renderCompare();
@@ -2425,7 +2436,7 @@ function handleClick(e){
     if(currentPage === 'favorites') renderFavs();
     else if(currentPage === 'markets') renderMarkets();
     else if(currentPage === 'home'){ renderFeatured(); renderMostUsed(); }
-    else if(currentPage === 'chart'){ renderChartPage(); }
+    else if(currentPage === 'chart'){ renderChartPage().catch(function(){}); }
     return;
   }
 
@@ -2485,7 +2496,7 @@ function handleClick(e){
     $$('[data-cars-filter]').forEach(c => c.classList.remove('is-active'));
     carChip.classList.add('is-active');
     carsFilter = carChip.dataset.carsFilter;
-    renderCars();
+    renderCars().catch(function(){});
     return;
   }
 
@@ -2528,8 +2539,8 @@ function handleClick(e){
     parent.querySelectorAll('button').forEach(b => b.classList.remove('is-active'));
     pill.classList.add('is-active');
     window.CFG.set('chartPeriod', pill.dataset.period);
-    if(currentPage === 'chart') renderChartPage();
-    if(currentPage === 'home') renderHomeChart();
+    if(currentPage === 'chart') renderChartPage().catch(function(){});
+    if(currentPage === 'home') renderHomeChart().catch(function(){});
     return;
   }
 
@@ -2622,14 +2633,14 @@ function refreshAll(){
     renderMostUsed();
     renderCats();
     renderTools();
-    renderHomeChart();
-    // ❌ renderCars() را حذف کن
+    renderHomeChart().catch(function(){});
+
   }
   if(currentPage === 'markets') renderMarkets();
-  if(currentPage === 'chart') renderChartPage();
+  if(currentPage === 'chart') renderChartPage().catch(function(){});
   if(currentPage === 'compare') renderCompare();
   if(currentPage === 'favorites') renderFavs();
-  if(currentPage === 'cars') renderCars();
+  if(currentPage === 'cars') renderCars().catch(function(){});
   renderHdrTicker();
   if(window.TV && window.TV.isActive()) window.TV.refresh();
 }
@@ -2712,8 +2723,8 @@ function init(){
     cs.addEventListener('input', window.U.debounce(function(e){
       carsSearch = e.target.value.trim();
       // ═══ فقط اگر در صفحه cars هستیم رندر کن ═══
-      if(currentPage === 'cars'){
-        renderCars();
+            if(currentPage === 'cars'){
+        renderCars().catch(function(){});
       }
     }, 200));
   }
@@ -2727,7 +2738,7 @@ function init(){
       btn.classList.add('is-active');
       carsFilter = btn.dataset.carsFilter;
       if(currentPage === 'cars'){
-        renderCars();
+        renderCars().catch(function(){});
       }
     });
   });
