@@ -571,18 +571,23 @@
   }
 
   /* ═══ گوش دادن به پیام‌های iframe ═══ */
-  window.addEventListener('message', function(e){
-    if(e.data === 'offline:retry-success' || e.data === 'offline:reconnect'){
-      hideOffline();
-      if(window.UI && window.UI.toast){
-        window.UI.toast('اتصال برقرار شد ✓', 'success');
-      }
-      if(window.API && window.API.fetchData){
-        window.API.fetchData(true).catch(function(){});
-      }
-    }
-  });
+let lastReconnectTime = 0;
+window.addEventListener('message', function(e){
+  if(e.data === 'offline:retry-success' || e.data === 'offline:reconnect'){
+    const now = Date.now();
+    // ═══ فقط هر ۳۰ ثانیه یک بار ═══
+    if(now - lastReconnectTime < 30000) return;
+    lastReconnectTime = now;
 
+    hideOffline();
+    if(window.UI && window.UI.toast){
+      window.UI.toast('اتصال برقرار شد ✓', 'success');
+    }
+    if(window.API && window.API.fetchData){
+      window.API.fetchData(true).catch(function(){});
+    }
+  }
+});
   /* ═══ Event Listeners ═══ */
   window.addEventListener('offline', function(){
     showOffline();

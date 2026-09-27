@@ -1238,15 +1238,29 @@ function closeModal(){
   if(m) m.classList.remove('is-open');
 }
 
+let lastToastMsg = '';
+let lastToastTime = 0;
+
 function toast(msg, type = ''){
   const t = $('[data-toast]');
   if(!t) return;
+
+  // ═══ جلوگیری از پیام تکراری در کمتر از ۳ ثانیه ═══
+  const now = Date.now();
+  if(msg === lastToastMsg && (now - lastToastTime) < 30000){
+    return;
+  }
+  lastToastMsg = msg;
+  lastToastTime = now;
+
   t.textContent = msg;
   t.className = 'toast is-show ' + type;
   clearTimeout(t._t);
-  t._t = setTimeout(() => t.classList.remove('is-show'), 2400);
+  t._t = setTimeout(() => {
+    t.classList.remove('is-show');
+    lastToastMsg = '';
+  }, 2400);
 }
-
 /* ============================================================
    TOOLS — محاسبه‌گرها
 ============================================================ */
@@ -2737,10 +2751,14 @@ function init(){
   }
 
   // ═══ Online/Offline ═══
-  window.addEventListener('online', () => {
-    toast('اتصال برقرار شد ✓', 'success');
-    window.API.fetchData(true).catch(() => {});
-  });
+let lastOnlineTime = 0;
+window.addEventListener('online', () => {
+  const now = Date.now();
+  if(now - lastOnlineTime < 10000) return;
+  lastOnlineTime = now;
+  toast('اتصال برقرار شد ✓', 'success');
+  window.API.fetchData(true).catch(() => {});
+});
 
   window.addEventListener('offline', () => {
     toast('حالت آفلاین', 'warning');
@@ -2749,14 +2767,22 @@ function init(){
   // ═══════════════════════════════════════════════════════════
   // ✅ subscribe با debounce — جلوگیری از حلقه بی‌پایان
   // ═══════════════════════════════════════════════════════════
-  let refreshTimer = null;
-  window.API.subscribe(() => {
-    if(refreshTimer) clearTimeout(refreshTimer);
-    refreshTimer = setTimeout(() => {
-      refreshAll();
-      checkAlerts();
-    }, 500);
-  });
+let refreshTimer = null;
+let lastRefreshHash = '';
+window.API.subscribe((data) => {
+  // ═══ hash از داده بساز ═══
+  const hash = data && data.updated ? data.updated : 'none';
+
+  // ═══ اگر داده تغییر نکرده، دوباره رندر نکن ═══
+  if(hash === lastRefreshHash) return;
+  lastRefreshHash = hash;
+
+  if(refreshTimer) clearTimeout(refreshTimer);
+  refreshTimer = setTimeout(() => {
+    refreshAll();
+    checkAlerts();
+  }, 500);
+});
 
   // ═══ رندر اولیه ticker ═══
   renderHdrTicker();
