@@ -4793,3 +4793,34 @@ button, a, .m-card, .cat-chip, .tool-chip, .chip, .nav-link,
   .main { min-height: 100vh; }
   .modal-sheet { max-height: 88vh; }
 }
+
+
+
+/* ═══ جستجوی ترکیبی — عنوان بخش ═══ */
+.ms-section-title {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 10px 14px 4px;
+  margin-top: 4px;
+  border-top: 1px solid var(--border);
+}
+.ms-section-title:first-child {
+  border-top: 0;
+  margin-top: 0;
+}
+
+/* ═══ آیتم جستجو — hover ═══ */
+.ms-item {
+  cursor: pointer;
+  transition: background .15s;
+}
+.ms-item:hover {
+  background: var(--card-2);
+}
+.ms-item-icon svg {
+  width: 18px;
+  height: 18px;
+}

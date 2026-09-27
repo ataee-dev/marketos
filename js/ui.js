@@ -5,7 +5,7 @@
  * ✅ تحلیل حباب طلا
  * ✅ سیستم واحد هوشمند (تومان/ریال)
  * ✅ واحدهای حجمی
- * ✅ جستجوی inline
+ * ✅ جستجوی inline (نماد + خودرو)
  * ✅ نمودار با نقاط تعاملی
  * ✅ جداکننده هزارگان
  * ✅ فرمت خودکار فیلدهای ورودی
@@ -140,12 +140,12 @@ function formatPriceWithUnit(asset, rialValue){
    CARD HTML
 ============================================================ */
 function marketCardHTML(asset){
-  const live = API.getById(asset.id);
+  const live = window.API && window.API.getById ? window.API.getById(asset.id) : null;
   const price = live && live.price != null ? live.price : null;
   const cp = live ? live.changePercent : null;
   const up = (cp || 0) >= 0;
   const color = catColor(asset);
-  const isFav = Storage.fav.get().includes(asset.id);
+  const isFav = window.Storage.fav.get().includes(asset.id);
   const noPrice = price == null;
 
   return `
@@ -153,12 +153,12 @@ function marketCardHTML(asset){
       <div class="m-card-head">
         <div class="m-card-icon ${color}">${assetIcon(asset)}</div>
         <div class="m-card-info">
-          <strong>${U.esc(asset.short || asset.name)}</strong>
+          <strong>${window.U.esc(asset.short || asset.name)}</strong>
           <small>${asset.code}</small>
         </div>
         <button type="button" class="icon-btn" data-fav-toggle="${asset.id}"
           style="width:24px;height:24px;color:${isFav?'var(--warn)':'var(--dim)'};font-size:14px;flex-shrink:0;padding:0;background:none;border:0">
-          ${Icons.get('star')}
+          ${window.Icons.get('star')}
         </button>
       </div>
       <div class="m-card-price">${noPrice ? '—' : formatPrice(asset, price)}</div>
@@ -264,6 +264,7 @@ function renderBankCard(){
   if(!wrap) return;
 
   if(!window.DATA || !window.DATA.find || !window.DATA.ASSETS) return;
+  if(!window.API || !window.API.getById) return;
 
   const list = window.Storage.pf.get();
   const userName = getUserName();
@@ -380,7 +381,6 @@ async function renderCars(){
   }
 
   try {
-    // ═══ از کش استفاده کن (از API.getCars) ═══
     let data = window.API.getCars && window.API.getCars();
     if(!data){
       data = await window.API.fetchCars();
@@ -497,6 +497,10 @@ function renderHdrTicker(){
   const track = $('[data-hdr-ticker-track]');
   if(!track) return;
 
+  // ═══ محافظت از API و DATA ═══
+  if(!window.API || !window.API.getById) return;
+  if(!window.DATA || !window.DATA.find) return;
+
   const ids = [
     'gold18', 'coin', 'dollar', 'euro', 'ounce', 'mesghal',
     'btc', 'eth', 'silver', 'oil_brent', 'bourse', 'usdt',
@@ -570,7 +574,7 @@ async function renderChartPage(){
   if(timeEl) timeEl.textContent = live && live.time ? live.time : '—';
 
   const canvas = $('[data-chart-canvas]');
-  if(canvas) drawChartAsync(canvas, asset);
+  if(canvas) drawChartAsync(canvas, asset).catch(function(){});
 
   await renderChartQuestions(asset, live);
   renderBubbleAnalysis(asset, live);
@@ -1021,9 +1025,6 @@ async function drawChartAsync(canvas, asset){
     let chartData = null;
     const period = window.CFG.get('chartPeriod') || '1D';
 
-    // ═══════════════════════════════════════════════════════
-    // ✅ مرحله ۱: history() — با period (1D/1W/1M)
-    // ═══════════════════════════════════════════════════════
     try {
       const prices = await window.API.history(asset, 60, period);
       if(prices && prices.length >= 2){
@@ -1040,9 +1041,6 @@ async function drawChartAsync(canvas, asset){
       console.warn('[Chart] history failed:', e.message);
     }
 
-    // ═══════════════════════════════════════════════════════
-    // ✅ مرحله ۲: fallback به getHistory (با gd/pd واقعی)
-    // ═══════════════════════════════════════════════════════
     if(!chartData || chartData.length < 2){
       if(window.API.getHistory){
         try {
@@ -1070,7 +1068,6 @@ async function drawChartAsync(canvas, asset){
     const up = last >= first;
     const color = up ? '#10b981' : '#ef4444';
 
-    // ✅ await برای drawLine (اگر async شده باشد)
     await window.Charts.drawLine(canvas, chartData, {
       padding: 20,
       paddingTop: 30,
@@ -1107,7 +1104,6 @@ function renderCompare(){
   const B = window.DATA.find(sB.value);
   if(!A || !B) return;
 
-  // ═══ نمودار مقایسه — async ═══
   const c = $('[data-cmp-chart]');
   if(c){
     (async function(){
@@ -1121,7 +1117,6 @@ function renderCompare(){
     })();
   }
 
-  // ═══ آمار مقایسه ═══
   const st = $('[data-cmp-stats]');
   if(st){
     const lA = window.API.getById(A.id);
@@ -1190,14 +1185,14 @@ function go(page){
 
   try {
     if(page === 'home'){
-     renderBankCard();
-     renderFeatured();
-     renderMostUsed();
-     renderCats();
-     renderTools();
-     renderHomeChart().catch(function(){});
-     renderCars().catch(function(){});
-     }
+      renderBankCard();
+      renderFeatured();
+      renderMostUsed();
+      renderCats();
+      renderTools();
+      renderHomeChart().catch(function(){});
+      renderCars().catch(function(){});
+    }
     else if(page === 'markets'){
       renderMarkets();
     }
@@ -1214,7 +1209,7 @@ function go(page){
       renderFavs();
     }
     else if(page === 'cars'){
-      renderCars();
+      renderCars().catch(function(){});
     }
 
     renderHdrTicker();
@@ -1256,7 +1251,6 @@ function toast(msg, type = ''){
   const t = $('[data-toast]');
   if(!t) return;
 
-  // ═══ جلوگیری از پیام تکراری در کمتر از ۳ ثانیه ═══
   const now = Date.now();
   if(msg === lastToastMsg && (now - lastToastTime) < 30000){
     return;
@@ -1272,6 +1266,7 @@ function toast(msg, type = ''){
     lastToastMsg = '';
   }, 2400);
 }
+
 /* ============================================================
    TOOLS — محاسبه‌گرها
 ============================================================ */
@@ -2288,10 +2283,11 @@ function openTool(tool){
 }
 
 /* ============================================================
-   SEARCH
+   SEARCH — جستجوی ترکیبی نمادها + خودروها
 ============================================================ */
 let searchIdx = -1;
 let searchResults = [];
+let searchKind = 'symbol'; // 'symbol' | 'car'
 
 function doSearch(query){
   const res = $('[data-search-results]');
@@ -2307,43 +2303,111 @@ function doSearch(query){
     return;
   }
 
-  const list = window.DATA.ASSETS.filter(a =>
+  // ═══ جستجو در نمادها ═══
+  const symbolList = window.DATA.ASSETS.filter(a =>
     a.name.toLowerCase().includes(q) ||
     a.code.toLowerCase().includes(q) ||
     a.id.toLowerCase().includes(q)
-  ).slice(0, 15);
+  ).slice(0, 10);
 
-  searchResults = list;
-  searchIdx = list.length ? 0 : -1;
+  // ═══ جستجو در خودروها ═══
+  let carList = [];
+  if(window.API && window.API.getCars){
+    const cars = window.API.getCars();
+    if(cars && cars.cars){
+      carList = cars.cars.filter(function(c){
+        return (c.name || '').toLowerCase().includes(q) ||
+               (c.category || '').toLowerCase().includes(q);
+      }).slice(0, 8);
+    }
+  }
 
-  if(!list.length){
+  const hasSymbols = symbolList.length > 0;
+  const hasCars = carList.length > 0;
+
+  if(!hasSymbols && !hasCars){
     res.innerHTML = '<div class="ms-empty">نتیجه‌ای یافت نشد</div>';
     res.hidden = false;
     return;
   }
 
-  res.innerHTML = list.map((a, i) => {
-    const live = window.API.getById(a.id);
-    const price = live && live.price != null ? formatPrice(a, live.price) : '—';
-    return `
-      <div class="ms-item ${i === 0 ? 'is-active' : ''}" data-idx="${i}">
-        <div class="ms-item-icon">${assetIcon(a)}</div>
-        <div class="ms-item-info">
-          <strong>${window.U.esc(a.name)}</strong>
-          <small>${a.code} · ${window.DATA.CATEGORIES[a.cat]?.label || ''}</small>
+  let html = '';
+
+  // ═══ بخش نمادها ═══
+  if(hasSymbols){
+    html += '<div class="ms-section-title">نمادها</div>';
+    html += symbolList.map(function(a, i){
+      const live = window.API && window.API.getById ? window.API.getById(a.id) : null;
+      const price = live && live.price != null ? formatPrice(a, live.price) : '—';
+      return `
+        <div class="ms-item" data-search-kind="symbol" data-idx="${i}">
+          <div class="ms-item-icon">${assetIcon(a)}</div>
+          <div class="ms-item-info">
+            <strong>${window.U.esc(a.name)}</strong>
+            <small>${a.code} · ${window.DATA.CATEGORIES[a.cat]?.label || ''}</small>
+          </div>
+          <div class="ms-item-price">${price}</div>
         </div>
-        <div class="ms-item-price">${price}</div>
-      </div>
-    `;
-  }).join('');
+      `;
+    }).join('');
+  }
+
+  // ═══ بخش خودروها ═══
+  if(hasCars){
+    html += '<div class="ms-section-title">خودروها</div>';
+    html += carList.map(function(c, i){
+      const priceValue = c.priceMarket != null ? c.priceMarket
+                       : c.priceFactory != null ? c.priceFactory
+                       : null;
+      const priceText = priceValue != null
+        ? formatPrice({ ptype: 'rial', dec: 0 }, priceValue)
+        : (c.status === 'coming-soon' ? 'به زودی'
+          : c.status === 'unavailable' ? 'ناموجود'
+          : c.status === 'discontinued' ? 'توقف تولید'
+          : c.status === 'not-selling' ? 'توقف فروش'
+          : '—');
+      const statusLabel = c.status === 'available' ? 'موجود'
+                        : c.status === 'coming-soon' ? 'به زودی'
+                        : c.status === 'unavailable' ? 'ناموجود'
+                        : c.status === 'discontinued' ? 'توقف تولید'
+                        : c.status === 'not-selling' ? 'توقف فروش'
+                        : '';
+      return `
+        <div class="ms-item" data-search-kind="car" data-idx="${i}">
+          <div class="ms-item-icon" style="background:var(--card-2);color:var(--accent)">
+            <span data-icon="car"></span>
+          </div>
+          <div class="ms-item-info">
+            <strong>${window.U.esc(c.name || '—')}</strong>
+            <small>${window.U.esc(c.category || '')} ${statusLabel ? '· ' + statusLabel : ''}</small>
+          </div>
+          <div class="ms-item-price">${priceText}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  res.innerHTML = html;
   res.hidden = false;
 
-  res.querySelectorAll('.ms-item').forEach(el => {
-    el.addEventListener('click', e => {
+  // ═══ اتصال کلیک ═══
+  res.querySelectorAll('.ms-item').forEach(function(el){
+    el.addEventListener('click', function(e){
       e.stopPropagation();
-      pickSearch(searchResults[+el.dataset.idx]);
+      const kind = el.dataset.searchKind;
+      const idx = +el.dataset.idx;
+      if(kind === 'symbol'){
+        pickSearch(symbolList[idx]);
+      } else if(kind === 'car'){
+        pickSearchCar(carList[idx]);
+      }
     });
   });
+
+  // ═══ hydrate آیکون‌ها ═══
+  if(window.Icons && window.Icons.hydrate){
+    window.Icons.hydrate(res);
+  }
 }
 
 function pickSearch(asset){
@@ -2351,6 +2415,24 @@ function pickSearch(asset){
   activeChartId = asset.id;
   closeSearch();
   go('chart');
+}
+
+function pickSearchCar(car){
+  if(!car) return;
+  carsSearch = car.name || '';
+  closeSearch();
+  go('cars');
+
+  // ═══ بعد از رندر، اسکرول به خودروی انتخاب‌شده ═══
+  setTimeout(function(){
+    const el = document.querySelector('[data-car-id="' + car.id + '"]');
+    if(el && el.scrollIntoView){
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.style.transition = 'background 0.3s';
+      el.style.background = 'var(--accent-soft, rgba(16,185,129,0.15))';
+      setTimeout(function(){ el.style.background = ''; }, 1500);
+    }
+  }, 400);
 }
 
 function closeSearch(){
@@ -2610,7 +2692,6 @@ function attachMoneyFormatter(){
     } catch(err){}
   }, true);
 
-  // جلوگیری از ورود حروف غیرعددی
   document.addEventListener('keypress', function(e){
     const input = e.target;
     if(!input || input.tagName !== 'INPUT') return;
@@ -2634,7 +2715,6 @@ function refreshAll(){
     renderCats();
     renderTools();
     renderHomeChart().catch(function(){});
-
   }
   if(currentPage === 'markets') renderMarkets();
   if(currentPage === 'chart') renderChartPage().catch(function(){});
@@ -2691,11 +2771,9 @@ function init(){
     }, 300));
   }
 
-  // ═══ Router اولیه ═══
   const hash = (location.hash || '').replace('#', '');
   go(PAGES.includes(hash) ? hash : 'home');
 
-  // ═══ Event Handlers ═══
   document.addEventListener('click', handleClick, true);
 
   document.addEventListener('keydown', e => {
@@ -2711,19 +2789,18 @@ function init(){
     }
   });
 
-  // ═══ جستجوی نمادها ═══
+  // ═══ جستجو ═══
   const si = $('[data-search-input]');
   if(si){
     si.addEventListener('input', window.U.debounce(e => doSearch(e.target.value), 150));
   }
 
-  // ═══ جستجوی خودروها ═══
+  // ═══ جستجوی خودروها (فقط در صفحه cars) ═══
   const cs = $('[data-cars-search]');
   if(cs){
     cs.addEventListener('input', window.U.debounce(function(e){
       carsSearch = e.target.value.trim();
-      // ═══ فقط اگر در صفحه cars هستیم رندر کن ═══
-            if(currentPage === 'cars'){
+      if(currentPage === 'cars'){
         renderCars().catch(function(){});
       }
     }, 200));
@@ -2743,58 +2820,45 @@ function init(){
     });
   });
 
-  // ═══ فرمت خودکار فیلدهای پولی ═══
   attachMoneyFormatter();
 
-  // ═══ تنظیم فاصله بروزرسانی ═══
   const iv = $('[data-input="interval"]');
   if(iv){
     iv.value = window.CFG.get('refreshInterval');
     iv.addEventListener('change', e => {
       const v = parseInt(e.target.value);
       window.CFG.set('refreshInterval', v);
-      // ═══ برای اعمال فاصله جدید، API.start دوباره صدا زده می‌شود ═══
-      // (با محافظت از تکرار در api.js جدید)
       window.API.stop();
       window.API.start(v);
       toast('فاصله: ' + (v / 1000) + 's', 'success');
     });
   }
 
-  // ═══ Online/Offline ═══
-let lastOnlineTime = 0;
-window.addEventListener('online', () => {
-  // ❌ toast حذف شد — فقط داده را بروزرسانی کن
-  window.API.fetchData(true).catch(() => {});
-});
+  window.addEventListener('online', () => {
+    window.API.fetchData(true).catch(() => {});
+  });
 
   window.addEventListener('offline', () => {
     toast('حالت آفلاین', 'warning');
   });
 
-  // ═══════════════════════════════════════════════════════════
-  // ✅ subscribe با debounce — جلوگیری از حلقه بی‌پایان
-  // ═══════════════════════════════════════════════════════════
-let refreshTimer = null;
-let lastRefreshHash = '';
-window.API.subscribe((data) => {
-  // ═══ hash از داده بساز ═══
-  const hash = data && data.updated ? data.updated : 'none';
+  let refreshTimer = null;
+  let lastRefreshHash = '';
+  window.API.subscribe((data) => {
+    const hash = data && data.updated ? data.updated : 'none';
+    if(hash === lastRefreshHash) return;
+    lastRefreshHash = hash;
 
-  // ═══ اگر داده تغییر نکرده، دوباره رندر نکن ═══
-  if(hash === lastRefreshHash) return;
-  lastRefreshHash = hash;
+    if(refreshTimer) clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(() => {
+      refreshAll();
+      checkAlerts();
+    }, 500);
+  });
 
-  if(refreshTimer) clearTimeout(refreshTimer);
-  refreshTimer = setTimeout(() => {
-    refreshAll();
-    checkAlerts();
-  }, 500);
-});
-
-  // ═══ رندر اولیه ticker ═══
   renderHdrTicker();
 }
+
 /* ============================================================
    PUBLIC API
 ============================================================ */
@@ -2840,7 +2904,9 @@ return {
   toolZakat: toolZakat,
   toolAvgBuy: toolAvgBuy,
   renderCars: renderCars,
-  carRowHTML: carRowHTML
+  carRowHTML: carRowHTML,
+  doSearch: doSearch,
+  closeSearch: closeSearch
 };
 
 })();
