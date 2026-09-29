@@ -163,7 +163,8 @@ function boot(){
     if(window.Anim && window.Anim.init) window.Anim.init();
 
     // 4. Gestures
-    if(window.Gestures && window.Gestures.init) window.Gestures.init();
+// ═══ Swipe غیرفعال — توسط ui.js مدیریت می‌شود ═══
+// if(window.Gestures && window.Gestures.init) window.Gestures.init();
 
     // 5. Online/Offline
     initOnlineStatus();

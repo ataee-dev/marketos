@@ -1,11 +1,18 @@
 /**
- * قیمتو 6.0 — API (اصلاح‌شده - بدون حلقه بی‌پایان)
+ * قیمتو 6.0 — API (نسخه نهایی — با پشتیبانی از cars_specs.json)
  * ✅ annual-history.json + history/ روزانه
  * ✅ cars.json (قیمت خودرو)
+ * ✅ cars_specs.json (مشخصات کامل خودروها)
  * ✅ cache هوشمند
  * ✅ بدون CORS
- * ✅ جلوگیری از start تکراری
- * ✅ جلوگیری از حلقه بی‌پایان
+ * ✅ بدون حلقه بی‌پایان
+ * ✅ رفع باگ getById (fallback به id)
+ * ✅ رفع باگ start() (بدون انباشت تایمر)
+ * ✅ رفع باگ getHistory (سقف پویا)
+ * ✅ رفع باگ fetchCars اولیه (force=true)
+ * ✅ currentSource صحیح
+ * ✅ refresh دوره‌ای annual/cars/cars_specs
+ * ✅ getCarSpecsById برای مودال خودرو
  */
 window.API = (function(){
 'use strict';
@@ -19,10 +26,13 @@ const CONFIG = {
   cacheTTL: 30000,
   annualCacheTTL: 5 * 60000,
   carsCacheTTL: 5 * 60000,
+  carSpecsCacheTTL: 30 * 60000,      // ✅ 30 دقیقه برای مشخصات
   poll: 60000,
   timeout: 8000,
   retries: 2,
-  historyBackupDays: 2
+  historyBackupDays: 2,
+  historyMaxBackupDays: 60,
+  annualRefreshThreshold: 5 * 60000
 };
 
 /* ============================================================
@@ -36,11 +46,12 @@ let fetching = false;
 let fallback = false;
 let timer = null;
 let subs = new Set();
-let currentSource = 'primary';
+let currentSource = 'unknown';
 
 // ═══ فلگ‌های محافظت از حلقه ═══
 let started = false;
 let carsFetching = false;
+let carSpecsFetching = false;
 
 let annualCache = null;
 let annualCacheTime = 0;
@@ -48,6 +59,11 @@ let annualCacheTime = 0;
 let carsCache = null;
 let carsCacheTime = 0;
 let carsError = null;
+
+// ✅ کش مشخصات خودروها
+let carSpecsCache = null;
+let carSpecsCacheTime = 0;
+let carSpecsError = null;
 
 const HISTORY_CACHE = new Map();
 const HISTORY_TTL = 5 * 60 * 1000;
@@ -183,18 +199,16 @@ async function fetchAnnual(){
 }
 
 /* ============================================================
-   FETCH CARS — با محافظت از حلقه
+   FETCH CARS — قیمت خودروها
 ============================================================ */
 async function fetchCars(force){
   force = force || false;
   const now = Date.now();
 
-  // اگر در حال fetch هستیم، کش فعلی را برگردان (جلوگیری از حلقه)
   if(carsFetching){
     return carsCache;
   }
 
-  // اگر کش معتبر داریم و force نیست، برگردان
   if(!force && carsCache && (now - carsCacheTime) < CONFIG.carsCacheTTL){
     return carsCache;
   }
@@ -226,16 +240,103 @@ async function fetchCars(force){
   }
 }
 
-/**
- * ✅ خواندن خودروها از کش (بدون fetch)
- * این تابع را در renderCars استفاده کن تا حلقه نشود
- */
 function getCars(){
   return carsCache;
 }
 
 function getCarsError(){
   return carsError;
+}
+
+/* ============================================================
+   ✅ FETCH CAR SPECS — مشخصات کامل خودروها
+============================================================ */
+async function fetchCarSpecs(force){
+  force = force || false;
+  const now = Date.now();
+
+  // ═══ جلوگیری از حلقه ═══
+  if(carSpecsFetching){
+    return carSpecsCache;
+  }
+
+  // ═══ استفاده از کش معتبر ═══
+  if(!force && carSpecsCache && (now - carSpecsCacheTime) < CONFIG.carSpecsCacheTTL){
+    return carSpecsCache;
+  }
+
+  carSpecsFetching = true;
+
+  const url = CONFIG.DATA_BASE + '/cars_specs.json?_=' + now;
+
+  try {
+    const json = await fetchJSON(url);
+    carSpecsCache = json;
+    carSpecsCacheTime = now;
+    carSpecsError = null;
+    console.log('[API] ✅ cars_specs.json — ' + (json.cars?.length || 0) + ' خودرو با مشخصات');
+    return json;
+  } catch(err){
+    carSpecsError = err.message;
+    console.warn('[API] ❌ cars_specs.json:', err.message);
+
+    // ═══ fallback: RAW_BASE ═══
+    try {
+      const url2 = CONFIG.RAW_BASE + '/cars_specs.json?_=' + now;
+      const json = await fetchJSON(url2);
+      carSpecsCache = json;
+      carSpecsCacheTime = now;
+      carSpecsError = null;
+      console.log('[API] ✅ cars_specs.json (raw) — ' + (json.cars?.length || 0) + ' خودرو');
+      return json;
+    } catch(err2){
+      carSpecsError = err2.message;
+      console.warn('[API] ❌ cars_specs.json (raw):', err2.message);
+    }
+
+    if(carSpecsCache) return carSpecsCache;
+    return { cars: [], byCategory: {}, byGroup: {} };
+  } finally {
+    carSpecsFetching = false;
+  }
+}
+
+function getCarSpecs(){
+  return carSpecsCache;
+}
+
+function getCarSpecsError(){
+  return carSpecsError;
+}
+
+/**
+ * ✅ دریافت مشخصات یک خودرو بر اساس ID
+ * اگر id در dیتا با نام‌های مختلف باشد، تطبیق هوشمند انجام می‌دهد
+ */
+function getCarSpecsById(id){
+  if(!carSpecsCache || !carSpecsCache.cars || !id) return null;
+
+  // ═══ تطبیق دقیق ═══
+  let found = carSpecsCache.cars.find(function(c){ return c.id === id; });
+  if(found) return found;
+
+  // ═══ تطبیق بدون حساسیت به فاصله و نیم‌فاصله ═══
+  const normalizeId = function(s){
+    return String(s).replace(/\s+/g, '').replace(/[\u200c\u200f]/g, '').trim();
+  };
+  const targetId = normalizeId(id);
+
+  found = carSpecsCache.cars.find(function(c){
+    return normalizeId(c.id) === targetId;
+  });
+  if(found) return found;
+
+  // ═══ تطبیق نسبی (اگر id از قیمت با id مشخصات کمی متفاوت باشد) ═══
+  found = carSpecsCache.cars.find(function(c){
+    const cid = normalizeId(c.id);
+    return cid.indexOf(targetId) !== -1 || targetId.indexOf(cid) !== -1;
+  });
+  return found || null;
 }
 
 /* ============================================================
@@ -271,7 +372,6 @@ async function fetchData(force){
     console.log('[API] ✅ ' + Object.keys(out).length + ' نماد از ' + currentSource);
     saveLocal();
 
-    // ✅ notify فقط یک بار در هر fetch
     notify();
 
     return json;
@@ -289,6 +389,7 @@ async function fetchData(force){
     for(const k in fb.data) norm[k] = normalize(k, fb.data[k]);
     lastFetch = Date.now();
     fallback = true;
+    currentSource = 'fallback';
     notify();
     return fb;
 
@@ -302,11 +403,28 @@ async function fetchData(force){
 ============================================================ */
 function get(k){ return norm[k] || null; }
 
+/**
+ * ✅ getById — با fallback به id
+ */
 function getById(id){
   if(!window.DATA) return null;
   const a = window.DATA.find(id);
   if(!a) return null;
-  return get(a.tgju);
+
+  // ═══ تلاش با tgju ═══
+  if(a.tgju){
+    const r = get(a.tgju);
+    if(r && r.price != null) return r;
+  }
+
+  // ═══ fallback: تلاش با id ═══
+  const r2 = get(a.id);
+  if(r2 && r2.price != null) return r2;
+
+  // ═══ fallback نهایی ═══
+  if(a.tgju) return get(a.tgju);
+
+  return null;
 }
 
 function getAll(){ return norm; }
@@ -327,16 +445,16 @@ function notify(){
 }
 
 /**
- * ✅ start با محافظت از اجرای تکراری
+ * ✅ start — بدون انباشت تایمر
  */
 function start(ms){
-  if(started){
-    console.log('[API] already started, skipping duplicate');
-    return;
+  // ═══ پاک کردن تایمر قبلی ═══
+  if(timer){
+    clearInterval(timer);
+    timer = null;
   }
-  started = true;
 
-  stop(); // پاک کردن تایمر قبلی (اگر وجود دارد)
+  started = true;
 
   const interval = ms || CONFIG.poll;
 
@@ -345,16 +463,27 @@ function start(ms){
   // ═══ fetch اولیه ═══
   fetchData().catch(function(){});
   fetchAnnual().catch(function(){});
-  // ═══ بار اول cars را هم fetch کن (یک بار) ═══
-  fetchCars().catch(function(){});
+  fetchCars(true).catch(function(){});
+  fetchCarSpecs(true).catch(function(){});   // ✅ fetch مشخصات
 
-  // ═══ تایمر برای fetch دوره‌ای ═══
+  // ═══ تایمر دوره‌ای ═══
   timer = setInterval(function(){
     if(document.hidden) return;
     fetchData().catch(function(){});
+
+    // ✅ refresh دوره‌ای
+    if(Date.now() - annualCacheTime > CONFIG.annualRefreshThreshold){
+      fetchAnnual().catch(function(){});
+    }
+    if(Date.now() - carsCacheTime > CONFIG.carsCacheTTL){
+      fetchCars(true).catch(function(){});
+    }
+    if(Date.now() - carSpecsCacheTime > CONFIG.carSpecsCacheTTL){
+      fetchCarSpecs(true).catch(function(){});
+    }
   }, interval);
 
-  console.log('[API] ▶ ' + interval + 'ms — ' + currentSource);
+  console.log('[API] ▶ ' + interval + 'ms — source: ' + currentSource);
 }
 
 function stop(){
@@ -363,6 +492,7 @@ function stop(){
     timer = null;
   }
   started = false;
+  console.log('[API] ■ stopped');
 }
 
 /* ============================================================
@@ -379,6 +509,7 @@ async function getHistory(asset, days){
   if(!asset) return [];
   days = Math.max(1, Math.ceil(days || 30));
 
+  // ═══ مرحله ۱: annual-history ═══
   try {
     const annual = await fetchAnnual();
 
@@ -413,7 +544,7 @@ async function getHistory(asset, days){
 
   const dates = [];
   const now = new Date();
-  const maxBackupDays = CONFIG.historyBackupDays;
+  const maxBackupDays = Math.min(days, CONFIG.historyMaxBackupDays);
 
   for(let i = 0; i < maxBackupDays; i++){
     const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
@@ -504,12 +635,6 @@ async function getPriceAt(asset, msAgo){
   return null;
 }
 
-/**
- * history — داده تاریخی بر اساس period
- * ✅ async — منتظر annual-history می‌ماند
- * ✅ اگر کافی نبود، از history/ روزانه جمع می‌کند
- * ✅ اگر باز کافی نبود، آخرین resort شبیه‌سازی
- */
 async function history(asset, count, period){
   period = period || '1D';
   const live = getById(asset.id);
@@ -539,82 +664,79 @@ async function history(asset, count, period){
 
       const sliced = converted.slice(-sliceCount);
 
-      // ═══ اگر تعداد کافی بود، مستقیم برگردان ═══
-if(sliced.length >= sliceCount * 0.8){
-  console.log('[API] history: ' + asset.tgju + ' / ' + period + ' → annual (' + sliced.length + ' نقاط)');
-  return sliced.map(function(h){ return h.p; });
-}
+      if(sliced.length >= sliceCount * 0.8){
+        console.log('[API] history: ' + asset.tgju + ' / ' + period + ' → annual (' + sliced.length + ' نقاط)');
+        return sliced.map(function(h){ return h.p; });
+      }
 
-// ═══ اگر کم بود، از history/ هم کمک بگیر ═══
-if(sliced.length >= 2){
-  console.log('[API] history: ' + asset.tgju + ' / ' + period + ' → annual ناکافی (' + sliced.length + ' از ' + sliceCount + ') → ترکیب با history/');
+      if(sliced.length >= 2){
+        console.log('[API] history: ' + asset.tgju + ' / ' + period + ' → annual ناکافی (' + sliced.length + ' از ' + sliceCount + ') → ترکیب با history/');
 
-  // از history/ روزانه چند روز اخیر جمع کن
-  const needed = sliceCount - sliced.length;
-  const daysBack = Math.min(365, Math.ceil(needed / 2) + 5);
+        const needed = sliceCount - sliced.length;
+        const daysBack = Math.min(
+          CONFIG.historyMaxBackupDays,
+          Math.ceil(needed / 2) + 5
+        );
 
-  try {
-    const dates = [];
-    const now = new Date();
-    const tehranOffset = 3.5 * 60 * 60 * 1000;
+        try {
+          const dates = [];
+          const now = new Date();
+          const tehranOffset = 3.5 * 60 * 60 * 1000;
 
-    for(let i = 0; i < daysBack; i++){
-      const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-      const tehranTime = new Date(d.getTime() + tehranOffset);
-      dates.push(tehranTime.toISOString().slice(0, 10));
-    }
+          for(let i = 0; i < daysBack; i++){
+            const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+            const tehranTime = new Date(d.getTime() + tehranOffset);
+            dates.push(tehranTime.toISOString().slice(0, 10));
+          }
 
-    const oldPoints = [];
+          const oldPoints = [];
 
-    for(let i = 0; i < dates.length; i++){
-      const hist = await fetchHistory(dates[i]);
-      if(!hist || !hist.symbols) continue;
+          for(let i = 0; i < dates.length; i++){
+            const hist = await fetchHistory(dates[i]);
+            if(!hist || !hist.symbols) continue;
 
-      const points = hist.symbols[asset.tgju];
-      if(points && points.length){
-        for(let j = 0; j < points.length; j++){
-          oldPoints.push({
-            t: points[j].t,
-            p: points[j].p
-          });
+            const points = hist.symbols[asset.tgju];
+            if(points && points.length){
+              for(let j = 0; j < points.length; j++){
+                oldPoints.push({
+                  t: points[j].t,
+                  p: points[j].p
+                });
+              }
+            }
+          }
+
+          const annualTimes = converted.map(function(x){ return x.t; });
+          const merged = sliced.slice();
+
+          for(let i = 0; i < oldPoints.length; i++){
+            const pt = oldPoints[i];
+            let isDup = false;
+            for(let k = 0; k < annualTimes.length; k++){
+              if(Math.abs(annualTimes[k] - pt.t) < 60 * 60 * 1000){
+                isDup = true;
+                break;
+              }
+            }
+            if(!isDup){
+              merged.push(pt);
+            }
+          }
+
+          merged.sort(function(a, b){ return a.t - b.t; });
+          const final = merged.slice(-sliceCount);
+
+          if(final.length >= 2){
+            console.log('[API] history: ' + asset.tgju + ' / ' + period + ' → ترکیبی (' + final.length + ' نقاط)');
+            return final.map(function(h){ return h.p; });
+          }
+        } catch(e){
+          console.warn('[API] merge failed:', e.message);
         }
+
+        console.log('[API] history: ' + asset.tgju + ' / ' + period + ' → annual فقط (' + sliced.length + ' نقاط)');
+        return sliced.map(function(h){ return h.p; });
       }
-    }
-
-    // ترکیب oldPoints + sliced
-    const annualTimes = converted.map(function(x){ return x.t; });
-    const merged = sliced.slice();  // از annual
-
-    for(let i = 0; i < oldPoints.length; i++){
-      const pt = oldPoints[i];
-      // اگر تکراری نبود، اضافه کن
-      let isDup = false;
-      for(let k = 0; k < annualTimes.length; k++){
-        if(Math.abs(annualTimes[k] - pt.t) < 60 * 60 * 1000){
-          isDup = true;
-          break;
-        }
-      }
-      if(!isDup){
-        merged.push(pt);
-      }
-    }
-
-    merged.sort(function(a, b){ return a.t - b.t; });
-    const final = merged.slice(-sliceCount);
-
-    if(final.length >= 2){
-      console.log('[API] history: ' + asset.tgju + ' / ' + period + ' → ترکیبی (' + final.length + ' نقاط)');
-      return final.map(function(h){ return h.p; });
-    }
-  } catch(e){
-    console.warn('[API] merge failed:', e.message);
-  }
-
-  // اگر ترکیب نشد، همان annual را برگردان
-  console.log('[API] history: ' + asset.tgju + ' / ' + period + ' → annual فقط (' + sliced.length + ' نقاط)');
-  return sliced.map(function(h){ return h.p; });
-}
     }
   } catch(e){
     console.warn('[API] annual failed:', e.message);
@@ -665,7 +787,7 @@ if(sliced.length >= 2){
     console.warn('[API] history/ failed:', e.message);
   }
 
-  // ═══ مرحله ۳: شبیه‌سازی (نباید برسد) ═══
+  // ═══ مرحله ۳: شبیه‌سازی ═══
   console.warn('[API] history: ❌ هیچ داده واقعی نیست — شبیه‌سازی');
   const seed = (asset.id + '_' + period).split('').reduce(function(a, c){
     return a + c.charCodeAt(0);
@@ -683,12 +805,6 @@ if(sliced.length >= 2){
   return out;
 }
 
-
-
-
-
-
-
 /* ============================================================
    HELPERS — today history
 ============================================================ */
@@ -705,16 +821,6 @@ async function preloadTodayHistory(){
   await fetchHistory(date);
   console.log('[API] ✅ today history preloaded');
 }
-
-
-
-
-
-
-
-
-
-
 
 /* ============================================================
    FALLBACK
@@ -795,15 +901,28 @@ return {
   fetchHistory: fetchHistory,
   preloadTodayHistory: preloadTodayHistory,
   getCachedHistory: getCachedHistory,
+
+  // ═══ CARS ═══
   fetchCars: fetchCars,
   getCars: getCars,
   getCarsError: getCarsError,
+
+  // ═══ CAR SPECS (جدید) ═══
+  fetchCarSpecs: fetchCarSpecs,
+  getCarSpecs: getCarSpecs,
+  getCarSpecsById: getCarSpecsById,
+  getCarSpecsError: getCarSpecsError,
+
+  // ═══ CLEAR CACHE ═══
   clearHistoryCache: function(){
     HISTORY_CACHE.clear();
+    NEGATIVE_CACHE.clear();
     annualCache = null;
     annualCacheTime = 0;
     carsCache = null;
     carsCacheTime = 0;
+    carSpecsCache = null;
+    carSpecsCacheTime = 0;
   }
 };
 

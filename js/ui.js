@@ -1,14 +1,12 @@
 /**
- * قیمتو 6.0 — UI (کامل و نهایی - اصلاح‌شده)
- * ✅ کارت بانکی پرتفوی
- * ✅ ۲۰ سوال TGJU با استایل جدید
- * ✅ تحلیل حباب طلا
- * ✅ سیستم واحد هوشمند (تومان/ریال)
- * ✅ واحدهای حجمی
- * ✅ جستجوی inline (نماد + خودرو)
- * ✅ نمودار با نقاط تعاملی
- * ✅ جداکننده هزارگان
- * ✅ فرمت خودکار فیلدهای ورودی
+ * قیمتو 6.0 — UI (نسخه نهایی اصلاح‌شده)
+ * ✅ حذف کامل swipe بین تب‌ها
+ * ✅ حذف کامل pinch/zoom
+ * ✅ رفع باگ برگشت نوار قیمت
+ * ✅ رفع حلقه بی‌نهایت go()
+ * ✅ کارت خودرو با تصویر و واترمارک
+ * ✅ مودال خودرو
+ * ✅ تکرارشونده هشدارها
  */
 
 window.UI = (function(){
@@ -21,11 +19,103 @@ let filter = 'all';
 let search = '';
 let currentPage = 'home';
 let activeChartId = 'gold18';
+let homeChartId = 'gold18';
 
 const PAGES = ['home', 'markets', 'chart', 'cars', 'settings'];
 
 /* ============================================================
-   NUMBER FORMATTING — جداکننده هزارگان
+   غیرفعال‌سازی کامل حرکت انگشت / swipe / gesture
+   ═══ رفع باگ: dx و dy قبلاً تعریف نشده بودند ═══
+============================================================ */
+function disableAllGestures(){
+  const opts = { passive: false };
+
+  // ═══ لغو pinch/zoom (Safari iOS) ═══
+  document.addEventListener('gesturestart', e => e.preventDefault(), opts);
+  document.addEventListener('gesturechange', e => e.preventDefault(), opts);
+  document.addEventListener('gestureend', e => e.preventDefault(), opts);
+
+  // ═══ فقط چند انگشت = لغو کامل ═══
+  document.addEventListener('touchstart', e => {
+    if(e.touches.length > 1){
+      e.preventDefault();
+    }
+  }, opts);
+
+  // ═══ جلوگیری از swipe افقی فقط روی بدنه صفحه ═══
+  // ✅ نکته: چک می‌کند که کاربر روی یک اسکرول‌رول افقی نباشد
+  let startX = 0, startY = 0;
+  
+  document.addEventListener('touchstart', e => {
+    if(e.touches.length === 1){
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchmove', e => {
+    // چند انگشت = pinch
+    if(e.touches.length > 1){
+      e.preventDefault();
+      return;
+    }
+
+    // ═══ اگر داخل یک اسکرول افقی هستیم، مداخله نکن ═══
+    const inScrollable = e.target.closest(
+      '.scroll-row, .tools-horizontal, .chips, .pills, .hdr-ticker, ' +
+      '.tv-ticker, .tv-heatmap, .tv-compact, .mobile-nav, ' +
+      '[data-featured], [data-most], [data-tools], [data-cats], ' +
+      '[data-related], [data-c-related]'
+    );
+    if(inScrollable){
+      return;  // ← اجازه بده مرورگر طبیعی اسکرول کند
+    }
+
+    // ═══ اگر روی سایدبار یا مودال هستیم، مداخله نکن ═══
+    if(e.target.closest('.sidebar, .modal, .tv, input, textarea, select')){
+      return;
+    }
+
+    // ═══ فقط اگر حرکت افقی در بدنه صفحه بود، جلوگیری کن ═══
+    if(e.touches[0]){
+      const dx = Math.abs(e.touches[0].clientX - startX);
+      const dy = Math.abs(e.touches[0].clientY - startY);
+
+      // اگر حرکت افقی غالب و بزرگ بود → swipe بین تب‌ها → جلوگیری
+      if(dx > dy && dx > 10){
+        e.preventDefault();
+      }
+    }
+  }, opts);
+
+  // ═══ لغو double-tap zoom ═══
+  let lastTouch = 0;
+  document.addEventListener('touchend', e => {
+    const now = Date.now();
+    if(now - lastTouch <= 300){
+      // فقط اگر روی بدنه صفحه بود
+      const inScrollable = e.target.closest('.scroll-row, .tools-horizontal, .chips, .pills, .hdr-ticker');
+      if(!inScrollable){
+        e.preventDefault();
+      }
+    }
+    lastTouch = now;
+  }, opts);
+
+  // ═══ غیرفعال کردن Gestures در app.js ═══
+  if(window.Gestures && window.Gestures.destroy){
+    try { window.Gestures.destroy(); } catch(e){}
+  }
+  window.Gestures = {
+    init: function(){ console.log('[Gestures] disabled by ui.js'); },
+    destroy: function(){},
+    isActive: function(){ return false; }
+  };
+
+  console.log('[UI] ✅ All gestures disabled (scroll-safe)');
+}
+/* ============================================================
+   NUMBER FORMATTING
 ============================================================ */
 function formatNumber(num, decimals){
   if(num == null || isNaN(num)) return '—';
@@ -83,7 +173,7 @@ function assetIcon(asset){
 function catColor(asset){ return CAT_COLOR[asset.cat] || 'gold'; }
 
 /* ============================================================
-   UNIT SYSTEM — تومان/ریال
+   UNIT SYSTEM
 ============================================================ */
 function getUnit(){
   return window.CFG.get('currency') || 'toman';
@@ -149,7 +239,7 @@ function marketCardHTML(asset){
   const noPrice = price == null;
 
   return `
-    <article class="m-card ${noPrice ? 'm-card-empty' : ''}" data-card-id="${asset.id}" role="button" tabindex="0">
+    <article class="m-card ${noPrice ? 'm-card-empty' : ''}" data-card-id="${asset.id}" role="button" tabindex="${noPrice ? '-1' : '0'}" aria-label="${window.U.esc(asset.name)}${noPrice ? ' - بدون داده' : ''}">
       <div class="m-card-head">
         <div class="m-card-icon ${color}">${assetIcon(asset)}</div>
         <div class="m-card-info">
@@ -157,6 +247,8 @@ function marketCardHTML(asset){
           <small>${asset.code}</small>
         </div>
         <button type="button" class="icon-btn" data-fav-toggle="${asset.id}"
+          title="${isFav ? 'حذف از علاقه‌مندی' : 'افزودن به علاقه‌مندی'}"
+          aria-label="${isFav ? 'حذف از علاقه‌مندی' : 'افزودن به علاقه‌مندی'}"
           style="width:24px;height:24px;color:${isFav?'var(--warn)':'var(--dim)'};font-size:14px;flex-shrink:0;padding:0;background:none;border:0">
           ${window.Icons.get('star')}
         </button>
@@ -196,7 +288,7 @@ function renderCats(){
   const counts = window.DATA.countByCat();
 
   c.innerHTML = Object.entries(window.DATA.CATEGORIES).map(([k, cat]) => `
-    <button class="cat-chip" data-filter-jump="${k}" type="button">
+    <button class="cat-chip" data-filter-jump="${k}" type="button" aria-label="${cat.label}">
       <span class="cat-chip-icon">${window.Icons.get(cat.icon)}</span>
       <span>${cat.label}</span>
       <small style="opacity:.6">${counts[k] || 0}</small>
@@ -227,8 +319,7 @@ function renderTools(){
     { id:'silver',      name:'محاسبه‌گر نقره',  icon:'diamond' },
     { id:'conv',        name:'مبدل ارز',        icon:'exchange' },
     { id:'crypto-conv', name:'مبدل کریپتو',     icon:'bitcoin' },
-    { id:'unit-conv',   name:'مبدل واحد',       icon:'swap' },
-    { id:'volume-conv', name:'مبدل حجم',        icon:'swap' },
+    { id:'unit-conv',   name:'مبدل واحد و حجم', icon:'swap' },
     { id:'portfolio',   name:'پرتفوی من',       icon:'briefcase' },
     { id:'alerts',      name:'هشدار قیمت',      icon:'bell' },
     { id:'notes',       name:'یادداشت‌ها',       icon:'note' },
@@ -241,7 +332,7 @@ function renderTools(){
   ];
 
   c.innerHTML = tools.map(t => `
-    <button type="button" class="tool-chip" data-tool="${t.id}">
+    <button type="button" class="tool-chip" data-tool="${t.id}" aria-label="${t.name}">
       <span class="tool-chip-icon">${window.Icons.get(t.icon)}</span>
       <span class="tool-chip-name">${t.name}</span>
     </button>
@@ -249,7 +340,7 @@ function renderTools(){
 }
 
 /* ============================================================
-   BANK CARD — کارت پرتفوی شبیه کارت بانکی
+   BANK CARD
 ============================================================ */
 function getUserName(){
   return window.Storage.get('gheymato.username', '') || 'کاربر مهمان';
@@ -290,10 +381,13 @@ function renderBankCard(){
 
   let displayValue = '۰ تومان';
   let displayChange = '';
+  let subtitle = 'برای شروع دارایی اضافه کنید';
+
   if(!isEmpty){
     const unitText = unitLabel();
     const val = baseToUser(totalNow);
     displayValue = formatNumber(val, 0) + ' ' + unitText;
+    subtitle = formatNumber(list.length, 0) + ' دارایی';
     displayChange = `
       <span class="bank-card-change">
         ${up ? '▲' : '▼'} ${up ? '+' : ''}${plPct.toFixed(2)}%
@@ -302,13 +396,13 @@ function renderBankCard(){
   }
 
   wrap.innerHTML = `
-    <div class="bank-card ${isEmpty ? 'is-empty' : ''}" data-tool="portfolio">
+    <div class="bank-card ${isEmpty ? 'is-empty' : ''}" data-tool="portfolio" role="button" tabindex="0" aria-label="پرتفوی من">
       <div class="bank-card-top">
         <div class="bank-card-brand">
           <img src="assets/logo.png" alt="قیمتو">
           <div class="bank-card-brand-text">
             <strong>قیمتو</strong>
-            <small>${isEmpty ? 'پرتفوی خالی' : formatNumber(list.length, 0) + ' دارایی'}</small>
+            <small>${isEmpty ? 'پرتفوی خالی' : subtitle}</small>
           </div>
         </div>
         <div class="bank-card-chip"></div>
@@ -328,7 +422,7 @@ function renderBankCard(){
             <small>${isEmpty ? 'برای شروع دارایی اضافه کنید' : 'دارایی‌های شما'}</small>
           </div>
         </div>
-        <button type="button" class="bank-card-add" data-tool="portfolio" aria-label="افزودن">
+        <button type="button" class="bank-card-add" data-tool="portfolio" aria-label="افزودن دارایی">
           ${window.Icons.get('plus')}
         </button>
       </div>
@@ -361,7 +455,160 @@ function renderMarkets(){
 }
 
 /* ============================================================
-   CARS — قیمت خودرو
+   CARS — نگاشت ID به تصویر
+============================================================ */
+const CAR_IMAGE_MAP = {
+  'وانت-آریسان': 'وانت-آریسان.jpg',
+  'سورن-TU5P': 'سورن-(TU5P).jpg',
+  'سورن-XU7P-رینگ-فولادی': 'سورن-XU7P-(رینگ-فولادی).jpg',
+  'سورن-XU7P': 'سورن-(TU5P).jpg',
+  'سورن-پلاس-دوگانه-سوز-کپسول-کوچک': 'سورن-پلاس-دوگانه-سوز-(کپسول-کوچک).jpg',
+  'سورن-پلاس-دوگانه-سوز-کپسول-بزرگ': 'سورن-پلاس-دوگانه-سوز-(کپسول-بزرگ).jpg',
+  'دنا-پلاس-MT6-رینگ-فولادی': 'دنا-پلاس-اتوماتیک.jpg',
+  'دنا-پلاس-MT6': 'دنا-پلاس-اتوماتیک.jpg',
+  'دنا-پلاس-اتوماتیک': 'دنا-پلاس-اتوماتیک.jpg',
+  'پژو-207-موتور-TU3': 'پژو-207-موتور-TU3.jpg',
+  'پژو-207-دنده-ای-هیدرولیک': 'پژو-207-دنده-ای-(هیدرولیک).jpg',
+  'پژو-207-دنده-ای-برقی': 'پژو-207-دنده-ای-(هیدرولیک).jpg',
+  'پژو-207-دنده-ای-پانوراما-رینگ-فولادی': 'پژو-207-دنده-ای-پانوراما-(رینگ-فولادی).jpg',
+  'پژو-207-دنده-ای-پانوراما': 'پژو-207-دنده-ای-پانوراما.jpg',
+  'پژو-207-اتوماتیک': 'پژو-207-اتوماتیک.jpg',
+  'پژو-207-اتوماتیک-پانوراما': 'پژو-207-اتوماتیک-پانوراما.jpg',
+  'راناپلاس': 'راناپلاس.jpg',
+  'تارا-دستی-V1': 'تارا-دستی-V1.jpg',
+  'تارا-اتوماتیک-V4': 'تارا-اتوماتیک-V4.jpg',
+  'تارا-اتوماتیک-توربو': 'تارا-اتوماتیک-(توربو).jpg',
+  'هایما-اس-5-S5-پرو': 'هایما-اس-5-(-S5-)-پرو.jpg',
+  'هایما-اس-7-S7-پرو': 'هایما-اس-7-(-S7-)-پرو.jpg',
+  'هایما-8-اس-8S-': 'هایما-8-اس-(-8S-).jpg',
+  'هایما-7X': 'هایما-7X.jpg',
+  'پیکاپ-فوتون-اتوماتیک': 'پیکاپ-فوتون-(اتوماتیک).jpg',
+  'ری-را': 'ری-را.jpg',
+  'سهند-S': 'سهند-S.jpg',
+  'اطلس-S': 'اطلس-S.jpg',
+  'اطلس-GL': 'اطلس-GL.jpg',
+  'اطلس-G': 'اطلس-G.jpg',
+  'اطلس-اتوماتیک': 'اطلس-اتوماتیک.jpg',
+  'ساینا-S': 'ساینا-S.jpg',
+  'ساینا-دوگانه-سوز': 'ساینا-دوگانه-سوز.jpg',
+  'شاهین-GL': 'شاهین-GL.jpg',
+  'شاهین-G-سانروف': 'شاهین-اتوماتیک-G.jpg',
+  'شاهین-اتوماتیک-G': 'شاهین-اتوماتیک-G.jpg',
+  'شاهین-دنده-پلاس': 'شاهین-دنده-پلاس.webp',
+  'شاهین-اتوماتیک-پلاس': 'شاهین-اتوماتیک-پلاس.jpg',
+  'سایپا-151-GX': 'سایپا-151-GX.jpg',
+  'سایپا-151-GX-پاششی': 'سایپا-151-GX.jpg',
+  'زامیاد-اکستند-EX': 'زامیاد-اکستند-EX-(دوگانه-سوز).jpg',
+  'زامیاد-اکستند-EX-دوگانه-سوز': 'زامیاد-اکستند-EX-(دوگانه-سوز).jpg',
+  'چانگان-CS35-مونتاژ': 'چانگان-CS35-(مونتاژ).jpg',
+  'چانگان-CS55-مونتاژ': 'چانگان-CS55-(مونتاژ).jpg',
+  'سیتروئن-C3-XR': 'سیتروئن-C3-XR.webp',
+  'X77-الیت': 'X77-(الیت).jpg',
+  'آریزو6-Z6-GT': 'آریزو6-(Z6-GT).jpg',
+  'تیگو7-F7-پرومکس-AWD': 'تیگو7-(F7)-پرومکس-AWD.jpg',
+  'تیگو-8-F8-پرومکس': 'تیگو-8-(F8)-پرومکس.jpg',
+  'اکستریم-TX': 'اکستریم-TX.jpg',
+  'اکستریم-QX': 'اکستریم-QX.jpg',
+  'بک-X3': 'بک-X3.jpg',
+  'جک-SR3': 'جک-SR3.jpg',
+  'کی-ام-سی-ایگل': 'کی-ام-سی-ایگل.jpg',
+  'کی-ام-سی-J7': 'کی-ام-سی-J7.jpg',
+  'کی-ام-سی-T8': 'کی-ام-سی-T8.jpg',
+  'کی-ام-سی-T9': 'کی-ام-سی-T9.jpg',
+  'فیدلیتی-پرستیژ-7-نفره': 'فیدلیتی-پرستیژ-(7-نفره).jpg',
+  'هاوال-H9-آپشنال': 'هاوال-H9-(آپشنال).jpg',
+  'هونگچی-H5': 'هونگچی-H5.jpg',
+  'اینوی-هیبریدی': 'اینوی-هیبریدی.jpg'
+};
+
+function getCarImage(car){
+  if(!car || !car.id) return 'assets/cars/x-car.png';
+  const img = CAR_IMAGE_MAP[car.id];
+  return img ? 'assets/cars/' + img : 'assets/cars/x-car.png';
+}
+
+/* ============================================================
+   CARS — کارت خودرو
+============================================================ */
+function carCardHTML(car){
+  const imgSrc = getCarImage(car);
+  
+  const priceMarket = car.priceMarket;
+  const priceFactory = car.priceFactory;
+  const changePercent = car.changePercent != null ? car.changePercent : 0;
+  const up = changePercent >= 0;
+  const hasChange = changePercent !== 0;
+  
+  const statusMap = {
+    'available':    { label: 'موجود',       cls: 'success' },
+    'unavailable':  { label: 'ناموجود',     cls: 'muted' },
+    'coming-soon':  { label: 'به زودی',     cls: 'info' },
+    'discontinued': { label: 'توقف تولید',  cls: 'danger' },
+    'not-selling':  { label: 'توقف فروش',   cls: 'danger' }
+  };
+  const status = statusMap[car.status] || { label: '', cls: '' };
+  
+  const fmt = (v) => v != null 
+    ? formatPrice({ ptype: 'rial', dec: 0 }, v) 
+    : '—';
+  
+  const isPlaceholder = priceMarket == null && priceFactory == null;
+  
+  return `
+    <article class="car-card" data-car-id="${window.U.esc(car.id || '')}" role="button" tabindex="0" aria-label="${window.U.esc(car.name)}">
+      <div class="car-card-image">
+        <img src="${imgSrc}" 
+             alt="${window.U.esc(car.name)}" 
+             loading="lazy"
+             onerror="this.onerror=null;this.src='assets/cars/x-car.png'">
+        <img class="car-card-watermark" 
+             src="assets/logo.png" 
+             alt=""
+             aria-hidden="true">
+        ${status.label ? `<span class="car-card-status ${status.cls}">${status.label}</span>` : ''}
+      </div>
+      
+      <div class="car-card-body">
+        <h3 class="car-card-name">${window.U.esc(car.name || '—')}</h3>
+        <span class="car-card-category">${window.U.esc(car.category || '')}</span>
+        
+        ${!isPlaceholder ? `
+          <div class="car-card-prices">
+            ${priceFactory != null ? `
+              <div class="car-price-row">
+                <span class="car-price-label">
+                  <span data-icon="factory"></span>
+                  کارخانه
+                </span>
+                <strong class="car-price-value factory">${fmt(priceFactory)}</strong>
+              </div>
+            ` : ''}
+            ${priceMarket != null ? `
+              <div class="car-price-row">
+                <span class="car-price-label">
+                  <span data-icon="store"></span>
+                  بازار
+                </span>
+                <strong class="car-price-value market">${fmt(priceMarket)}</strong>
+              </div>
+            ` : ''}
+          </div>
+        ` : `
+          <div class="car-card-empty">قیمتی ثبت نشده</div>
+        `}
+        
+        ${hasChange ? `
+          <div class="car-card-change ${up ? 'up' : 'down'}">
+            ${up ? '▲' : '▼'} ${Math.abs(changePercent).toFixed(2)}٪
+          </div>
+        ` : ''}
+      </div>
+    </article>
+  `;
+}
+
+/* ============================================================
+   CARS — رندر
 ============================================================ */
 let carsFilter = 'all';
 let carsSearch = '';
@@ -375,8 +622,9 @@ async function renderCars(){
   if(!wrap && !listEl) return;
 
   if(!window.API || !window.API.fetchCars){
-    if(wrap) wrap.innerHTML = '<div class="empty"><h3>API خودرو در دسترس نیست</h3></div>';
-    if(listEl) listEl.innerHTML = '<div class="empty"><h3>API خودرو در دسترس نیست</h3></div>';
+    const msg = '<div class="empty"><h3>API خودرو در دسترس نیست</h3></div>';
+    if(wrap) wrap.innerHTML = msg;
+    if(listEl) listEl.innerHTML = msg;
     return;
   }
 
@@ -387,8 +635,9 @@ async function renderCars(){
     }
 
     if(!data || !data.cars || !data.cars.length){
-      if(wrap) wrap.innerHTML = '<div class="empty"><h3>داده‌ای موجود نیست</h3></div>';
-      if(listEl) listEl.innerHTML = '<div class="empty"><h3>داده‌ای موجود نیست</h3></div>';
+      const msg = '<div class="empty"><h3>داده‌ای موجود نیست</h3></div>';
+      if(wrap) wrap.innerHTML = msg;
+      if(listEl) listEl.innerHTML = msg;
       return;
     }
 
@@ -405,15 +654,15 @@ async function renderCars(){
     }
 
     if(wrap){
-      const homeList = list.slice(0, 5);
+      const homeList = list.slice(0, 4);
       wrap.innerHTML = homeList.map(function(c){
-        return carRowHTML(c);
+        return carCardHTML(c);
       }).join('');
     }
 
     if(listEl){
       listEl.innerHTML = list.map(function(c){
-        return carRowHTML(c);
+        return carCardHTML(c);
       }).join('');
     }
 
@@ -426,51 +675,202 @@ async function renderCars(){
     const countEl = $('[data-cars-count]');
     if(countEl) countEl.textContent = formatNumber(list.length, 0) + ' خودرو';
 
+    if(window.Icons && window.Icons.hydrate){
+      if(wrap) window.Icons.hydrate(wrap);
+      if(listEl) window.Icons.hydrate(listEl);
+    }
+
   } catch(err){
     console.error('[Cars]', err);
-    if(wrap) wrap.innerHTML = '<div class="empty"><h3>خطا در بارگذاری خودرو</h3></div>';
-    if(listEl) listEl.innerHTML = '<div class="empty"><h3>خطا در بارگذاری خودرو</h3></div>';
+    const msg = '<div class="empty"><h3>خطا در بارگذاری خودرو</h3></div>';
+    if(wrap) wrap.innerHTML = msg;
+    if(listEl) listEl.innerHTML = msg;
   }
 }
 
-function carRowHTML(car){
-  const priceValue = car.priceMarket != null ? car.priceMarket
-                    : car.priceFactory != null ? car.priceFactory
-                    : null;
-
-  const priceText = priceValue != null
-    ? formatPrice({ ptype: 'rial', dec: 0 }, priceValue)
-    : (car.status === 'coming-soon' ? 'به زودی'
-      : car.status === 'unavailable' ? 'ناموجود'
-      : car.status === 'discontinued' ? 'توقف تولید'
-      : car.status === 'not-selling' ? 'توقف فروش'
-      : '—');
-
-  const changePercent = car.changePercent != null ? car.changePercent : null;
-  const up = (changePercent || 0) >= 0;
-
-  const changeText = changePercent != null && changePercent !== 0
-    ? `<span class="car-row-change ${up ? 'up' : 'down'}">
-         ${up ? '▲' : '▼'} ${Math.abs(changePercent).toFixed(2)}%
-       </span>`
-    : '';
-
-  const isPlaceholder = priceValue == null;
-  const rowClass = car.status === 'unavailable' || car.status === 'discontinued'
-    ? 'car-row is-unavailable'
-    : car.status === 'coming-soon'
-    ? 'car-row is-coming'
-    : 'car-row';
-
-  return `
-    <div class="${rowClass}" data-car-id="${window.U.esc(car.id || '')}">
-      <div class="car-row-name">${window.U.esc(car.name || '—')}</div>
-      <div class="car-row-price ${isPlaceholder ? 'is-placeholder' : ''}">
-        ${priceText}
-        ${changeText}
-      </div>
+/* ============================================================
+   CARS — مودال
+============================================================ */
+/* ============================================================
+   CARS — مودال جزئیات کامل خودرو
+============================================================ */
+function openCarModal(carId){
+  const cars = window.API.getCars && window.API.getCars();
+  if(!cars || !cars.cars){
+    toast('داده خودرو در دسترس نیست', 'warning');
+    return;
+  }
+  
+  const car = cars.cars.find(function(c){ return c.id === carId; });
+  if(!car){
+    toast('خودرو پیدا نشد', 'error');
+    return;
+  }
+  
+  // ═══ دریافت مشخصات از cars_specs_only ═══
+  const specs = window.API.getCarSpecsById ? window.API.getCarSpecsById(carId) : null;
+  
+  const imgSrc = getCarImage(car);
+  const fmt = (v) => v != null 
+    ? formatPrice({ ptype: 'rial', dec: 0 }, v) 
+    : '—';
+  
+  const statusMap = {
+    'available':    'موجود',
+    'unavailable':  'ناموجود',
+    'coming-soon':  'به زودی',
+    'discontinued': 'توقف تولید',
+    'not-selling':  'توقف فروش'
+  };
+  
+  const changePercent = car.changePercent || 0;
+  const up = changePercent >= 0;
+  const changeVal = car.change || 0;
+  const changeValAbs = Math.abs(changeVal);
+  
+  // ═══ آماده‌سازی مشخصات فنی ═══
+  let specsHTML = '';
+  if(specs && specs.specifications && Object.keys(specs.specifications).length > 0){
+    const specRows = Object.entries(specs.specifications)
+      .filter(([k, v]) => k && v && k !== 'مشخصات' && k !== 'کد کلاس خودرو' && k !== 'کد کلاس(های) خودرو')
+      .map(([k, v]) => `
+        <div class="car-spec-row">
+          <span class="car-spec-label">${window.U.esc(k)}</span>
+          <strong class="car-spec-value">${window.U.esc(String(v))}</strong>
+        </div>
+      `).join('');
+    
+    if(specRows){
+      specsHTML = `
+        <details class="car-modal-section" open>
+          <summary class="car-modal-section-head">
+            <span class="car-modal-section-icon" data-icon="settings"></span>
+            <span>مشخصات فنی</span>
+            <span class="car-modal-section-count">${Object.keys(specs.specifications).length}</span>
+          </summary>
+          <div class="car-spec-grid">
+            ${specRows}
+          </div>
+        </details>
+      `;
+    }
+  }
+  
+  // ═══ آماده‌سازی امکانات و تجهیزات ═══
+  let featuresHTML = '';
+  if(specs && specs.features && Object.keys(specs.features).length > 0){
+    const featRows = Object.entries(specs.features)
+      .filter(([k, v]) => k && v && k !== 'مشخصات' && k !== 'تیپ' && v !== 'مقدار')
+      .map(([k, v]) => `
+        <div class="car-feature-row">
+          <div class="car-feature-title">${window.U.esc(k)}</div>
+          <div class="car-feature-value">${window.U.esc(String(v))}</div>
+        </div>
+      `).join('');
+    
+    if(featRows){
+      featuresHTML = `
+        <details class="car-modal-section" open>
+          <summary class="car-modal-section-head">
+            <span class="car-modal-section-icon" data-icon="check"></span>
+            <span>امکانات و تجهیزات</span>
+            <span class="car-modal-section-count">${Object.keys(specs.features).length}</span>
+          </summary>
+          <div class="car-features-list">
+            ${featRows}
+          </div>
+        </details>
+      `;
+    }
+  }
+  
+  // ═══ آماده‌سازی توضیحات ═══
+  let descriptionHTML = '';
+  if(specs && specs.description && Array.isArray(specs.description) && specs.description.length > 0){
+    const descHTML = specs.description
+      .filter(d => d && d.trim())
+      .map(d => `<p class="car-desc-paragraph">${window.U.esc(d)}</p>`)
+      .join('');
+    
+    if(descHTML){
+      descriptionHTML = `
+        <details class="car-modal-section">
+          <summary class="car-modal-section-head">
+            <span class="car-modal-section-icon" data-icon="info"></span>
+            <span>توضیحات تکمیلی</span>
+          </summary>
+          <div class="car-description">
+            ${descHTML}
+          </div>
+        </details>
+      `;
+    }
+  }
+  
+  // ═══ اگر هیچ داده‌ای نیست ═══
+  const hasDetails = specsHTML || featuresHTML || descriptionHTML;
+  const emptySpecsHTML = !hasDetails ? `
+    <div class="car-modal-empty-details">
+      <span data-icon="info"></span>
+      <span>مشخصات تکمیلی برای این خودرو در دسترس نیست</span>
     </div>
-  `;
+  ` : '';
+  
+  // ═══ ساختار مودال ═══
+  openModal(`<span data-icon="car"></span> ${window.U.esc(car.name)}`, `
+    <div class="car-modal-image">
+      <img src="${imgSrc}" 
+           alt="${window.U.esc(car.name)}"
+           onerror="this.onerror=null;this.src='assets/cars/x-car.png'">
+      <img class="car-modal-watermark" src="assets/logo.png" alt="">
+      <span class="car-modal-badge-floating ${car.status || ''}">${statusMap[car.status] || '—'}</span>
+    </div>
+    
+    <div class="car-modal-info">
+      <!-- ═══ هدر: دسته‌بندی ═══ -->
+      <div class="car-modal-badge-row">
+        <span class="car-modal-badge category">${window.U.esc(car.category || '—')}</span>
+        ${specs && specs.title ? `<span class="car-modal-badge title" title="${window.U.esc(specs.title)}">${window.U.esc(specs.title.length > 60 ? specs.title.slice(0, 60) + '...' : specs.title)}</span>` : ''}
+      </div>
+      
+      <!-- ═══ قیمت‌ها ═══ -->
+      <div class="car-modal-prices">
+        ${car.priceFactory != null ? `
+          <div class="car-modal-price-card">
+            <span class="car-modal-price-label">قیمت کارخانه</span>
+            <strong class="car-modal-price-value">${fmt(car.priceFactory)}</strong>
+          </div>
+        ` : ''}
+        ${car.priceMarket != null ? `
+          <div class="car-modal-price-card market">
+            <span class="car-modal-price-label">قیمت بازار</span>
+            <strong class="car-modal-price-value">${fmt(car.priceMarket)}</strong>
+          </div>
+        ` : ''}
+      </div>
+      
+      <!-- ═══ تغییر قیمت ═══ -->
+      ${changePercent !== 0 ? `
+        <div class="car-modal-change ${up ? 'up' : 'down'}">
+          <span>${up ? '▲' : '▼'}</span>
+          <span>${Math.abs(changePercent).toFixed(2)}٪</span>
+          ${changeValAbs > 0 ? `<span style="font-size:11px;opacity:.7">(${up ? '+' : '-'}${formatPrice({ptype:'rial'}, changeValAbs)})</span>` : ''}
+        </div>
+      ` : ''}
+      
+      <!-- ═══ مشخصات فنی + امکانات + توضیحات ═══ -->
+      ${specsHTML}
+      ${featuresHTML}
+      ${descriptionHTML}
+      ${emptySpecsHTML}
+    </div>
+  `);
+  
+  // ═══ hydrate آیکون‌ها ═══
+  const modalBody = $('[data-modal-body]');
+  if(window.Icons && window.Icons.hydrate && modalBody){
+    window.Icons.hydrate(modalBody);
+  }
 }
 
 /* ============================================================
@@ -491,13 +891,12 @@ function renderFavs(){
 }
 
 /* ============================================================
-   HEADER TICKER
+   HEADER TICKER — با رفع باگ برگشت نوار
 ============================================================ */
 function renderHdrTicker(){
   const track = $('[data-hdr-ticker-track]');
   if(!track) return;
 
-  // ═══ محافظت از API و DATA ═══
   if(!window.API || !window.API.getById) return;
   if(!window.DATA || !window.DATA.find) return;
 
@@ -523,9 +922,28 @@ function renderHdrTicker(){
     `;
   }).filter(Boolean).join('');
 
-  track.innerHTML = items + items;
-}
+  if(!items) return;
 
+  // ═══ اگر قبلاً محتوا وجود دارد و یکسان است، دوباره رندر نکن ═══
+  const newContent = items + items;
+  if(track.dataset.content === newContent && track.children.length > 0){
+    return;  // ← جلوگیری از پرش نوار
+  }
+  track.dataset.content = newContent;
+
+  // ═══ استفاده از requestAnimationFrame برای ریست صحیح انیمیشن ═══
+  track.innerHTML = newContent;
+
+  // ═══ ریست انیمیشن با روش صحیح ═══
+  // حذف کلاس انیمیشن، force reflow، سپس افزودن دوباره
+  track.style.animation = 'none';
+  // force reflow
+  void track.offsetWidth;
+  // دوباره فعال کن — در فریم بعدی
+  requestAnimationFrame(() => {
+    track.style.animation = '';
+  });
+}
 /* ============================================================
    CHART PAGE
 ============================================================ */
@@ -549,6 +967,7 @@ async function renderChartPage(){
     const isFav = window.Storage.fav.get().includes(asset.id);
     favEl.classList.toggle('is-fav', isFav);
     favEl.dataset.favToggle = asset.id;
+    favEl.setAttribute('aria-label', isFav ? 'حذف از علاقه‌مندی' : 'افزودن به علاقه‌مندی');
     favEl.textContent = isFav ? '★' : '☆';
   }
 
@@ -589,7 +1008,7 @@ async function renderChartPage(){
 }
 
 /* ============================================================
-   CHART QUESTIONS — ۲۰+ سوال TGJU با استایل جدید
+   CHART QUESTIONS
 ============================================================ */
 async function renderChartQuestions(asset, live){
   const listEl = $('[data-c-questions]');
@@ -614,15 +1033,31 @@ async function renderChartQuestions(asset, live){
   const unitText = asset.unit || '';
 
   let history = [];
+  let historyWarning = false;
   try {
     if(window.API.getHistory){
-      history = await window.API.getHistory(asset, 30);
+      history = await window.API.getHistory(asset, 365);
+      if(!history || history.length < 5){
+        history = await window.API.getHistory(asset, 30);
+        historyWarning = true;
+      }
     }
   } catch(e){
     console.warn('[Questions] history failed:', e.message);
+    historyWarning = true;
   }
 
   const sortedHistory = (history || []).slice().sort((a, b) => a.t - b.t);
+
+  let warningBanner = '';
+  if(historyWarning || sortedHistory.length < 10){
+    warningBanner = `
+      <div class="chart-q-warning" role="alert">
+        <span>⚠️</span>
+        <span>داده تاریخی کامل در دسترس نیست — برخی پاسخ‌ها تقریبی هستند</span>
+      </div>
+    `;
+  }
 
   function findPriceAt(msAgo){
     if(!sortedHistory.length) return null;
@@ -632,7 +1067,10 @@ async function renderChartQuestions(asset, live){
       const diff = Math.abs(p.t - target);
       if(diff < minDiff){ minDiff = diff; closest = p; }
     }
-    if(closest && minDiff < 3 * 24 * 60 * 60 * 1000){
+    const tolerance = msAgo > 90 * 24 * 60 * 60 * 1000
+      ? 30 * 24 * 60 * 60 * 1000
+      : 3 * 24 * 60 * 60 * 1000;
+    if(closest && minDiff < tolerance){
       return closest.p;
     }
     return null;
@@ -658,7 +1096,7 @@ async function renderChartQuestions(asset, live){
       cls = change >= 0 ? 'up' : 'down';
     }
     const changeText = hasChange
-      ? `<span class="chart-q-answer ${cls}">${change >= 0 ? '▲' : '▼'} ${Math.abs(change).toFixed(2)}%</span>`
+      ? `<span class="chart-q-answer ${cls}">${change >= 0 ? '▲' : '▼'} ${Math.abs(change).toFixed(2)}٪</span>`
       : `<span class="chart-q-answer neutral">—</span>`;
 
     return `
@@ -677,20 +1115,6 @@ async function renderChartQuestions(asset, live){
         <div class="chart-q-body">
           <span class="chart-q-question">${label}</span>
           <span class="chart-q-answer neutral">${value || '—'}</span>
-        </div>
-      </div>
-    `;
-  }
-
-  function iconItem(label, value, iconName, iconColor){
-    return `
-      <div class="chart-q-item">
-        <div class="chart-q-body">
-          <span class="chart-q-question">${label}</span>
-          <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
-            <span data-icon="${iconName}" style="width:16px;height:16px;color:${iconColor || 'var(--accent)'};flex-shrink:0"></span>
-            <span class="chart-q-answer neutral">${value || '—'}</span>
-          </div>
         </div>
       </div>
     `;
@@ -736,20 +1160,16 @@ async function renderChartQuestions(asset, live){
   }
 
   if(low != null){
-    questions.push(iconItem(
-      `پایین‌ترین قیمتی که در بازار امروز برای ${asset.name} به ثبت رسیده چقدر بوده است؟`,
-      formatPrice(asset, low) + u,
-      'arrowDown',
-      'var(--down)'
+    questions.push(valueItem(
+      `پایین‌ترین قیمت امروز ${asset.name} چقدر بوده است؟`,
+      formatPrice(asset, low) + u
     ));
   }
 
   if(high != null){
-    questions.push(iconItem(
-      `بالاترین قیمتی که در بازار امروز برای ${asset.name} به ثبت رسیده چقدر بوده است؟`,
-      formatPrice(asset, high) + u,
-      'arrowUp',
-      'var(--up)'
+    questions.push(valueItem(
+      `بالاترین قیمت امروز ${asset.name} چقدر بوده است؟`,
+      formatPrice(asset, high) + u
     ));
   }
 
@@ -785,10 +1205,7 @@ async function renderChartQuestions(asset, live){
         <div class="chart-q-item">
           <div class="chart-q-body">
             <span class="chart-q-question">بالاترین قیمت ${asset.name} تاکنون چقدر و در چه تاریخی بوده است؟</span>
-            <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
-              <span data-icon="trendingUp" style="width:16px;height:16px;color:#eab308;flex-shrink:0"></span>
-              <span class="chart-q-answer neutral">${formatPrice(asset, highest.p)}${u}</span>
-            </div>
+            <span class="chart-q-answer neutral">${formatPrice(asset, highest.p)}${u}</span>
             <span class="chart-q-date-tiny">${dateStr}</span>
           </div>
         </div>
@@ -838,95 +1255,7 @@ async function renderChartQuestions(asset, live){
     ));
   }
 
-  const comparisons = [
-    { id: 'coin',   name: 'سکه امامی' },
-    { id: 'dollar', name: 'دلار' },
-    { id: 'btc',    name: 'بیت‌کوین' },
-    { id: 'eth',    name: 'اتریوم' },
-    { id: 'sol',    name: 'سولانا' },
-    { id: 'gold18', name: 'طلای ۱۸ عیار' }
-  ];
-
-  for(const c of comparisons){
-    if(asset.id === c.id) continue;
-    if(questions.length >= 25) break;
-
-    const comp = await compareWith(c.id, monthAgo, current, priceMonthAgo);
-    if(comp){
-      questions.push(comparisonItem(
-        `آیا در یک ماه اخیر، سرمایه‌گذاری در ${asset.name} نسبت به ${c.name} سودمندتر بوده یا خیر؟`,
-        comp
-      ));
-    }
-  }
-
-  listEl.innerHTML = questions.join('');
-
-  if(window.Icons && window.Icons.hydrate){
-    window.Icons.hydrate(listEl);
-  }
-}
-
-/* ============================================================
-   COMPARE WITH
-============================================================ */
-async function compareWith(assetId, msAgo, myCurrent, myPast){
-  try {
-    if(myPast == null) return null;
-
-    const a = window.DATA.find(assetId);
-    if(!a) return null;
-
-    const hist = await window.API.getHistory(a, 30);
-    if(!hist || hist.length < 2) return null;
-
-    const sorted = hist.slice().sort((x, y) => x.t - y.t);
-    const target = Date.now() - msAgo;
-    let closest = null, minDiff = Infinity;
-    for(const p of sorted){
-      const diff = Math.abs(p.t - target);
-      if(diff < minDiff){ minDiff = diff; closest = p; }
-    }
-
-    if(!closest || !closest.p) return null;
-
-    const last = sorted[sorted.length - 1].p;
-    const otherPast = closest.p;
-
-    const myPct = ((myCurrent - myPast) / myPast) * 100;
-    const otherPct = ((last - otherPast) / otherPast) * 100;
-
-    return {
-      name: a.short || a.name,
-      myPct: myPct,
-      otherPct: otherPct,
-      better: myPct > otherPct
-    };
-  } catch(e){
-    return null;
-  }
-}
-
-function comparisonItem(label, comp){
-  const cls = comp.better ? 'up' : 'down';
-  const iconName = comp.better ? 'trendingUp' : 'trendingDown';
-  const iconColor = comp.better ? 'var(--up)' : 'var(--down)';
-  const text = comp.better ? 'بله' : 'خیر';
-
-  return `
-    <div class="chart-q-item">
-      <div class="chart-q-body">
-        <span class="chart-q-question">${label}</span>
-        <div style="display:flex;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap">
-          <span data-icon="${iconName}" style="width:16px;height:16px;color:${iconColor};flex-shrink:0"></span>
-          <span class="chart-q-answer ${cls}">${text}</span>
-          <span style="font-size:11px;color:var(--text-muted)">
-            (شما: ${comp.myPct.toFixed(2)}% / ${comp.name}: ${comp.otherPct.toFixed(2)}%)
-          </span>
-        </div>
-      </div>
-    </div>
-  `;
+  listEl.innerHTML = warningBanner + questions.join('');
 }
 
 /* ============================================================
@@ -1018,7 +1347,7 @@ function renderBubbleAnalysis(asset, live){
 }
 
 /* ============================================================
-   نمودار — رسم با داده‌های تاریخی کامل
+   نمودار
 ============================================================ */
 async function drawChartAsync(canvas, asset){
   try {
@@ -1152,7 +1481,7 @@ function renderCompare(){
 async function renderHomeChart(){
   const c = $('[data-home-chart]');
   if(!c) return;
-  const asset = window.DATA.find('gold18');
+  const asset = window.DATA.find(homeChartId) || window.DATA.find('gold18');
   if(!asset) return;
   await drawChartAsync(c, asset);
 }
@@ -1160,11 +1489,25 @@ async function renderHomeChart(){
 /* ============================================================
    ROUTER
 ============================================================ */
+let _goRetries = 0;
+const GO_MAX_RETRIES = 50;
+
 function go(page){
   if(!window.DATA || !window.DATA.ASSETS || !window.DATA.ASSETS.length){
+    if(_goRetries >= GO_MAX_RETRIES){
+      const el = $('.page.is-active') || document.body;
+      const errBox = document.createElement('div');
+      errBox.className = 'empty';
+      errBox.style.padding = '40px 20px';
+      errBox.innerHTML = '<h3>خطا در بارگذاری داده‌ها</h3><p style="margin-top:8px;color:var(--muted)">لطفاً اتصال اینترنت را بررسی و صفحه را بازخوانی کنید.</p>';
+      if(el && el.appendChild) el.appendChild(errBox);
+      return;
+    }
+    _goRetries++;
     setTimeout(function(){ go(page); }, 100);
     return;
   }
+  _goRetries = 0;
 
   if(!PAGES.includes(page)) page = 'home';
   currentPage = page;
@@ -1190,38 +1533,22 @@ function go(page){
       renderMostUsed();
       renderCats();
       renderTools();
-      renderHomeChart().catch(function(){});
       renderCars().catch(function(){});
     }
-    else if(page === 'markets'){
-      renderMarkets();
-    }
+    else if(page === 'markets'){ renderMarkets(); }
     else if(page === 'chart'){
       if(!activeChartId && window.DATA.ASSETS.length){
         activeChartId = window.DATA.ASSETS[0].id;
       }
       renderChartPage().catch(function(){});
     }
-    else if(page === 'compare'){
-      renderCompare();
-    }
-    else if(page === 'favorites'){
-      renderFavs();
-    }
-    else if(page === 'cars'){
-      renderCars().catch(function(){});
-    }
+    else if(page === 'compare'){ renderCompare(); }
+    else if(page === 'favorites'){ renderFavs(); }
+    else if(page === 'cars'){ renderCars().catch(function(){}); }
 
     renderHdrTicker();
   } catch(err){
     console.error('[UI.go] render error on page "' + page + '":', err);
-    if(!go._retried){
-      go._retried = true;
-      setTimeout(function(){
-        go._retried = false;
-        go(page);
-      }, 200);
-    }
   }
 }
 
@@ -1244,31 +1571,71 @@ function closeModal(){
   if(m) m.classList.remove('is-open');
 }
 
-let lastToastMsg = '';
-let lastToastTime = 0;
+const _toastHistory = new Map();
+let _lastToastText = '';
+let _lastToastTime = 0;
 
-function toast(msg, type = ''){
+function toast(msg, type = '', id = null){
   const t = $('[data-toast]');
   if(!t) return;
 
   const now = Date.now();
-  if(msg === lastToastMsg && (now - lastToastTime) < 30000){
-    return;
+
+  if(id && _toastHistory.has(id)){
+    const last = _toastHistory.get(id);
+    if(now - last < 60000) return;
   }
-  lastToastMsg = msg;
-  lastToastTime = now;
+  if(!id && msg === _lastToastText && (now - _lastToastTime) < 3000) return;
+
+  if(id) _toastHistory.set(id, now);
+  _lastToastText = msg;
+  _lastToastTime = now;
 
   t.textContent = msg;
   t.className = 'toast is-show ' + type;
   clearTimeout(t._t);
   t._t = setTimeout(() => {
     t.classList.remove('is-show');
-    lastToastMsg = '';
+    if(!id) _lastToastText = '';
   }, 2400);
 }
 
 /* ============================================================
-   TOOLS — محاسبه‌گرها
+   HELPERS — اعتبارسنجی
+============================================================ */
+function setFieldError(input, message){
+  if(!input) return;
+  input.classList.add('is-error');
+  input.setAttribute('aria-invalid', 'true');
+  let err = input.parentElement?.querySelector('.field-error');
+  if(!err){
+    err = document.createElement('small');
+    err.className = 'field-error';
+    input.parentElement?.appendChild(err);
+  }
+  err.textContent = message;
+}
+
+function clearFieldError(input){
+  if(!input) return;
+  input.classList.remove('is-error');
+  input.removeAttribute('aria-invalid');
+  const err = input.parentElement?.querySelector('.field-error');
+  if(err) err.remove();
+}
+
+function validatePositive(input, fieldName){
+  const v = parseFormattedNumber(input?.value);
+  if(v == null || v <= 0){
+    setFieldError(input, fieldName + ' باید عددی مثبت باشد');
+    return null;
+  }
+  clearFieldError(input);
+  return v;
+}
+
+/* ============================================================
+   TOOLS
 ============================================================ */
 function money(v){ return formatPrice({ptype:'rial'}, v); }
 
@@ -1280,11 +1647,11 @@ function toolGold(){
     <div class="form-grid">
       <div class="form-group">
         <label>وزن (گرم)</label>
-        <input class="input" type="text" inputmode="decimal" value="10" data-money data-gw>
+        <input class="input" type="text" inputmode="decimal" value="10" data-money data-gw aria-label="وزن به گرم">
       </div>
       <div class="form-group">
         <label>عیار</label>
-        <select class="select" data-gk>
+        <select class="select" data-gk aria-label="عیار">
           <option value="18" selected>۱۸</option>
           <option value="24">۲۴</option>
           <option value="22">۲۲</option>
@@ -1294,15 +1661,15 @@ function toolGold(){
       </div>
       <div class="form-group">
         <label>اجرت ساخت (%)</label>
-        <input class="input" type="text" inputmode="decimal" value="7" data-money data-gwg>
+        <input class="input" type="text" inputmode="decimal" value="7" data-money data-gwg aria-label="اجرت ساخت">
       </div>
       <div class="form-group">
         <label>سود فروشنده (%)</label>
-        <input class="input" type="text" inputmode="decimal" value="5" data-money data-gp>
+        <input class="input" type="text" inputmode="decimal" value="5" data-money data-gp aria-label="سود فروشنده">
       </div>
       <div class="form-group" style="grid-column:1/-1">
         <label>مالیات (%)</label>
-        <input class="input" type="text" inputmode="decimal" value="9" data-money data-gt>
+        <input class="input" type="text" inputmode="decimal" value="9" data-money data-gt aria-label="مالیات">
       </div>
     </div>
     <div class="result-box" data-gold-out></div>
@@ -1343,13 +1710,13 @@ function toolCoin(){
   openModal(`<span data-icon="coins"></span> محاسبه‌گر سکه`, `
     <div class="form-group">
       <label>نوع سکه</label>
-      <select class="select" data-ct>
+      <select class="select" data-ct aria-label="نوع سکه">
         ${sel.map(a => `<option value="${a.id}">${a.name}</option>`).join('')}
       </select>
     </div>
     <div class="form-group">
       <label>تعداد</label>
-      <input class="input" type="text" inputmode="decimal" value="1" data-money data-cc>
+      <input class="input" type="text" inputmode="decimal" value="1" data-money data-cc aria-label="تعداد">
     </div>
     <div class="result-box" data-coin-out></div>
   `);
@@ -1385,11 +1752,11 @@ function toolOunce(){
     <div class="form-grid">
       <div class="form-group">
         <label>تعداد انس</label>
-        <input class="input" type="text" inputmode="decimal" value="1" data-money data-oc>
+        <input class="input" type="text" inputmode="decimal" value="1" data-money data-oc aria-label="تعداد انس">
       </div>
       <div class="form-group">
         <label>عیار</label>
-        <select class="select" data-ok>
+        <select class="select" data-ok aria-label="عیار">
           <option value="24">۲۴ عیار</option>
           <option value="18" selected>۱۸ عیار</option>
           <option value="21">۲۱ عیار</option>
@@ -1432,7 +1799,7 @@ function toolSilver(){
   openModal(`<span data-icon="diamond"></span> محاسبه‌گر نقره`, `
     <div class="form-group">
       <label>وزن (گرم)</label>
-      <input class="input" type="text" inputmode="decimal" value="100" data-money data-sv>
+      <input class="input" type="text" inputmode="decimal" value="100" data-money data-sv aria-label="وزن نقره">
     </div>
     <div class="result-box" data-silver-out></div>
   `);
@@ -1461,12 +1828,12 @@ function toolConv(){
   openModal(`<span data-icon="exchange"></span> مبدل ارز`, `
     <div class="form-group">
       <label>مقدار (${unitLabel()})</label>
-      <input class="input" type="text" inputmode="decimal" value="1000000" data-money data-va>
+      <input class="input" type="text" inputmode="decimal" value="1000000" data-money data-va aria-label="مقدار">
     </div>
     <div style="display:grid;grid-template-columns:1fr 48px 1fr;gap:10px;align-items:center">
-      <select class="select" data-vf>${opts}</select>
-      <button type="button" class="btn btn-primary" data-vs style="padding:10px;width:48px;height:48px;border-radius:14px">⇄</button>
-      <select class="select" data-vt>${opts}</select>
+      <select class="select" data-vf aria-label="از واحد">${opts}</select>
+      <button type="button" class="btn btn-primary" data-vs style="padding:10px;width:48px;height:48px;border-radius:14px" aria-label="جابجایی">⇄</button>
+      <select class="select" data-vt aria-label="به واحد">${opts}</select>
     </div>
     <div class="result-box" data-conv-out></div>
   `);
@@ -1517,12 +1884,12 @@ function toolCryptoConv(){
   openModal(`<span data-icon="bitcoin"></span> مبدل کریپتو`, `
     <div class="form-group">
       <label>مقدار</label>
-      <input class="input" type="text" inputmode="decimal" value="1" data-money data-cca>
+      <input class="input" type="text" inputmode="decimal" value="1" data-money data-cca aria-label="مقدار">
     </div>
     <div style="display:grid;grid-template-columns:1fr 48px 1fr;gap:10px;align-items:center">
-      <select class="select" data-ccf>${opts}</select>
-      <button type="button" class="btn btn-primary" data-ccs style="padding:10px;width:48px;height:48px;border-radius:14px">⇄</button>
-      <select class="select" data-cct>${opts}</select>
+      <select class="select" data-ccf aria-label="از کریپتو">${opts}</select>
+      <button type="button" class="btn btn-primary" data-ccs style="padding:10px;width:48px;height:48px;border-radius:14px" aria-label="جابجایی">⇄</button>
+      <select class="select" data-cct aria-label="به کریپتو">${opts}</select>
     </div>
     <div class="result-box" data-crypto-out></div>
   `);
@@ -1570,14 +1937,11 @@ function toolCryptoConv(){
   calc();
 }
 
-/* ============================================================
-   مبدل واحد
-============================================================ */
 function toolUnitConv(){
-  openModal(`<span data-icon="swap"></span> مبدل واحد`, `
+  openModal(`<span data-icon="swap"></span> مبدل واحد و حجم`, `
     <div class="form-group">
       <label>دسته</label>
-      <select class="select" data-ucat>
+      <select class="select" data-ucat aria-label="دسته واحد">
         <option value="weight">وزن</option>
         <option value="length">طول</option>
         <option value="volume">حجم</option>
@@ -1586,12 +1950,12 @@ function toolUnitConv(){
     </div>
     <div class="form-group">
       <label>مقدار</label>
-      <input class="input" type="text" inputmode="decimal" value="1" data-money data-ua>
+      <input class="input" type="text" inputmode="decimal" value="1" data-money data-ua aria-label="مقدار">
     </div>
     <div style="display:grid;grid-template-columns:1fr 48px 1fr;gap:10px;align-items:center">
-      <select class="select" data-uf></select>
-      <button type="button" class="btn btn-primary" data-us style="padding:10px;width:48px;height:48px;border-radius:14px">⇄</button>
-      <select class="select" data-ut></select>
+      <select class="select" data-uf aria-label="از واحد"></select>
+      <button type="button" class="btn btn-primary" data-us style="padding:10px;width:48px;height:48px;border-radius:14px" aria-label="جابجایی">⇄</button>
+      <select class="select" data-ut aria-label="به واحد"></select>
     </div>
     <div class="result-box" data-unit-out></div>
   `);
@@ -1667,19 +2031,10 @@ function toolUnitConv(){
     fSel.innerHTML = html;
     tSel.innerHTML = html;
 
-    if(catKey === 'weight'){
-      fSel.value = 'gram';
-      tSel.value = 'mesghal';
-    } else if(catKey === 'length'){
-      fSel.value = 'meter';
-      tSel.value = 'foot';
-    } else if(catKey === 'volume'){
-      fSel.value = 'liter';
-      tSel.value = 'gallon_us';
-    } else if(catKey === 'area'){
-      fSel.value = 'm2';
-      tSel.value = 'ft2';
-    }
+    if(catKey === 'weight'){ fSel.value = 'gram'; tSel.value = 'mesghal'; }
+    else if(catKey === 'length'){ fSel.value = 'meter'; tSel.value = 'foot'; }
+    else if(catKey === 'volume'){ fSel.value = 'liter'; tSel.value = 'gallon_us'; }
+    else if(catKey === 'area'){ fSel.value = 'm2'; tSel.value = 'ft2'; }
     calc();
   }
 
@@ -1721,118 +2076,22 @@ function toolUnitConv(){
   updateSelects();
 }
 
-/* ============================================================
-   مبدل حجم اختصاصی
-============================================================ */
-function toolVolumeConv(){
-  openModal(`<span data-icon="swap"></span> مبدل حجم`, `
-    <div class="form-group">
-      <label>مقدار</label>
-      <input class="input" type="text" inputmode="decimal" value="1" data-money data-vola>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 48px 1fr;gap:10px;align-items:center">
-      <select class="select" data-volf>
-        <option value="liter">لیتر (L)</option>
-        <option value="ml">میلی‌لیتر (mL)</option>
-        <option value="m3">متر مکعب (m³)</option>
-        <option value="gallon_us">گالن آمریکایی</option>
-        <option value="gallon_uk">گالن انگلیسی</option>
-        <option value="barrel_oil">بشکه نفت</option>
-        <option value="barrel">بشکه آمریکایی</option>
-        <option value="cubic_inch">اینچ مکعب</option>
-        <option value="cubic_ft">فوت مکعب</option>
-      </select>
-      <button type="button" class="btn btn-primary" data-vols style="padding:10px;width:48px;height:48px;border-radius:14px">⇄</button>
-      <select class="select" data-volt>
-        <option value="liter" selected>لیتر (L)</option>
-        <option value="ml">میلی‌لیتر (mL)</option>
-        <option value="m3">متر مکعب (m³)</option>
-        <option value="gallon_us">گالن آمریکایی</option>
-        <option value="gallon_uk">گالن انگلیسی</option>
-        <option value="barrel_oil">بشکه نفت</option>
-        <option value="barrel">بشکه آمریکایی</option>
-        <option value="cubic_inch">اینچ مکعب</option>
-        <option value="cubic_ft">فوت مکعب</option>
-      </select>
-    </div>
-    <div class="result-box" data-vol-out></div>
-  `);
-
-  const toLiter = {
-    liter: 1,
-    ml: 0.001,
-    m3: 1000,
-    gallon_us: 3.785411784,
-    gallon_uk: 4.54609,
-    barrel_oil: 158.987294928,
-    barrel: 119.240471196,
-    cubic_inch: 0.016387064,
-    cubic_ft: 28.316846592
-  };
-
-  const labels = {
-    liter: 'لیتر',
-    ml: 'میلی‌لیتر',
-    m3: 'متر مکعب',
-    gallon_us: 'گالن آمریکایی',
-    gallon_uk: 'گالن انگلیسی',
-    barrel_oil: 'بشکه نفت',
-    barrel: 'بشکه',
-    cubic_inch: 'اینچ مکعب',
-    cubic_ft: 'فوت مکعب'
-  };
-
-  function calc(){
-    const amt = parseFormattedNumber($('[data-vola]')?.value) || 0;
-    const from = $('[data-volf]')?.value;
-    const to = $('[data-volt]')?.value;
-    if(!from || !to) return;
-
-    const inLiter = amt * toLiter[from];
-    const res = inLiter / toLiter[to];
-
-    const out = $('[data-vol-out]');
-    if(out) out.innerHTML = `
-      <div class="result-row"><span>مقدار ورودی</span><strong>${formatNumber(amt, 4)} ${labels[from]}</strong></div>
-      <div class="result-row"><span>معادل لیتر</span><strong>${formatNumber(inLiter, 4)} لیتر</strong></div>
-      <div class="result-row result-total"><span>معادل</span><strong>${formatNumber(res, 4)} ${labels[to]}</strong></div>
-    `;
-  }
-
-  $$('[data-vola],[data-volf],[data-volt]').forEach(el => {
-    el.addEventListener('input', calc);
-    el.addEventListener('change', calc);
-  });
-  $('[data-vols]')?.addEventListener('click', e => {
-    e.preventDefault();
-    e.stopPropagation();
-    const a = $('[data-volf]').value;
-    $('[data-volf]').value = $('[data-volt]').value;
-    $('[data-volt]').value = a;
-    calc();
-  });
-  calc();
-}
-
-/* ============================================================
-   PORTFOLIO
-============================================================ */
 function toolPortfolio(){
   openModal(`<span data-icon="briefcase"></span> پرتفوی من`, `
     <div class="form-group">
       <label>نماد</label>
-      <select class="select" data-pa>
+      <select class="select" data-pa aria-label="نماد">
         ${window.DATA.ASSETS.map(a => `<option value="${a.id}">${a.name}</option>`).join('')}
       </select>
     </div>
     <div class="form-grid">
       <div class="form-group">
         <label>مقدار</label>
-        <input class="input" type="text" inputmode="decimal" placeholder="۱۰" data-money data-pq>
+        <input class="input" type="text" inputmode="decimal" placeholder="۱۰" data-money data-pq aria-label="مقدار">
       </div>
       <div class="form-group">
         <label>قیمت خرید (${unitLabel()})</label>
-        <input class="input" type="text" inputmode="decimal" placeholder="خودکار" data-money data-pp>
+        <input class="input" type="text" inputmode="decimal" placeholder="خودکار" data-money data-pp aria-label="قیمت خرید">
       </div>
     </div>
     <button type="button" class="btn btn-primary btn-block" data-padd>
@@ -1878,6 +2137,7 @@ function toolPortfolio(){
               </small>
             </div>
             <button type="button" class="icon-btn" data-pf-del2="${item.ts}"
+              title="حذف" aria-label="حذف دارایی"
               style="width:28px;height:28px;font-size:14px;color:var(--muted)">
               ${window.Icons.get('trash')}
             </button>
@@ -1902,12 +2162,14 @@ function toolPortfolio(){
     e.preventDefault();
     e.stopPropagation();
     const id = $('[data-pa]')?.value;
-    const qty = parseFormattedNumber($('[data-pq]')?.value);
-    const ppUser = parseFormattedNumber($('[data-pp]')?.value);
-    if(!id || !qty || qty <= 0){ toast('مقدار را وارد کنید', 'error'); return; }
+    const pqEl = $('[data-pq]');
+    const ppEl = $('[data-pp]');
+    const qty = validatePositive(pqEl, 'مقدار');
+    if(!id || qty == null) return;
 
+    const ppUser = parseFormattedNumber(ppEl?.value);
     let buyBase;
-    if(ppUser && !isNaN(ppUser)){
+    if(ppUser && !isNaN(ppUser) && ppUser > 0){
       buyBase = userToBase(ppUser);
     } else {
       const l = window.API.getById(id);
@@ -1920,37 +2182,38 @@ function toolPortfolio(){
     window.Storage.pf.save(list);
     render();
     renderBankCard();
-    const pq = $('[data-pq]');
-    const ppEl = $('[data-pp]');
-    if(pq) pq.value = '';
+    if(pqEl) pqEl.value = '';
     if(ppEl) ppEl.value = '';
+    clearFieldError(pqEl);
+    clearFieldError(ppEl);
     toast('اضافه شد ✓', 'success');
   });
 
   render();
 }
 
-/* ============================================================
-   ALERTS
-============================================================ */
 function toolAlerts(){
   openModal(`<span data-icon="bell"></span> هشدار قیمت`, `
     <div class="form-group">
       <label>نماد</label>
-      <select class="select" data-al-a>
+      <select class="select" data-al-a aria-label="نماد">
         ${window.DATA.ASSETS.map(a => `<option value="${a.id}">${a.name}</option>`).join('')}
       </select>
     </div>
     <div class="form-grid">
       <div class="form-group">
         <label>بالاتر از (${unitLabel()})</label>
-        <input class="input" type="text" inputmode="decimal" data-money data-al-up>
+        <input class="input" type="text" inputmode="decimal" data-money data-al-up aria-label="بالاتر از">
       </div>
       <div class="form-group">
         <label>پایین‌تر از (${unitLabel()})</label>
-        <input class="input" type="text" inputmode="decimal" data-money data-al-dn>
+        <input class="input" type="text" inputmode="decimal" data-money data-al-dn aria-label="پایین‌تر از">
       </div>
     </div>
+    <label style="display:flex;align-items:center;gap:8px;margin:12px 0;font-size:13px;color:var(--muted)">
+      <input type="checkbox" data-al-repeat checked>
+      هشدار تکرارشونده (پس از فعال شدن حفظ شود)
+    </label>
     <button type="button" class="btn btn-primary btn-block" data-al-save>
       <span data-icon="plus"></span>
       ذخیره هشدار
@@ -1971,10 +2234,14 @@ function toolAlerts(){
       const parts = [];
       if(al.up) parts.push('بالاتر از ' + money(al.up));
       if(al.dn) parts.push('پایین‌تر از ' + money(al.dn));
+      const repeatBadge = al.repeat !== false
+        ? '<span style="font-size:10px;background:var(--accent-soft);color:var(--accent);padding:2px 6px;border-radius:6px;margin-right:6px">تکرارشونده</span>'
+        : '';
       return `
         <div class="result-row" style="padding:10px;border-radius:10px;background:var(--card-2);margin-bottom:6px">
-          <span>${window.U.esc(a?.name || '—')} — ${parts.join(' / ')}</span>
+          <span>${window.U.esc(a?.name || '—')} — ${parts.join(' / ')} ${repeatBadge}</span>
           <button type="button" class="icon-btn" data-al-del="${al.ts}"
+            title="حذف" aria-label="حذف هشدار"
             style="font-size:14px;width:28px;height:28px;color:var(--muted)">
             ${window.Icons.get('trash')}
           </button>
@@ -2002,8 +2269,9 @@ function toolAlerts(){
     if(!id || (upUser == null && dnUser == null)){ toast('حداقل یک شرط وارد کنید', 'error'); return; }
     const up = upUser != null ? userToBase(upUser) : null;
     const dn = dnUser != null ? userToBase(dnUser) : null;
+    const repeat = $('[data-al-repeat]')?.checked !== false;
     const list = window.Storage.alerts.get();
-    list.push({ id, up, dn, ts: Date.now() });
+    list.push({ id, up, dn, repeat, ts: Date.now() });
     window.Storage.alerts.save(list);
     render();
     toast('ذخیره شد ✓', 'success');
@@ -2012,13 +2280,10 @@ function toolAlerts(){
   render();
 }
 
-/* ============================================================
-   NOTES
-============================================================ */
 function toolNotes(){
   const notes = window.Storage.notes.get() || '';
   openModal(`<span data-icon="note"></span> یادداشت‌ها`, `
-    <textarea class="textarea" data-notes placeholder="یادداشت خود را بنویسید..." style="min-height:220px">${notes}</textarea>
+    <textarea class="textarea" data-notes placeholder="یادداشت خود را بنویسید..." style="min-height:220px" aria-label="یادداشت">${notes}</textarea>
     <button type="button" class="btn btn-primary btn-block" data-notes-save>
       <span data-icon="check"></span>
       ذخیره
@@ -2029,29 +2294,26 @@ function toolNotes(){
     e.stopPropagation();
     const val = $('[data-notes]')?.value || '';
     window.Storage.notes.save(val);
-    toast('ذخیره شد ✓', 'success');
     closeModal();
+    toast('ذخیره شد ✓', 'success');
   });
 }
 
-/* ============================================================
-   PROFIT
-============================================================ */
 function toolProfit(){
   const opts = window.DATA.ASSETS.slice(0, 50).map(a => `<option value="${a.id}">${a.name}</option>`).join('');
   openModal(`<span data-icon="trendingUp"></span> محاسبه سود / زیان`, `
     <div class="form-group">
       <label>دارایی</label>
-      <select class="select" data-pr-a>${opts}</select>
+      <select class="select" data-pr-a aria-label="دارایی">${opts}</select>
     </div>
     <div class="form-grid">
       <div class="form-group">
         <label>قیمت خرید (${unitLabel()})</label>
-        <input class="input" type="text" inputmode="decimal" placeholder="قیمت واحد" data-money data-pr-buy>
+        <input class="input" type="text" inputmode="decimal" placeholder="قیمت واحد" data-money data-pr-buy aria-label="قیمت خرید">
       </div>
       <div class="form-group">
         <label>مقدار</label>
-        <input class="input" type="text" inputmode="decimal" value="1" data-money data-pr-qty>
+        <input class="input" type="text" inputmode="decimal" value="1" data-money data-pr-qty aria-label="مقدار">
       </div>
     </div>
     <div class="result-box" data-profit-out></div>
@@ -2072,7 +2334,7 @@ function toolProfit(){
     const nowVal = l.price * qty;
     const buyVal = buyBase * qty;
     const pl = nowVal - buyVal;
-    const pct = (pl / buyVal) * 100;
+    const pct = buyVal > 0 ? (pl / buyVal) * 100 : 0;
     const up = pl >= 0;
 
     if(out) out.innerHTML = `
@@ -2093,9 +2355,6 @@ function toolProfit(){
   calc();
 }
 
-/* ============================================================
-   ZAKAT
-============================================================ */
 function toolZakat(){
   const gold = window.API.getById('gold18');
   if(!gold || gold.price == null){ toast('در حال دریافت...', 'warning'); return; }
@@ -2104,11 +2363,11 @@ function toolZakat(){
     <div class="form-grid">
       <div class="form-group">
         <label>وزن طلا (گرم)</label>
-        <input class="input" type="text" inputmode="decimal" value="100" data-money data-zw>
+        <input class="input" type="text" inputmode="decimal" value="100" data-money data-zw aria-label="وزن طلا">
       </div>
       <div class="form-group">
         <label>عیار</label>
-        <select class="select" data-zk>
+        <select class="select" data-zk aria-label="عیار">
           <option value="18" selected>۱۸ عیار</option>
           <option value="24">۲۴ عیار</option>
           <option value="21">۲۱ عیار</option>
@@ -2155,15 +2414,12 @@ function toolZakat(){
   calc();
 }
 
-/* ============================================================
-   AVG BUY
-============================================================ */
 function toolAvgBuy(){
   const opts = window.DATA.ASSETS.slice(0, 50).map(a => `<option value="${a.id}">${a.name}</option>`).join('');
   openModal(`<span data-icon="barChart"></span> میانگین خرید`, `
     <div class="form-group">
       <label>دارایی</label>
-      <select class="select" data-avg-a>${opts}</select>
+      <select class="select" data-avg-a aria-label="دارایی">${opts}</select>
     </div>
     <div id="avg-rows"></div>
     <button type="button" class="btn btn-ghost btn-block" data-avg-add style="margin-top:8px">
@@ -2180,9 +2436,9 @@ function toolAvgBuy(){
     row.setAttribute('data-avg-row', '');
     row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 40px;gap:8px;margin-bottom:8px';
     row.innerHTML = `
-      <input class="input" type="text" inputmode="decimal" placeholder="قیمت (${unitLabel()})" data-money data-avg-p>
-      <input class="input" type="text" inputmode="decimal" placeholder="مقدار" data-money data-avg-q>
-      <button type="button" class="btn btn-danger" data-avg-del style="padding:0;width:40px;font-size:18px">×</button>
+      <input class="input" type="text" inputmode="decimal" placeholder="قیمت (${unitLabel()})" data-money data-avg-p aria-label="قیمت">
+      <input class="input" type="text" inputmode="decimal" placeholder="مقدار" data-money data-avg-q aria-label="مقدار">
+      <button type="button" class="btn btn-danger" data-avg-del style="padding:0;width:40px;font-size:18px" title="حذف ردیف" aria-label="حذف ردیف">×</button>
     `;
     wrap.appendChild(row);
     row.querySelectorAll('input').forEach(i => i.addEventListener('input', calc));
@@ -2243,9 +2499,6 @@ function toolAvgBuy(){
   addRow();
 }
 
-/* ============================================================
-   OPEN TOOL
-============================================================ */
 function openTool(tool){
   if(tool === 'gold') toolGold();
   else if(tool === 'coin') toolCoin();
@@ -2254,7 +2507,7 @@ function openTool(tool){
   else if(tool === 'conv') toolConv();
   else if(tool === 'crypto-conv') toolCryptoConv();
   else if(tool === 'unit-conv') toolUnitConv();
-  else if(tool === 'volume-conv') toolVolumeConv();
+  else if(tool === 'volume-conv') toolUnitConv();
   else if(tool === 'portfolio') toolPortfolio();
   else if(tool === 'alerts') toolAlerts();
   else if(tool === 'notes') toolNotes();
@@ -2282,13 +2535,6 @@ function openTool(tool){
   }
 }
 
-/* ============================================================
-   SEARCH — جستجوی ترکیبی نمادها + خودروها
-============================================================ */
-let searchIdx = -1;
-let searchResults = [];
-let searchKind = 'symbol'; // 'symbol' | 'car'
-
 function doSearch(query){
   const res = $('[data-search-results]');
   if(!res) return;
@@ -2298,19 +2544,15 @@ function doSearch(query){
   if(!q || q.length < 2){
     res.hidden = true;
     res.innerHTML = '';
-    searchResults = [];
-    searchIdx = -1;
     return;
   }
 
-  // ═══ جستجو در نمادها ═══
   const symbolList = window.DATA.ASSETS.filter(a =>
     a.name.toLowerCase().includes(q) ||
     a.code.toLowerCase().includes(q) ||
     a.id.toLowerCase().includes(q)
   ).slice(0, 10);
 
-  // ═══ جستجو در خودروها ═══
   let carList = [];
   if(window.API && window.API.getCars){
     const cars = window.API.getCars();
@@ -2333,14 +2575,13 @@ function doSearch(query){
 
   let html = '';
 
-  // ═══ بخش نمادها ═══
   if(hasSymbols){
     html += '<div class="ms-section-title">نمادها</div>';
     html += symbolList.map(function(a, i){
       const live = window.API && window.API.getById ? window.API.getById(a.id) : null;
       const price = live && live.price != null ? formatPrice(a, live.price) : '—';
       return `
-        <div class="ms-item" data-search-kind="symbol" data-idx="${i}">
+        <div class="ms-item" data-search-kind="symbol" data-idx="${i}" role="button" tabindex="0">
           <div class="ms-item-icon">${assetIcon(a)}</div>
           <div class="ms-item-info">
             <strong>${window.U.esc(a.name)}</strong>
@@ -2352,7 +2593,6 @@ function doSearch(query){
     }).join('');
   }
 
-  // ═══ بخش خودروها ═══
   if(hasCars){
     html += '<div class="ms-section-title">خودروها</div>';
     html += carList.map(function(c, i){
@@ -2373,7 +2613,7 @@ function doSearch(query){
                         : c.status === 'not-selling' ? 'توقف فروش'
                         : '';
       return `
-        <div class="ms-item" data-search-kind="car" data-idx="${i}">
+        <div class="ms-item" data-search-kind="car" data-idx="${i}" role="button" tabindex="0">
           <div class="ms-item-icon" style="background:var(--card-2);color:var(--accent)">
             <span data-icon="car"></span>
           </div>
@@ -2390,7 +2630,6 @@ function doSearch(query){
   res.innerHTML = html;
   res.hidden = false;
 
-  // ═══ اتصال کلیک ═══
   res.querySelectorAll('.ms-item').forEach(function(el){
     el.addEventListener('click', function(e){
       e.stopPropagation();
@@ -2404,7 +2643,6 @@ function doSearch(query){
     });
   });
 
-  // ═══ hydrate آیکون‌ها ═══
   if(window.Icons && window.Icons.hydrate){
     window.Icons.hydrate(res);
   }
@@ -2422,17 +2660,6 @@ function pickSearchCar(car){
   carsSearch = car.name || '';
   closeSearch();
   go('cars');
-
-  // ═══ بعد از رندر، اسکرول به خودروی انتخاب‌شده ═══
-  setTimeout(function(){
-    const el = document.querySelector('[data-car-id="' + car.id + '"]');
-    if(el && el.scrollIntoView){
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      el.style.transition = 'background 0.3s';
-      el.style.background = 'var(--accent-soft, rgba(16,185,129,0.15))';
-      setTimeout(function(){ el.style.background = ''; }, 1500);
-    }
-  }, 400);
 }
 
 function closeSearch(){
@@ -2443,13 +2670,8 @@ function closeSearch(){
   }
   const input = $('[data-search-input]');
   if(input) input.value = '';
-  searchResults = [];
-  searchIdx = -1;
 }
 
-/* ============================================================
-   EVENT HANDLING
-============================================================ */
 function handleClick(e){
   const menuBtn = e.target.closest('[data-menu]');
   if(menuBtn){
@@ -2472,12 +2694,14 @@ function handleClick(e){
     e.stopPropagation();
     if(refreshBtn.dataset.loading === '1') return;
     refreshBtn.dataset.loading = '1';
+    refreshBtn.classList.add('is-loading');
     window.API.fetchData(true).then(() => {
       toast('بروزرسانی شد ✓', 'success');
     }).catch(() => {
       toast('خطا در بروزرسانی', 'error');
     }).finally(() => {
       refreshBtn.dataset.loading = '';
+      refreshBtn.classList.remove('is-loading');
     });
     return;
   }
@@ -2530,6 +2754,14 @@ function handleClick(e){
     window.Storage.pf.save(window.Storage.pf.get().filter(x => x.ts !== ts));
     renderBankCard();
     toast('حذف شد', 'success');
+    return;
+  }
+
+  const carCard = e.target.closest('[data-car-id]');
+  if(carCard){
+    e.preventDefault();
+    e.stopPropagation();
+    openCarModal(carCard.dataset.carId);
     return;
   }
 
@@ -2609,7 +2841,7 @@ function handleClick(e){
 
       try {
         localStorage.setItem('gheymato.cfg.v6', JSON.stringify(window.CFG._c));
-      } catch(e){}
+      } catch(err){}
     }
   }
 
@@ -2623,6 +2855,16 @@ function handleClick(e){
     window.CFG.set('chartPeriod', pill.dataset.period);
     if(currentPage === 'chart') renderChartPage().catch(function(){});
     if(currentPage === 'home') renderHomeChart().catch(function(){});
+    return;
+  }
+
+  const homeAssetBtn = e.target.closest('[data-home-chart-asset]');
+  if(homeAssetBtn){
+    e.preventDefault();
+    e.stopPropagation();
+    homeChartId = homeAssetBtn.dataset.homeChartAsset;
+    $$('[data-home-chart-asset]').forEach(b => b.classList.toggle('is-active', b.dataset.homeChartAsset === homeChartId));
+    renderHomeChart().catch(function(){});
     return;
   }
 
@@ -2661,9 +2903,6 @@ function handleClick(e){
   }
 }
 
-/* ============================================================
-   FORMAT INPUT — جداکننده هزارگان خودکار
-============================================================ */
 function attachMoneyFormatter(){
   document.addEventListener('input', function(e){
     const input = e.target;
@@ -2704,9 +2943,6 @@ function attachMoneyFormatter(){
   }, true);
 }
 
-/* ============================================================
-   REFRESH ALL
-============================================================ */
 function refreshAll(){
   if(currentPage === 'home'){
     renderBankCard();
@@ -2714,7 +2950,7 @@ function refreshAll(){
     renderMostUsed();
     renderCats();
     renderTools();
-    renderHomeChart().catch(function(){});
+    renderCars().catch(function(){});
   }
   if(currentPage === 'markets') renderMarkets();
   if(currentPage === 'chart') renderChartPage().catch(function(){});
@@ -2725,9 +2961,6 @@ function refreshAll(){
   if(window.TV && window.TV.isActive()) window.TV.refresh();
 }
 
-/* ============================================================
-   HELPERS
-============================================================ */
 function checkAlerts(){
   const list = window.Storage.alerts.get();
   if(!list.length) return;
@@ -2738,9 +2971,18 @@ function checkAlerts(){
     let fired = false;
     if(al.up && l.price >= al.up) fired = true;
     if(al.dn && l.price <= al.dn) fired = true;
+
     if(fired){
       const a = window.DATA.find(al.id);
-      toast('🔔 ' + (a?.name || al.id), 'warning');
+      const name = a?.name || al.id;
+      const direction = al.up && l.price >= al.up ? 'بالاتر از' : 'پایین‌تر از';
+      toast('🔔 ' + name + ' ' + direction + ' حد تعیین‌شده', 'warning', 'alert_' + al.id + '_' + (al.up || al.dn));
+
+      if(al.repeat === false){
+        // حذف
+      } else {
+        remaining.push(al);
+      }
     } else {
       remaining.push(al);
     }
@@ -2748,10 +2990,10 @@ function checkAlerts(){
   if(remaining.length !== list.length) window.Storage.alerts.save(remaining);
 }
 
-/* ============================================================
-   INIT
-============================================================ */
 function init(){
+  // ═══ اول از همه: غیرفعال‌سازی swipe ═══
+  disableAllGestures();
+
   window.CFG.load();
   document.body.classList.toggle('dark', window.CFG.get('theme') === 'dark');
 
@@ -2789,13 +3031,11 @@ function init(){
     }
   });
 
-  // ═══ جستجو ═══
   const si = $('[data-search-input]');
   if(si){
     si.addEventListener('input', window.U.debounce(e => doSearch(e.target.value), 150));
   }
 
-  // ═══ جستجوی خودروها (فقط در صفحه cars) ═══
   const cs = $('[data-cars-search]');
   if(cs){
     cs.addEventListener('input', window.U.debounce(function(e){
@@ -2803,10 +3043,9 @@ function init(){
       if(currentPage === 'cars'){
         renderCars().catch(function(){});
       }
-    }, 200));
+    }, 250));
   }
 
-  // ═══ فیلتر خودروها ═══
   $$('[data-cars-filter]').forEach(function(btn){
     btn.addEventListener('click', function(e){
       e.preventDefault();
@@ -2853,60 +3092,58 @@ function init(){
     refreshTimer = setTimeout(() => {
       refreshAll();
       checkAlerts();
-    }, 500);
+    }, 200);
   });
 
   renderHdrTicker();
 }
 
-/* ============================================================
-   PUBLIC API
-============================================================ */
 return {
-  init: init,
-  go: go,
-  toast: toast,
-  refreshAll: refreshAll,
-  openModal: openModal,
-  closeModal: closeModal,
-  closeSearch: closeSearch,
-  renderChartPage: renderChartPage,
-  renderMarkets: renderMarkets,
-  renderFavs: renderFavs,
-  renderBankCard: renderBankCard,
-  renderFeatured: renderFeatured,
-  renderMostUsed: renderMostUsed,
-  renderTools: renderTools,
-  renderCats: renderCats,
-  renderHdrTicker: renderHdrTicker,
-  getUserName: getUserName,
-  saveUserName: saveUserName,
-  formatPrice: formatPrice,
-  formatPriceWithUnit: formatPriceWithUnit,
-  fullUnitLabel: fullUnitLabel,
-  baseToUser: baseToUser,
-  userToBase: userToBase,
-  formatNumber: formatNumber,
-  parseFormattedNumber: parseFormattedNumber,
-  openTool: openTool,
-  toolGold: toolGold,
-  toolCoin: toolCoin,
-  toolOunce: toolOunce,
-  toolSilver: toolSilver,
-  toolConv: toolConv,
-  toolCryptoConv: toolCryptoConv,
-  toolUnitConv: toolUnitConv,
-  toolVolumeConv: toolVolumeConv,
-  toolPortfolio: toolPortfolio,
-  toolAlerts: toolAlerts,
-  toolNotes: toolNotes,
-  toolProfit: toolProfit,
-  toolZakat: toolZakat,
-  toolAvgBuy: toolAvgBuy,
-  renderCars: renderCars,
-  carRowHTML: carRowHTML,
-  doSearch: doSearch,
-  closeSearch: closeSearch
+  init,
+  go,
+  toast,
+  refreshAll,
+  openModal,
+  closeModal,
+  closeSearch,
+  renderChartPage,
+  renderMarkets,
+  renderFavs,
+  renderBankCard,
+  renderFeatured,
+  renderMostUsed,
+  renderTools,
+  renderCats,
+  renderHdrTicker,
+  getUserName,
+  saveUserName,
+  formatPrice,
+  formatPriceWithUnit,
+  fullUnitLabel,
+  baseToUser,
+  userToBase,
+  formatNumber,
+  parseFormattedNumber,
+  openTool,
+  toolGold,
+  toolCoin,
+  toolOunce,
+  toolSilver,
+  toolConv,
+  toolCryptoConv,
+  toolUnitConv,
+  toolPortfolio,
+  toolAlerts,
+  toolNotes,
+  toolProfit,
+  toolZakat,
+  toolAvgBuy,
+  renderCars,
+  carCardHTML,
+  getCarImage,
+  openCarModal,
+  doSearch,
+  disableAllGestures
 };
 
 })();
