@@ -4824,3 +4824,79 @@ button, a, .m-card, .cat-chip, .tool-chip, .chip, .nav-link,
   width: 18px;
   height: 18px;
 }
+
+
+
+
+/* ═══════════════════════════════════════════════════════════
+   غیرفعال‌سازی کامل حرکات انگشت
+═══════════════════════════════════════════════════════════ */
+
+/* ۱. روی کل بدنه — فقط اسکرول عمودی مجاز */
+html, body {
+  touch-action: pan-y;           /* فقط اسکرول عمودی */
+  overscroll-behavior: none;      /* جلوگیری از pull-to-refresh */
+  overscroll-behavior-x: none;    /* جلوگیری از swipe جانبی */
+  overscroll-behavior-y: contain; /* جلوگیری از bounce */
+  -webkit-user-select: none;      /* جلوگیری از انتخاب متن */
+  user-select: none;
+  -webkit-touch-callout: none;    /* جلوگیری از منوی long-press iOS */
+  -webkit-tap-highlight-color: transparent; /* حذف هایلایت آبی کلیک */
+}
+
+/* ۲. روی کارت‌ها و عناصر تعاملی — کاملاً قفل */
+.m-card,
+.bank-card,
+.cat-chip,
+.tool-chip,
+.car-row,
+.chart-canvas,
+.ms-item,
+.chart-q-item,
+.sidebar,
+.modal {
+  touch-action: manipulation;     /* فقط tap و scroll عمودی */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* ۳. روی اسلایدرها و نمودارها — کاملاً غیرفعال */
+.chart-canvas,
+canvas,
+.hdr-ticker,
+.ticker-track {
+  touch-action: none;             /* هیچ لمسی مجاز نیست */
+  pointer-events: none;            /* برای ticker */
+}
+
+/* ۴. در ورودی‌ها — انتخاب متن مجاز باشد */
+input,
+textarea,
+.select,
+[contenteditable] {
+  touch-action: manipulation;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* ۵. جلوگیری از zoom در iOS */
+@supports (-webkit-touch-callout: none) {
+  body {
+    -webkit-text-size-adjust: 100%;
+  }
+}
+
+/* ۶. جلوگیری از drag تصاویر و لینک‌ها */
+img, a {
+  -webkit-user-drag: none;
+  user-drag: none;
+  pointer-events: auto;
+}
+
+/* ۷. حذف رفتار پیش‌فرض اسکرول زنجیره‌ای */
+.page,
+.sidebar-body,
+.modal-body {
+  overscroll-behavior: contain;
+}
