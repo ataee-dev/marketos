@@ -1,14 +1,17 @@
 /**
- * قیمتو 6.0 — UI (کامل و نهایی - اصلاح‌شده)
- * ✅ کارت بانکی پرتفوی
- * ✅ ۲۰ سوال TGJU با استایل جدید
- * ✅ تحلیل حباب طلا
- * ✅ سیستم واحد هوشمند (تومان/ریال)
- * ✅ واحدهای حجمی
- * ✅ جستجوی inline (نماد + خودرو)
- * ✅ نمودار با نقاط تعاملی
- * ✅ جداکننده هزارگان
- * ✅ فرمت خودکار فیلدهای ورودی
+ * قیمتو 6.0 — UI (نسخه نهایی اصلاح‌شده)
+ * ✅ رفع حلقه بی‌نهایت go()
+ * ✅ هشدارها پس از trigger حفظ می‌شوند (تکرارشونده)
+ * ✅ بازه تاریخی سوالات قابل تنظیم
+ * ✅ جلوگیری از Toast spam
+ * ✅ Loading state واقعی
+ * ✅ بنر «داده تاریخی در دسترس نیست»
+ * ✅ اعتبارسنجی inline فرم‌ها
+ * ✅ انتخاب asset برای نمودار خانه
+ * ✅ ادغام مبدل واحد/حجم
+ * ✅ a11y کامل (aria-label, title)
+ * ✅ بدون هیچ حرکت swipe/gesture
+ * ✅ کد تمیز و بدون تکرار
  */
 
 window.UI = (function(){
@@ -21,11 +24,68 @@ let filter = 'all';
 let search = '';
 let currentPage = 'home';
 let activeChartId = 'gold18';
+let homeChartId = 'gold18';
 
 const PAGES = ['home', 'markets', 'chart', 'cars', 'settings'];
 
+// ═══════════════════════════════════════════════════════════
+// غیرفعال‌سازی کامل حرکت انگشت / swipe / gesture
+// ═══════════════════════════════════════════════════════════
+function disableAllGestures(){
+  const opts = { passive: false };
+
+  const prevent = e => {
+    // فقط روی صفحه‌های افقی جلوگیری می‌کند تا اسکرول عمودی حفظ شود
+    if(Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+      e.preventDefault();
+    }
+  };
+
+  document.addEventListener('touchstart', e => {
+    // اگر بیش از یک انگشت بود، pinch/zoom را غیرفعال کن
+    if(e.touches.length > 1) e.preventDefault();
+  }, opts);
+
+  document.addEventListener('touchmove', e => {
+    if(e.touches.length > 1) {
+      e.preventDefault();
+      return;
+    }
+    // جلوگیری از کشیدن افقی روی کارت‌ها
+    const target = e.target.closest('.m-card, .bank-card, .chart-canvas, .cat-chip, .tool-chip, .car-row');
+    if(target) {
+      const touch = e.touches[0];
+      if(!touch) return;
+      // اگر حرکت افقی غالب بود
+      if(target._startX != null && Math.abs(touch.clientX - target._startX) > Math.abs(touch.clientY - target._startY)) {
+        e.preventDefault();
+      }
+    }
+  }, opts);
+
+  document.addEventListener('touchstart', e => {
+    const target = e.target.closest('.m-card, .bank-card, .chart-canvas, .cat-chip, .tool-chip, .car-row');
+    if(target && e.touches[0]) {
+      target._startX = e.touches[0].clientX;
+      target._startY = e.touches[0].clientY;
+    }
+  }, { passive: true });
+
+  document.addEventListener('gesturestart', e => e.preventDefault(), opts);
+  document.addEventListener('gesturechange', e => e.preventDefault(), opts);
+  document.addEventListener('gestureend', e => e.preventDefault(), opts);
+
+  // جلوگیری از double-tap zoom
+  let lastTouch = 0;
+  document.addEventListener('touchend', e => {
+    const now = Date.now();
+    if(now - lastTouch <= 300) e.preventDefault();
+    lastTouch = now;
+  }, opts);
+}
+
 /* ============================================================
-   NUMBER FORMATTING — جداکننده هزارگان
+   NUMBER FORMATTING
 ============================================================ */
 function formatNumber(num, decimals){
   if(num == null || isNaN(num)) return '—';
@@ -83,7 +143,7 @@ function assetIcon(asset){
 function catColor(asset){ return CAT_COLOR[asset.cat] || 'gold'; }
 
 /* ============================================================
-   UNIT SYSTEM — تومان/ریال
+   UNIT SYSTEM
 ============================================================ */
 function getUnit(){
   return window.CFG.get('currency') || 'toman';
@@ -149,7 +209,7 @@ function marketCardHTML(asset){
   const noPrice = price == null;
 
   return `
-    <article class="m-card ${noPrice ? 'm-card-empty' : ''}" data-card-id="${asset.id}" role="button" tabindex="0">
+    <article class="m-card ${noPrice ? 'm-card-empty' : ''}" data-card-id="${asset.id}" role="button" tabindex="${noPrice ? '-1' : '0'}" aria-label="${window.U.esc(asset.name)}${noPrice ? ' - بدون داده' : ''}">
       <div class="m-card-head">
         <div class="m-card-icon ${color}">${assetIcon(asset)}</div>
         <div class="m-card-info">
@@ -157,6 +217,8 @@ function marketCardHTML(asset){
           <small>${asset.code}</small>
         </div>
         <button type="button" class="icon-btn" data-fav-toggle="${asset.id}"
+          title="${isFav ? 'حذف از علاقه‌مندی' : 'افزودن به علاقه‌مندی'}"
+          aria-label="${isFav ? 'حذف از علاقه‌مندی' : 'افزودن به علاقه‌مندی'}"
           style="width:24px;height:24px;color:${isFav?'var(--warn)':'var(--dim)'};font-size:14px;flex-shrink:0;padding:0;background:none;border:0">
           ${window.Icons.get('star')}
         </button>
@@ -196,7 +258,7 @@ function renderCats(){
   const counts = window.DATA.countByCat();
 
   c.innerHTML = Object.entries(window.DATA.CATEGORIES).map(([k, cat]) => `
-    <button class="cat-chip" data-filter-jump="${k}" type="button">
+    <button class="cat-chip" data-filter-jump="${k}" type="button" aria-label="${cat.label}">
       <span class="cat-chip-icon">${window.Icons.get(cat.icon)}</span>
       <span>${cat.label}</span>
       <small style="opacity:.6">${counts[k] || 0}</small>
@@ -227,8 +289,7 @@ function renderTools(){
     { id:'silver',      name:'محاسبه‌گر نقره',  icon:'diamond' },
     { id:'conv',        name:'مبدل ارز',        icon:'exchange' },
     { id:'crypto-conv', name:'مبدل کریپتو',     icon:'bitcoin' },
-    { id:'unit-conv',   name:'مبدل واحد',       icon:'swap' },
-    { id:'volume-conv', name:'مبدل حجم',        icon:'swap' },
+    { id:'unit-conv',   name:'مبدل واحد و حجم', icon:'swap' },
     { id:'portfolio',   name:'پرتفوی من',       icon:'briefcase' },
     { id:'alerts',      name:'هشدار قیمت',      icon:'bell' },
     { id:'notes',       name:'یادداشت‌ها',       icon:'note' },
@@ -241,7 +302,7 @@ function renderTools(){
   ];
 
   c.innerHTML = tools.map(t => `
-    <button type="button" class="tool-chip" data-tool="${t.id}">
+    <button type="button" class="tool-chip" data-tool="${t.id}" aria-label="${t.name}">
       <span class="tool-chip-icon">${window.Icons.get(t.icon)}</span>
       <span class="tool-chip-name">${t.name}</span>
     </button>
@@ -249,7 +310,7 @@ function renderTools(){
 }
 
 /* ============================================================
-   BANK CARD — کارت پرتفوی شبیه کارت بانکی
+   BANK CARD
 ============================================================ */
 function getUserName(){
   return window.Storage.get('gheymato.username', '') || 'کاربر مهمان';
@@ -290,10 +351,13 @@ function renderBankCard(){
 
   let displayValue = '۰ تومان';
   let displayChange = '';
+  let subtitle = 'برای شروع دارایی اضافه کنید';
+
   if(!isEmpty){
     const unitText = unitLabel();
     const val = baseToUser(totalNow);
     displayValue = formatNumber(val, 0) + ' ' + unitText;
+    subtitle = formatNumber(list.length, 0) + ' دارایی';
     displayChange = `
       <span class="bank-card-change">
         ${up ? '▲' : '▼'} ${up ? '+' : ''}${plPct.toFixed(2)}%
@@ -302,13 +366,13 @@ function renderBankCard(){
   }
 
   wrap.innerHTML = `
-    <div class="bank-card ${isEmpty ? 'is-empty' : ''}" data-tool="portfolio">
+    <div class="bank-card ${isEmpty ? 'is-empty' : ''}" data-tool="portfolio" role="button" tabindex="0" aria-label="پرتفوی من">
       <div class="bank-card-top">
         <div class="bank-card-brand">
           <img src="assets/logo.png" alt="قیمتو">
           <div class="bank-card-brand-text">
             <strong>قیمتو</strong>
-            <small>${isEmpty ? 'پرتفوی خالی' : formatNumber(list.length, 0) + ' دارایی'}</small>
+            <small>${isEmpty ? 'پرتفوی خالی' : subtitle}</small>
           </div>
         </div>
         <div class="bank-card-chip"></div>
@@ -328,7 +392,7 @@ function renderBankCard(){
             <small>${isEmpty ? 'برای شروع دارایی اضافه کنید' : 'دارایی‌های شما'}</small>
           </div>
         </div>
-        <button type="button" class="bank-card-add" data-tool="portfolio" aria-label="افزودن">
+        <button type="button" class="bank-card-add" data-tool="portfolio" aria-label="افزودن دارایی">
           ${window.Icons.get('plus')}
         </button>
       </div>
@@ -361,7 +425,7 @@ function renderMarkets(){
 }
 
 /* ============================================================
-   CARS — قیمت خودرو
+   CARS
 ============================================================ */
 let carsFilter = 'all';
 let carsSearch = '';
@@ -375,8 +439,9 @@ async function renderCars(){
   if(!wrap && !listEl) return;
 
   if(!window.API || !window.API.fetchCars){
-    if(wrap) wrap.innerHTML = '<div class="empty"><h3>API خودرو در دسترس نیست</h3></div>';
-    if(listEl) listEl.innerHTML = '<div class="empty"><h3>API خودرو در دسترس نیست</h3></div>';
+    const msg = '<div class="empty"><h3>API خودرو در دسترس نیست</h3></div>';
+    if(wrap) wrap.innerHTML = msg;
+    if(listEl) listEl.innerHTML = msg;
     return;
   }
 
@@ -387,8 +452,9 @@ async function renderCars(){
     }
 
     if(!data || !data.cars || !data.cars.length){
-      if(wrap) wrap.innerHTML = '<div class="empty"><h3>داده‌ای موجود نیست</h3></div>';
-      if(listEl) listEl.innerHTML = '<div class="empty"><h3>داده‌ای موجود نیست</h3></div>';
+      const msg = '<div class="empty"><h3>داده‌ای موجود نیست</h3></div>';
+      if(wrap) wrap.innerHTML = msg;
+      if(listEl) listEl.innerHTML = msg;
       return;
     }
 
@@ -428,8 +494,9 @@ async function renderCars(){
 
   } catch(err){
     console.error('[Cars]', err);
-    if(wrap) wrap.innerHTML = '<div class="empty"><h3>خطا در بارگذاری خودرو</h3></div>';
-    if(listEl) listEl.innerHTML = '<div class="empty"><h3>خطا در بارگذاری خودرو</h3></div>';
+    const msg = '<div class="empty"><h3>خطا در بارگذاری خودرو</h3></div>';
+    if(wrap) wrap.innerHTML = msg;
+    if(listEl) listEl.innerHTML = msg;
   }
 }
 
@@ -497,7 +564,6 @@ function renderHdrTicker(){
   const track = $('[data-hdr-ticker-track]');
   if(!track) return;
 
-  // ═══ محافظت از API و DATA ═══
   if(!window.API || !window.API.getById) return;
   if(!window.DATA || !window.DATA.find) return;
 
@@ -549,6 +615,7 @@ async function renderChartPage(){
     const isFav = window.Storage.fav.get().includes(asset.id);
     favEl.classList.toggle('is-fav', isFav);
     favEl.dataset.favToggle = asset.id;
+    favEl.setAttribute('aria-label', isFav ? 'حذف از علاقه‌مندی' : 'افزودن به علاقه‌مندی');
     favEl.textContent = isFav ? '★' : '☆';
   }
 
@@ -589,7 +656,7 @@ async function renderChartPage(){
 }
 
 /* ============================================================
-   CHART QUESTIONS — ۲۰+ سوال TGJU با استایل جدید
+   CHART QUESTIONS — بازه تاریخی قابل تنظیم
 ============================================================ */
 async function renderChartQuestions(asset, live){
   const listEl = $('[data-c-questions]');
@@ -613,16 +680,39 @@ async function renderChartQuestions(asset, live){
   const changePct = live.changePercent || 0;
   const unitText = asset.unit || '';
 
+  // ═══════════════════════════════════════════════════════════
+  // دریافت بازه تاریخی کامل (سالانه) — نه فقط ۳۰ روز
+  // ═══════════════════════════════════════════════════════════
   let history = [];
+  let historyWarning = false;
   try {
     if(window.API.getHistory){
-      history = await window.API.getHistory(asset, 30);
+      // ابتدا ۳۶۵ روز درخواست می‌کنیم تا سوالات سالانه هم پوشش داده شود
+      history = await window.API.getHistory(asset, 365);
+      if(!history || history.length < 5){
+        history = await window.API.getHistory(asset, 30);
+        historyWarning = true;
+      }
     }
   } catch(e){
     console.warn('[Questions] history failed:', e.message);
+    historyWarning = true;
   }
 
   const sortedHistory = (history || []).slice().sort((a, b) => a.t - b.t);
+
+  // ═══════════════════════════════════════════════════════════
+  // بنر هشدار در صورت کمبود داده تاریخی
+  // ═══════════════════════════════════════════════════════════
+  let warningBanner = '';
+  if(historyWarning || sortedHistory.length < 10){
+    warningBanner = `
+      <div class="chart-q-warning" role="alert">
+        <span data-icon="alert" style="width:16px;height:16px;flex-shrink:0"></span>
+        <span>داده تاریخی کامل در دسترس نیست — برخی پاسخ‌ها تقریبی هستند</span>
+      </div>
+    `;
+  }
 
   function findPriceAt(msAgo){
     if(!sortedHistory.length) return null;
@@ -632,7 +722,11 @@ async function renderChartQuestions(asset, live){
       const diff = Math.abs(p.t - target);
       if(diff < minDiff){ minDiff = diff; closest = p; }
     }
-    if(closest && minDiff < 3 * 24 * 60 * 60 * 1000){
+    // تلورانس بسته به بازه
+    const tolerance = msAgo > 90 * 24 * 60 * 60 * 1000
+      ? 30 * 24 * 60 * 60 * 1000   // برای سالانه: ۳۰ روز
+      : 3 * 24 * 60 * 60 * 1000;    // برای کوتاه‌مدت: ۳ روز
+    if(closest && minDiff < tolerance){
       return closest.p;
     }
     return null;
@@ -658,7 +752,7 @@ async function renderChartQuestions(asset, live){
       cls = change >= 0 ? 'up' : 'down';
     }
     const changeText = hasChange
-      ? `<span class="chart-q-answer ${cls}">${change >= 0 ? '▲' : '▼'} ${Math.abs(change).toFixed(2)}%</span>`
+      ? `<span class="chart-q-answer ${cls}">${change >= 0 ? '▲' : '▼'} ${Math.abs(change).toFixed(2)}٪</span>`
       : `<span class="chart-q-answer neutral">—</span>`;
 
     return `
@@ -860,7 +954,7 @@ async function renderChartQuestions(asset, live){
     }
   }
 
-  listEl.innerHTML = questions.join('');
+  listEl.innerHTML = warningBanner + questions.join('');
 
   if(window.Icons && window.Icons.hydrate){
     window.Icons.hydrate(listEl);
@@ -877,7 +971,7 @@ async function compareWith(assetId, msAgo, myCurrent, myPast){
     const a = window.DATA.find(assetId);
     if(!a) return null;
 
-    const hist = await window.API.getHistory(a, 30);
+    const hist = await window.API.getHistory(a, 90);
     if(!hist || hist.length < 2) return null;
 
     const sorted = hist.slice().sort((x, y) => x.t - y.t);
@@ -1018,7 +1112,7 @@ function renderBubbleAnalysis(asset, live){
 }
 
 /* ============================================================
-   نمودار — رسم با داده‌های تاریخی کامل
+   نمودار
 ============================================================ */
 async function drawChartAsync(canvas, asset){
   try {
@@ -1152,19 +1246,33 @@ function renderCompare(){
 async function renderHomeChart(){
   const c = $('[data-home-chart]');
   if(!c) return;
-  const asset = window.DATA.find('gold18');
+  const asset = window.DATA.find(homeChartId) || window.DATA.find('gold18');
   if(!asset) return;
   await drawChartAsync(c, asset);
 }
 
 /* ============================================================
-   ROUTER
+   ROUTER — با timeout و پیام خطا (بدون حلقه بی‌نهایت)
 ============================================================ */
+let _goRetries = 0;
+const GO_MAX_RETRIES = 50; // 5 ثانیه
+
 function go(page){
   if(!window.DATA || !window.DATA.ASSETS || !window.DATA.ASSETS.length){
+    if(_goRetries >= GO_MAX_RETRIES){
+      const el = $('.page.is-active') || document.body;
+      const errBox = document.createElement('div');
+      errBox.className = 'empty';
+      errBox.style.padding = '40px 20px';
+      errBox.innerHTML = '<h3>خطا در بارگذاری داده‌ها</h3><p style="margin-top:8px;color:var(--muted)">لطفاً اتصال اینترنت را بررسی و صفحه را بازخوانی کنید.</p>';
+      if(el && el.appendChild) el.appendChild(errBox);
+      return;
+    }
+    _goRetries++;
     setTimeout(function(){ go(page); }, 100);
     return;
   }
+  _goRetries = 0;
 
   if(!PAGES.includes(page)) page = 'home';
   currentPage = page;
@@ -1193,35 +1301,20 @@ function go(page){
       renderHomeChart().catch(function(){});
       renderCars().catch(function(){});
     }
-    else if(page === 'markets'){
-      renderMarkets();
-    }
+    else if(page === 'markets'){ renderMarkets(); }
     else if(page === 'chart'){
       if(!activeChartId && window.DATA.ASSETS.length){
         activeChartId = window.DATA.ASSETS[0].id;
       }
       renderChartPage().catch(function(){});
     }
-    else if(page === 'compare'){
-      renderCompare();
-    }
-    else if(page === 'favorites'){
-      renderFavs();
-    }
-    else if(page === 'cars'){
-      renderCars().catch(function(){});
-    }
+    else if(page === 'compare'){ renderCompare(); }
+    else if(page === 'favorites'){ renderFavs(); }
+    else if(page === 'cars'){ renderCars().catch(function(){}); }
 
     renderHdrTicker();
   } catch(err){
     console.error('[UI.go] render error on page "' + page + '":', err);
-    if(!go._retried){
-      go._retried = true;
-      setTimeout(function(){
-        go._retried = false;
-        go(page);
-      }, 200);
-    }
   }
 }
 
@@ -1244,31 +1337,76 @@ function closeModal(){
   if(m) m.classList.remove('is-open');
 }
 
-let lastToastMsg = '';
-let lastToastTime = 0;
+// ═══════════════════════════════════════════════════════════
+// Toast با debounce و پیام‌های id-دار
+// ═══════════════════════════════════════════════════════════
+const _toastHistory = new Map(); // id → timestamp
+let _lastToastText = '';
+let _lastToastTime = 0;
 
-function toast(msg, type = ''){
+function toast(msg, type = '', id = null){
   const t = $('[data-toast]');
   if(!t) return;
 
   const now = Date.now();
-  if(msg === lastToastMsg && (now - lastToastTime) < 30000){
-    return;
+  const key = id || msg;
+
+  // ═══ جلوگیری از تکرار سریع ═══
+  if(id && _toastHistory.has(id)){
+    const last = _toastHistory.get(id);
+    if(now - last < 60000) return; // ۶۰ ثانیه برای پیام‌های id-دار
   }
-  lastToastMsg = msg;
-  lastToastTime = now;
+  if(!id && msg === _lastToastText && (now - _lastToastTime) < 3000) return;
+
+  if(id) _toastHistory.set(id, now);
+  _lastToastText = msg;
+  _lastToastTime = now;
 
   t.textContent = msg;
   t.className = 'toast is-show ' + type;
   clearTimeout(t._t);
   t._t = setTimeout(() => {
     t.classList.remove('is-show');
-    lastToastMsg = '';
+    if(!id) _lastToastText = '';
   }, 2400);
 }
 
 /* ============================================================
-   TOOLS — محاسبه‌گرها
+   HELPERS — اعتبارسنجی
+============================================================ */
+function setFieldError(input, message){
+  if(!input) return;
+  input.classList.add('is-error');
+  input.setAttribute('aria-invalid', 'true');
+  let err = input.parentElement?.querySelector('.field-error');
+  if(!err){
+    err = document.createElement('small');
+    err.className = 'field-error';
+    input.parentElement?.appendChild(err);
+  }
+  err.textContent = message;
+}
+
+function clearFieldError(input){
+  if(!input) return;
+  input.classList.remove('is-error');
+  input.removeAttribute('aria-invalid');
+  const err = input.parentElement?.querySelector('.field-error');
+  if(err) err.remove();
+}
+
+function validatePositive(input, fieldName){
+  const v = parseFormattedNumber(input?.value);
+  if(v == null || v <= 0){
+    setFieldError(input, fieldName + ' باید عددی مثبت باشد');
+    return null;
+  }
+  clearFieldError(input);
+  return v;
+}
+
+/* ============================================================
+   TOOLS
 ============================================================ */
 function money(v){ return formatPrice({ptype:'rial'}, v); }
 
@@ -1280,11 +1418,11 @@ function toolGold(){
     <div class="form-grid">
       <div class="form-group">
         <label>وزن (گرم)</label>
-        <input class="input" type="text" inputmode="decimal" value="10" data-money data-gw>
+        <input class="input" type="text" inputmode="decimal" value="10" data-money data-gw aria-label="وزن به گرم">
       </div>
       <div class="form-group">
         <label>عیار</label>
-        <select class="select" data-gk>
+        <select class="select" data-gk aria-label="عیار">
           <option value="18" selected>۱۸</option>
           <option value="24">۲۴</option>
           <option value="22">۲۲</option>
@@ -1294,15 +1432,15 @@ function toolGold(){
       </div>
       <div class="form-group">
         <label>اجرت ساخت (%)</label>
-        <input class="input" type="text" inputmode="decimal" value="7" data-money data-gwg>
+        <input class="input" type="text" inputmode="decimal" value="7" data-money data-gwg aria-label="اجرت ساخت">
       </div>
       <div class="form-group">
         <label>سود فروشنده (%)</label>
-        <input class="input" type="text" inputmode="decimal" value="5" data-money data-gp>
+        <input class="input" type="text" inputmode="decimal" value="5" data-money data-gp aria-label="سود فروشنده">
       </div>
       <div class="form-group" style="grid-column:1/-1">
         <label>مالیات (%)</label>
-        <input class="input" type="text" inputmode="decimal" value="9" data-money data-gt>
+        <input class="input" type="text" inputmode="decimal" value="9" data-money data-gt aria-label="مالیات">
       </div>
     </div>
     <div class="result-box" data-gold-out></div>
@@ -1343,13 +1481,13 @@ function toolCoin(){
   openModal(`<span data-icon="coins"></span> محاسبه‌گر سکه`, `
     <div class="form-group">
       <label>نوع سکه</label>
-      <select class="select" data-ct>
+      <select class="select" data-ct aria-label="نوع سکه">
         ${sel.map(a => `<option value="${a.id}">${a.name}</option>`).join('')}
       </select>
     </div>
     <div class="form-group">
       <label>تعداد</label>
-      <input class="input" type="text" inputmode="decimal" value="1" data-money data-cc>
+      <input class="input" type="text" inputmode="decimal" value="1" data-money data-cc aria-label="تعداد">
     </div>
     <div class="result-box" data-coin-out></div>
   `);
@@ -1360,7 +1498,7 @@ function toolCoin(){
     const live = window.API.getById(id);
     const out = $('[data-coin-out]');
     if(!live || live.price == null){
-      if(out) out.innerHTML = '<div class="result-row"><span>در حال دریافت...</span></div>';
+      if(out) out.innerHTML = '<div class="result-row"><span>در حال دریافت...</span><span class="spinner"></span></div>';
       return;
     }
     const tot = live.price * n;
@@ -1385,11 +1523,11 @@ function toolOunce(){
     <div class="form-grid">
       <div class="form-group">
         <label>تعداد انس</label>
-        <input class="input" type="text" inputmode="decimal" value="1" data-money data-oc>
+        <input class="input" type="text" inputmode="decimal" value="1" data-money data-oc aria-label="تعداد انس">
       </div>
       <div class="form-group">
         <label>عیار</label>
-        <select class="select" data-ok>
+        <select class="select" data-ok aria-label="عیار">
           <option value="24">۲۴ عیار</option>
           <option value="18" selected>۱۸ عیار</option>
           <option value="21">۲۱ عیار</option>
@@ -1432,7 +1570,7 @@ function toolSilver(){
   openModal(`<span data-icon="diamond"></span> محاسبه‌گر نقره`, `
     <div class="form-group">
       <label>وزن (گرم)</label>
-      <input class="input" type="text" inputmode="decimal" value="100" data-money data-sv>
+      <input class="input" type="text" inputmode="decimal" value="100" data-money data-sv aria-label="وزن نقره">
     </div>
     <div class="result-box" data-silver-out></div>
   `);
@@ -1461,12 +1599,12 @@ function toolConv(){
   openModal(`<span data-icon="exchange"></span> مبدل ارز`, `
     <div class="form-group">
       <label>مقدار (${unitLabel()})</label>
-      <input class="input" type="text" inputmode="decimal" value="1000000" data-money data-va>
+      <input class="input" type="text" inputmode="decimal" value="1000000" data-money data-va aria-label="مقدار">
     </div>
     <div style="display:grid;grid-template-columns:1fr 48px 1fr;gap:10px;align-items:center">
-      <select class="select" data-vf>${opts}</select>
-      <button type="button" class="btn btn-primary" data-vs style="padding:10px;width:48px;height:48px;border-radius:14px">⇄</button>
-      <select class="select" data-vt>${opts}</select>
+      <select class="select" data-vf aria-label="از واحد">${opts}</select>
+      <button type="button" class="btn btn-primary" data-vs style="padding:10px;width:48px;height:48px;border-radius:14px" aria-label="جابجایی">⇄</button>
+      <select class="select" data-vt aria-label="به واحد">${opts}</select>
     </div>
     <div class="result-box" data-conv-out></div>
   `);
@@ -1486,7 +1624,7 @@ function toolConv(){
     const lt = window.API.getById(t.id);
     const out = $('[data-conv-out]');
     if(!lf || !lt || lf.price == null || lt.price == null){
-      if(out) out.innerHTML = '<div class="result-row"><span>در حال دریافت...</span></div>';
+      if(out) out.innerHTML = '<div class="result-row"><span>در حال دریافت...</span><span class="spinner"></span></div>';
       return;
     }
     const res = (amtBase * lf.price) / lt.price;
@@ -1517,12 +1655,12 @@ function toolCryptoConv(){
   openModal(`<span data-icon="bitcoin"></span> مبدل کریپتو`, `
     <div class="form-group">
       <label>مقدار</label>
-      <input class="input" type="text" inputmode="decimal" value="1" data-money data-cca>
+      <input class="input" type="text" inputmode="decimal" value="1" data-money data-cca aria-label="مقدار">
     </div>
     <div style="display:grid;grid-template-columns:1fr 48px 1fr;gap:10px;align-items:center">
-      <select class="select" data-ccf>${opts}</select>
-      <button type="button" class="btn btn-primary" data-ccs style="padding:10px;width:48px;height:48px;border-radius:14px">⇄</button>
-      <select class="select" data-cct>${opts}</select>
+      <select class="select" data-ccf aria-label="از کریپتو">${opts}</select>
+      <button type="button" class="btn btn-primary" data-ccs style="padding:10px;width:48px;height:48px;border-radius:14px" aria-label="جابجایی">⇄</button>
+      <select class="select" data-cct aria-label="به کریپتو">${opts}</select>
     </div>
     <div class="result-box" data-crypto-out></div>
   `);
@@ -1541,7 +1679,7 @@ function toolCryptoConv(){
     const lt = window.API.getById(to.id);
     const out = $('[data-crypto-out]');
     if(!lf || !lt || lf.price == null || lt.price == null){
-      if(out) out.innerHTML = '<div class="result-row"><span>در حال دریافت...</span></div>';
+      if(out) out.innerHTML = '<div class="result-row"><span>در حال دریافت...</span><span class="spinner"></span></div>';
       return;
     }
     const res = (amt * lf.price) / lt.price;
@@ -1571,13 +1709,13 @@ function toolCryptoConv(){
 }
 
 /* ============================================================
-   مبدل واحد
+   مبدل واحد و حجم — ادغام شده
 ============================================================ */
 function toolUnitConv(){
-  openModal(`<span data-icon="swap"></span> مبدل واحد`, `
+  openModal(`<span data-icon="swap"></span> مبدل واحد و حجم`, `
     <div class="form-group">
       <label>دسته</label>
-      <select class="select" data-ucat>
+      <select class="select" data-ucat aria-label="دسته واحد">
         <option value="weight">وزن</option>
         <option value="length">طول</option>
         <option value="volume">حجم</option>
@@ -1586,12 +1724,12 @@ function toolUnitConv(){
     </div>
     <div class="form-group">
       <label>مقدار</label>
-      <input class="input" type="text" inputmode="decimal" value="1" data-money data-ua>
+      <input class="input" type="text" inputmode="decimal" value="1" data-money data-ua aria-label="مقدار">
     </div>
     <div style="display:grid;grid-template-columns:1fr 48px 1fr;gap:10px;align-items:center">
-      <select class="select" data-uf></select>
-      <button type="button" class="btn btn-primary" data-us style="padding:10px;width:48px;height:48px;border-radius:14px">⇄</button>
-      <select class="select" data-ut></select>
+      <select class="select" data-uf aria-label="از واحد"></select>
+      <button type="button" class="btn btn-primary" data-us style="padding:10px;width:48px;height:48px;border-radius:14px" aria-label="جابجایی">⇄</button>
+      <select class="select" data-ut aria-label="به واحد"></select>
     </div>
     <div class="result-box" data-unit-out></div>
   `);
@@ -1667,19 +1805,10 @@ function toolUnitConv(){
     fSel.innerHTML = html;
     tSel.innerHTML = html;
 
-    if(catKey === 'weight'){
-      fSel.value = 'gram';
-      tSel.value = 'mesghal';
-    } else if(catKey === 'length'){
-      fSel.value = 'meter';
-      tSel.value = 'foot';
-    } else if(catKey === 'volume'){
-      fSel.value = 'liter';
-      tSel.value = 'gallon_us';
-    } else if(catKey === 'area'){
-      fSel.value = 'm2';
-      tSel.value = 'ft2';
-    }
+    if(catKey === 'weight'){ fSel.value = 'gram'; tSel.value = 'mesghal'; }
+    else if(catKey === 'length'){ fSel.value = 'meter'; tSel.value = 'foot'; }
+    else if(catKey === 'volume'){ fSel.value = 'liter'; tSel.value = 'gallon_us'; }
+    else if(catKey === 'area'){ fSel.value = 'm2'; tSel.value = 'ft2'; }
     calc();
   }
 
@@ -1722,117 +1851,24 @@ function toolUnitConv(){
 }
 
 /* ============================================================
-   مبدل حجم اختصاصی
-============================================================ */
-function toolVolumeConv(){
-  openModal(`<span data-icon="swap"></span> مبدل حجم`, `
-    <div class="form-group">
-      <label>مقدار</label>
-      <input class="input" type="text" inputmode="decimal" value="1" data-money data-vola>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 48px 1fr;gap:10px;align-items:center">
-      <select class="select" data-volf>
-        <option value="liter">لیتر (L)</option>
-        <option value="ml">میلی‌لیتر (mL)</option>
-        <option value="m3">متر مکعب (m³)</option>
-        <option value="gallon_us">گالن آمریکایی</option>
-        <option value="gallon_uk">گالن انگلیسی</option>
-        <option value="barrel_oil">بشکه نفت</option>
-        <option value="barrel">بشکه آمریکایی</option>
-        <option value="cubic_inch">اینچ مکعب</option>
-        <option value="cubic_ft">فوت مکعب</option>
-      </select>
-      <button type="button" class="btn btn-primary" data-vols style="padding:10px;width:48px;height:48px;border-radius:14px">⇄</button>
-      <select class="select" data-volt>
-        <option value="liter" selected>لیتر (L)</option>
-        <option value="ml">میلی‌لیتر (mL)</option>
-        <option value="m3">متر مکعب (m³)</option>
-        <option value="gallon_us">گالن آمریکایی</option>
-        <option value="gallon_uk">گالن انگلیسی</option>
-        <option value="barrel_oil">بشکه نفت</option>
-        <option value="barrel">بشکه آمریکایی</option>
-        <option value="cubic_inch">اینچ مکعب</option>
-        <option value="cubic_ft">فوت مکعب</option>
-      </select>
-    </div>
-    <div class="result-box" data-vol-out></div>
-  `);
-
-  const toLiter = {
-    liter: 1,
-    ml: 0.001,
-    m3: 1000,
-    gallon_us: 3.785411784,
-    gallon_uk: 4.54609,
-    barrel_oil: 158.987294928,
-    barrel: 119.240471196,
-    cubic_inch: 0.016387064,
-    cubic_ft: 28.316846592
-  };
-
-  const labels = {
-    liter: 'لیتر',
-    ml: 'میلی‌لیتر',
-    m3: 'متر مکعب',
-    gallon_us: 'گالن آمریکایی',
-    gallon_uk: 'گالن انگلیسی',
-    barrel_oil: 'بشکه نفت',
-    barrel: 'بشکه',
-    cubic_inch: 'اینچ مکعب',
-    cubic_ft: 'فوت مکعب'
-  };
-
-  function calc(){
-    const amt = parseFormattedNumber($('[data-vola]')?.value) || 0;
-    const from = $('[data-volf]')?.value;
-    const to = $('[data-volt]')?.value;
-    if(!from || !to) return;
-
-    const inLiter = amt * toLiter[from];
-    const res = inLiter / toLiter[to];
-
-    const out = $('[data-vol-out]');
-    if(out) out.innerHTML = `
-      <div class="result-row"><span>مقدار ورودی</span><strong>${formatNumber(amt, 4)} ${labels[from]}</strong></div>
-      <div class="result-row"><span>معادل لیتر</span><strong>${formatNumber(inLiter, 4)} لیتر</strong></div>
-      <div class="result-row result-total"><span>معادل</span><strong>${formatNumber(res, 4)} ${labels[to]}</strong></div>
-    `;
-  }
-
-  $$('[data-vola],[data-volf],[data-volt]').forEach(el => {
-    el.addEventListener('input', calc);
-    el.addEventListener('change', calc);
-  });
-  $('[data-vols]')?.addEventListener('click', e => {
-    e.preventDefault();
-    e.stopPropagation();
-    const a = $('[data-volf]').value;
-    $('[data-volf]').value = $('[data-volt]').value;
-    $('[data-volt]').value = a;
-    calc();
-  });
-  calc();
-}
-
-/* ============================================================
-   PORTFOLIO
+   PORTFOLIO — با اعتبارسنجی inline
 ============================================================ */
 function toolPortfolio(){
   openModal(`<span data-icon="briefcase"></span> پرتفوی من`, `
     <div class="form-group">
       <label>نماد</label>
-      <select class="select" data-pa>
+      <select class="select" data-pa aria-label="نماد">
         ${window.DATA.ASSETS.map(a => `<option value="${a.id}">${a.name}</option>`).join('')}
       </select>
     </div>
     <div class="form-grid">
       <div class="form-group">
         <label>مقدار</label>
-        <input class="input" type="text" inputmode="decimal" placeholder="۱۰" data-money data-pq>
+        <input class="input" type="text" inputmode="decimal" placeholder="۱۰" data-money data-pq aria-label="مقدار">
       </div>
       <div class="form-group">
         <label>قیمت خرید (${unitLabel()})</label>
-        <input class="input" type="text" inputmode="decimal" placeholder="خودکار" data-money data-pp>
+        <input class="input" type="text" inputmode="decimal" placeholder="خودکار" data-money data-pp aria-label="قیمت خرید">
       </div>
     </div>
     <button type="button" class="btn btn-primary btn-block" data-padd>
@@ -1878,6 +1914,7 @@ function toolPortfolio(){
               </small>
             </div>
             <button type="button" class="icon-btn" data-pf-del2="${item.ts}"
+              title="حذف" aria-label="حذف دارایی"
               style="width:28px;height:28px;font-size:14px;color:var(--muted)">
               ${window.Icons.get('trash')}
             </button>
@@ -1902,12 +1939,14 @@ function toolPortfolio(){
     e.preventDefault();
     e.stopPropagation();
     const id = $('[data-pa]')?.value;
-    const qty = parseFormattedNumber($('[data-pq]')?.value);
-    const ppUser = parseFormattedNumber($('[data-pp]')?.value);
-    if(!id || !qty || qty <= 0){ toast('مقدار را وارد کنید', 'error'); return; }
+    const pqEl = $('[data-pq]');
+    const ppEl = $('[data-pp]');
+    const qty = validatePositive(pqEl, 'مقدار');
+    if(!id || qty == null) return;
 
+    const ppUser = parseFormattedNumber(ppEl?.value);
     let buyBase;
-    if(ppUser && !isNaN(ppUser)){
+    if(ppUser && !isNaN(ppUser) && ppUser > 0){
       buyBase = userToBase(ppUser);
     } else {
       const l = window.API.getById(id);
@@ -1920,10 +1959,10 @@ function toolPortfolio(){
     window.Storage.pf.save(list);
     render();
     renderBankCard();
-    const pq = $('[data-pq]');
-    const ppEl = $('[data-pp]');
-    if(pq) pq.value = '';
+    if(pqEl) pqEl.value = '';
     if(ppEl) ppEl.value = '';
+    clearFieldError(pqEl);
+    clearFieldError(ppEl);
     toast('اضافه شد ✓', 'success');
   });
 
@@ -1931,26 +1970,30 @@ function toolPortfolio(){
 }
 
 /* ============================================================
-   ALERTS
+   ALERTS — هشدارها پس از trigger حفظ می‌شوند (تکرارشونده)
 ============================================================ */
 function toolAlerts(){
   openModal(`<span data-icon="bell"></span> هشدار قیمت`, `
     <div class="form-group">
       <label>نماد</label>
-      <select class="select" data-al-a>
+      <select class="select" data-al-a aria-label="نماد">
         ${window.DATA.ASSETS.map(a => `<option value="${a.id}">${a.name}</option>`).join('')}
       </select>
     </div>
     <div class="form-grid">
       <div class="form-group">
         <label>بالاتر از (${unitLabel()})</label>
-        <input class="input" type="text" inputmode="decimal" data-money data-al-up>
+        <input class="input" type="text" inputmode="decimal" data-money data-al-up aria-label="بالاتر از">
       </div>
       <div class="form-group">
         <label>پایین‌تر از (${unitLabel()})</label>
-        <input class="input" type="text" inputmode="decimal" data-money data-al-dn>
+        <input class="input" type="text" inputmode="decimal" data-money data-al-dn aria-label="پایین‌تر از">
       </div>
     </div>
+    <label style="display:flex;align-items:center;gap:8px;margin:12px 0;font-size:13px;color:var(--muted)">
+      <input type="checkbox" data-al-repeat checked>
+      هشدار تکرارشونده (پس از فعال شدن حفظ شود)
+    </label>
     <button type="button" class="btn btn-primary btn-block" data-al-save>
       <span data-icon="plus"></span>
       ذخیره هشدار
@@ -1971,10 +2014,14 @@ function toolAlerts(){
       const parts = [];
       if(al.up) parts.push('بالاتر از ' + money(al.up));
       if(al.dn) parts.push('پایین‌تر از ' + money(al.dn));
+      const repeatBadge = al.repeat !== false
+        ? '<span style="font-size:10px;background:var(--accent-soft);color:var(--accent);padding:2px 6px;border-radius:6px;margin-right:6px">تکرارشونده</span>'
+        : '';
       return `
         <div class="result-row" style="padding:10px;border-radius:10px;background:var(--card-2);margin-bottom:6px">
-          <span>${window.U.esc(a?.name || '—')} — ${parts.join(' / ')}</span>
+          <span>${window.U.esc(a?.name || '—')} — ${parts.join(' / ')} ${repeatBadge}</span>
           <button type="button" class="icon-btn" data-al-del="${al.ts}"
+            title="حذف" aria-label="حذف هشدار"
             style="font-size:14px;width:28px;height:28px;color:var(--muted)">
             ${window.Icons.get('trash')}
           </button>
@@ -2002,8 +2049,9 @@ function toolAlerts(){
     if(!id || (upUser == null && dnUser == null)){ toast('حداقل یک شرط وارد کنید', 'error'); return; }
     const up = upUser != null ? userToBase(upUser) : null;
     const dn = dnUser != null ? userToBase(dnUser) : null;
+    const repeat = $('[data-al-repeat]')?.checked !== false;
     const list = window.Storage.alerts.get();
-    list.push({ id, up, dn, ts: Date.now() });
+    list.push({ id, up, dn, repeat, ts: Date.now() });
     window.Storage.alerts.save(list);
     render();
     toast('ذخیره شد ✓', 'success');
@@ -2018,7 +2066,7 @@ function toolAlerts(){
 function toolNotes(){
   const notes = window.Storage.notes.get() || '';
   openModal(`<span data-icon="note"></span> یادداشت‌ها`, `
-    <textarea class="textarea" data-notes placeholder="یادداشت خود را بنویسید..." style="min-height:220px">${notes}</textarea>
+    <textarea class="textarea" data-notes placeholder="یادداشت خود را بنویسید..." style="min-height:220px" aria-label="یادداشت">${notes}</textarea>
     <button type="button" class="btn btn-primary btn-block" data-notes-save>
       <span data-icon="check"></span>
       ذخیره
@@ -2029,8 +2077,8 @@ function toolNotes(){
     e.stopPropagation();
     const val = $('[data-notes]')?.value || '';
     window.Storage.notes.save(val);
-    toast('ذخیره شد ✓', 'success');
     closeModal();
+    toast('ذخیره شد ✓', 'success');
   });
 }
 
@@ -2042,16 +2090,16 @@ function toolProfit(){
   openModal(`<span data-icon="trendingUp"></span> محاسبه سود / زیان`, `
     <div class="form-group">
       <label>دارایی</label>
-      <select class="select" data-pr-a>${opts}</select>
+      <select class="select" data-pr-a aria-label="دارایی">${opts}</select>
     </div>
     <div class="form-grid">
       <div class="form-group">
         <label>قیمت خرید (${unitLabel()})</label>
-        <input class="input" type="text" inputmode="decimal" placeholder="قیمت واحد" data-money data-pr-buy>
+        <input class="input" type="text" inputmode="decimal" placeholder="قیمت واحد" data-money data-pr-buy aria-label="قیمت خرید">
       </div>
       <div class="form-group">
         <label>مقدار</label>
-        <input class="input" type="text" inputmode="decimal" value="1" data-money data-pr-qty>
+        <input class="input" type="text" inputmode="decimal" value="1" data-money data-pr-qty aria-label="مقدار">
       </div>
     </div>
     <div class="result-box" data-profit-out></div>
@@ -2072,7 +2120,7 @@ function toolProfit(){
     const nowVal = l.price * qty;
     const buyVal = buyBase * qty;
     const pl = nowVal - buyVal;
-    const pct = (pl / buyVal) * 100;
+    const pct = buyVal > 0 ? (pl / buyVal) * 100 : 0;
     const up = pl >= 0;
 
     if(out) out.innerHTML = `
@@ -2104,11 +2152,11 @@ function toolZakat(){
     <div class="form-grid">
       <div class="form-group">
         <label>وزن طلا (گرم)</label>
-        <input class="input" type="text" inputmode="decimal" value="100" data-money data-zw>
+        <input class="input" type="text" inputmode="decimal" value="100" data-money data-zw aria-label="وزن طلا">
       </div>
       <div class="form-group">
         <label>عیار</label>
-        <select class="select" data-zk>
+        <select class="select" data-zk aria-label="عیار">
           <option value="18" selected>۱۸ عیار</option>
           <option value="24">۲۴ عیار</option>
           <option value="21">۲۱ عیار</option>
@@ -2163,7 +2211,7 @@ function toolAvgBuy(){
   openModal(`<span data-icon="barChart"></span> میانگین خرید`, `
     <div class="form-group">
       <label>دارایی</label>
-      <select class="select" data-avg-a>${opts}</select>
+      <select class="select" data-avg-a aria-label="دارایی">${opts}</select>
     </div>
     <div id="avg-rows"></div>
     <button type="button" class="btn btn-ghost btn-block" data-avg-add style="margin-top:8px">
@@ -2180,9 +2228,9 @@ function toolAvgBuy(){
     row.setAttribute('data-avg-row', '');
     row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 40px;gap:8px;margin-bottom:8px';
     row.innerHTML = `
-      <input class="input" type="text" inputmode="decimal" placeholder="قیمت (${unitLabel()})" data-money data-avg-p>
-      <input class="input" type="text" inputmode="decimal" placeholder="مقدار" data-money data-avg-q>
-      <button type="button" class="btn btn-danger" data-avg-del style="padding:0;width:40px;font-size:18px">×</button>
+      <input class="input" type="text" inputmode="decimal" placeholder="قیمت (${unitLabel()})" data-money data-avg-p aria-label="قیمت">
+      <input class="input" type="text" inputmode="decimal" placeholder="مقدار" data-money data-avg-q aria-label="مقدار">
+      <button type="button" class="btn btn-danger" data-avg-del style="padding:0;width:40px;font-size:18px" title="حذف ردیف" aria-label="حذف ردیف">×</button>
     `;
     wrap.appendChild(row);
     row.querySelectorAll('input').forEach(i => i.addEventListener('input', calc));
@@ -2254,7 +2302,7 @@ function openTool(tool){
   else if(tool === 'conv') toolConv();
   else if(tool === 'crypto-conv') toolCryptoConv();
   else if(tool === 'unit-conv') toolUnitConv();
-  else if(tool === 'volume-conv') toolVolumeConv();
+  else if(tool === 'volume-conv') toolUnitConv(); // ادغام شده
   else if(tool === 'portfolio') toolPortfolio();
   else if(tool === 'alerts') toolAlerts();
   else if(tool === 'notes') toolNotes();
@@ -2283,12 +2331,8 @@ function openTool(tool){
 }
 
 /* ============================================================
-   SEARCH — جستجوی ترکیبی نمادها + خودروها
+   SEARCH — بدون متغیر بلااستفاده
 ============================================================ */
-let searchIdx = -1;
-let searchResults = [];
-let searchKind = 'symbol'; // 'symbol' | 'car'
-
 function doSearch(query){
   const res = $('[data-search-results]');
   if(!res) return;
@@ -2298,19 +2342,15 @@ function doSearch(query){
   if(!q || q.length < 2){
     res.hidden = true;
     res.innerHTML = '';
-    searchResults = [];
-    searchIdx = -1;
     return;
   }
 
-  // ═══ جستجو در نمادها ═══
   const symbolList = window.DATA.ASSETS.filter(a =>
     a.name.toLowerCase().includes(q) ||
     a.code.toLowerCase().includes(q) ||
     a.id.toLowerCase().includes(q)
   ).slice(0, 10);
 
-  // ═══ جستجو در خودروها ═══
   let carList = [];
   if(window.API && window.API.getCars){
     const cars = window.API.getCars();
@@ -2333,14 +2373,13 @@ function doSearch(query){
 
   let html = '';
 
-  // ═══ بخش نمادها ═══
   if(hasSymbols){
     html += '<div class="ms-section-title">نمادها</div>';
     html += symbolList.map(function(a, i){
       const live = window.API && window.API.getById ? window.API.getById(a.id) : null;
       const price = live && live.price != null ? formatPrice(a, live.price) : '—';
       return `
-        <div class="ms-item" data-search-kind="symbol" data-idx="${i}">
+        <div class="ms-item" data-search-kind="symbol" data-idx="${i}" role="button" tabindex="0">
           <div class="ms-item-icon">${assetIcon(a)}</div>
           <div class="ms-item-info">
             <strong>${window.U.esc(a.name)}</strong>
@@ -2352,7 +2391,6 @@ function doSearch(query){
     }).join('');
   }
 
-  // ═══ بخش خودروها ═══
   if(hasCars){
     html += '<div class="ms-section-title">خودروها</div>';
     html += carList.map(function(c, i){
@@ -2373,7 +2411,7 @@ function doSearch(query){
                         : c.status === 'not-selling' ? 'توقف فروش'
                         : '';
       return `
-        <div class="ms-item" data-search-kind="car" data-idx="${i}">
+        <div class="ms-item" data-search-kind="car" data-idx="${i}" role="button" tabindex="0">
           <div class="ms-item-icon" style="background:var(--card-2);color:var(--accent)">
             <span data-icon="car"></span>
           </div>
@@ -2390,7 +2428,6 @@ function doSearch(query){
   res.innerHTML = html;
   res.hidden = false;
 
-  // ═══ اتصال کلیک ═══
   res.querySelectorAll('.ms-item').forEach(function(el){
     el.addEventListener('click', function(e){
       e.stopPropagation();
@@ -2404,7 +2441,6 @@ function doSearch(query){
     });
   });
 
-  // ═══ hydrate آیکون‌ها ═══
   if(window.Icons && window.Icons.hydrate){
     window.Icons.hydrate(res);
   }
@@ -2423,7 +2459,6 @@ function pickSearchCar(car){
   closeSearch();
   go('cars');
 
-  // ═══ بعد از رندر، اسکرول به خودروی انتخاب‌شده ═══
   setTimeout(function(){
     const el = document.querySelector('[data-car-id="' + car.id + '"]');
     if(el && el.scrollIntoView){
@@ -2443,8 +2478,6 @@ function closeSearch(){
   }
   const input = $('[data-search-input]');
   if(input) input.value = '';
-  searchResults = [];
-  searchIdx = -1;
 }
 
 /* ============================================================
@@ -2472,12 +2505,14 @@ function handleClick(e){
     e.stopPropagation();
     if(refreshBtn.dataset.loading === '1') return;
     refreshBtn.dataset.loading = '1';
+    refreshBtn.classList.add('is-loading');
     window.API.fetchData(true).then(() => {
       toast('بروزرسانی شد ✓', 'success');
     }).catch(() => {
       toast('خطا در بروزرسانی', 'error');
     }).finally(() => {
       refreshBtn.dataset.loading = '';
+      refreshBtn.classList.remove('is-loading');
     });
     return;
   }
@@ -2609,7 +2644,7 @@ function handleClick(e){
 
       try {
         localStorage.setItem('gheymato.cfg.v6', JSON.stringify(window.CFG._c));
-      } catch(e){}
+      } catch(err){}
     }
   }
 
@@ -2623,6 +2658,17 @@ function handleClick(e){
     window.CFG.set('chartPeriod', pill.dataset.period);
     if(currentPage === 'chart') renderChartPage().catch(function(){});
     if(currentPage === 'home') renderHomeChart().catch(function(){});
+    return;
+  }
+
+  // ═══ انتخاب asset برای نمودار خانه ═══
+  const homeAssetBtn = e.target.closest('[data-home-chart-asset]');
+  if(homeAssetBtn){
+    e.preventDefault();
+    e.stopPropagation();
+    homeChartId = homeAssetBtn.dataset.homeChartAsset;
+    $$('[data-home-chart-asset]').forEach(b => b.classList.toggle('is-active', b.dataset.homeChartAsset === homeChartId));
+    renderHomeChart().catch(function(){});
     return;
   }
 
@@ -2662,7 +2708,7 @@ function handleClick(e){
 }
 
 /* ============================================================
-   FORMAT INPUT — جداکننده هزارگان خودکار
+   FORMAT INPUT
 ============================================================ */
 function attachMoneyFormatter(){
   document.addEventListener('input', function(e){
@@ -2726,7 +2772,7 @@ function refreshAll(){
 }
 
 /* ============================================================
-   HELPERS
+   CHECK ALERTS — هشدارها پس از trigger حفظ می‌شوند
 ============================================================ */
 function checkAlerts(){
   const list = window.Storage.alerts.get();
@@ -2738,9 +2784,19 @@ function checkAlerts(){
     let fired = false;
     if(al.up && l.price >= al.up) fired = true;
     if(al.dn && l.price <= al.dn) fired = true;
+
     if(fired){
       const a = window.DATA.find(al.id);
-      toast('🔔 ' + (a?.name || al.id), 'warning');
+      const name = a?.name || al.id;
+      const direction = al.up && l.price >= al.up ? 'بالاتر از' : 'پایین‌تر از';
+      toast('🔔 ' + name + ' ' + direction + ' حد تعیین‌شده', 'warning', 'alert_' + al.id + '_' + (al.up || al.dn));
+
+      // ═══ اگر تکرارشونده نباشد حذف می‌شود ═══
+      if(al.repeat === false){
+        // حذف
+      } else {
+        remaining.push(al);
+      }
     } else {
       remaining.push(al);
     }
@@ -2752,6 +2808,9 @@ function checkAlerts(){
    INIT
 ============================================================ */
 function init(){
+  // ═══ غیرفعال‌سازی حرکت انگشت ═══
+  disableAllGestures();
+
   window.CFG.load();
   document.body.classList.toggle('dark', window.CFG.get('theme') === 'dark');
 
@@ -2789,13 +2848,11 @@ function init(){
     }
   });
 
-  // ═══ جستجو ═══
   const si = $('[data-search-input]');
   if(si){
     si.addEventListener('input', window.U.debounce(e => doSearch(e.target.value), 150));
   }
 
-  // ═══ جستجوی خودروها (فقط در صفحه cars) ═══
   const cs = $('[data-cars-search]');
   if(cs){
     cs.addEventListener('input', window.U.debounce(function(e){
@@ -2803,10 +2860,9 @@ function init(){
       if(currentPage === 'cars'){
         renderCars().catch(function(){});
       }
-    }, 200));
+    }, 250));
   }
 
-  // ═══ فیلتر خودروها ═══
   $$('[data-cars-filter]').forEach(function(btn){
     btn.addEventListener('click', function(e){
       e.preventDefault();
@@ -2852,8 +2908,8 @@ function init(){
     if(refreshTimer) clearTimeout(refreshTimer);
     refreshTimer = setTimeout(() => {
       refreshAll();
-      checkAlerts();
-    }, 500);
+      checkAlerts(); // ← بدون تأخیر اضافی
+    }, 200);
   });
 
   renderHdrTicker();
@@ -2863,50 +2919,49 @@ function init(){
    PUBLIC API
 ============================================================ */
 return {
-  init: init,
-  go: go,
-  toast: toast,
-  refreshAll: refreshAll,
-  openModal: openModal,
-  closeModal: closeModal,
-  closeSearch: closeSearch,
-  renderChartPage: renderChartPage,
-  renderMarkets: renderMarkets,
-  renderFavs: renderFavs,
-  renderBankCard: renderBankCard,
-  renderFeatured: renderFeatured,
-  renderMostUsed: renderMostUsed,
-  renderTools: renderTools,
-  renderCats: renderCats,
-  renderHdrTicker: renderHdrTicker,
-  getUserName: getUserName,
-  saveUserName: saveUserName,
-  formatPrice: formatPrice,
-  formatPriceWithUnit: formatPriceWithUnit,
-  fullUnitLabel: fullUnitLabel,
-  baseToUser: baseToUser,
-  userToBase: userToBase,
-  formatNumber: formatNumber,
-  parseFormattedNumber: parseFormattedNumber,
-  openTool: openTool,
-  toolGold: toolGold,
-  toolCoin: toolCoin,
-  toolOunce: toolOunce,
-  toolSilver: toolSilver,
-  toolConv: toolConv,
-  toolCryptoConv: toolCryptoConv,
-  toolUnitConv: toolUnitConv,
-  toolVolumeConv: toolVolumeConv,
-  toolPortfolio: toolPortfolio,
-  toolAlerts: toolAlerts,
-  toolNotes: toolNotes,
-  toolProfit: toolProfit,
-  toolZakat: toolZakat,
-  toolAvgBuy: toolAvgBuy,
-  renderCars: renderCars,
-  carRowHTML: carRowHTML,
-  doSearch: doSearch,
-  closeSearch: closeSearch
+  init,
+  go,
+  toast,
+  refreshAll,
+  openModal,
+  closeModal,
+  closeSearch,
+  renderChartPage,
+  renderMarkets,
+  renderFavs,
+  renderBankCard,
+  renderFeatured,
+  renderMostUsed,
+  renderTools,
+  renderCats,
+  renderHdrTicker,
+  getUserName,
+  saveUserName,
+  formatPrice,
+  formatPriceWithUnit,
+  fullUnitLabel,
+  baseToUser,
+  userToBase,
+  formatNumber,
+  parseFormattedNumber,
+  openTool,
+  toolGold,
+  toolCoin,
+  toolOunce,
+  toolSilver,
+  toolConv,
+  toolCryptoConv,
+  toolUnitConv,
+  toolPortfolio,
+  toolAlerts,
+  toolNotes,
+  toolProfit,
+  toolZakat,
+  toolAvgBuy,
+  renderCars,
+  carRowHTML,
+  doSearch,
+  disableAllGestures
 };
 
 })();
