@@ -116,7 +116,7 @@ const U = {
     return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
   },
 
-  flag(code){ return `https://flagcdn.com/w80/${code}.png`; },
+  flag(code){ return `https://flagcdn.com/w80/${code}.webp`; },
 
   debounce(fn, w=150){
     let t;

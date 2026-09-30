@@ -8,230 +8,442 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="قیمتو">
+<meta name="description" content="قیمتو — پایش زنده بازار طلا، ارز، سکه، کریپتو و خودرو با نمودار لحظه‌ای">
+<meta name="keywords" content="قیمت طلا, قیمت دلار, قیمت سکه, قیمت خودرو, ارز دیجیتال, بورس">
 <title>قیمتو — پایش زنده بازار</title>
-<link rel="icon" type="image/png" href="assets/logo.png">
+<link rel="icon" type="image/png" href="assets/logo.webp">
 <link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="css/app.css">
 
-<!-- ═══════════════ SPLASH INLINE STYLES ═══════════════ -->
+<!-- ═══════════════ SPLASH SCREEN 2.0 ═══════════════ -->
 <style>
-#splashScreen {
+#splash {
   position: fixed;
   inset: 0;
   z-index: 99999;
-  background: #0a1310;
+  background: radial-gradient(circle at 50% 35%, #0d1f18 0%, #0a1310 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  transition: opacity 0.4s ease, visibility 0.4s ease;
-  will-change: opacity;
+  transition: opacity .45s cubic-bezier(.32,.72,0,1), visibility .45s;
 }
-#splashScreen.light { background: #f5f7f6; }
-#splashScreen.is-hidden { opacity: 0; visibility: hidden; pointer-events: none; }
-#splashScreen .splash-logo {
-  width: 110px; height: 110px; margin-bottom: 22px;
-  display: flex; align-items: center; justify-content: center;
+body:not(.dark) #splash {
+  background: radial-gradient(circle at 50% 35%, #f0f5f2 0%, #f4f7f5 100%);
 }
-#splashScreen .splash-logo img {
-  width: 100%; height: 100%; object-fit: contain;
-  animation: splashLogoIn 0.6s ease;
+#splash.is-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
-#splashScreen .splash-name {
-  font-size: 30px; font-weight: 900; color: #ffffff;
-  letter-spacing: 1px; margin-bottom: 8px;
+#splash .splash-logo-wrap {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-#splashScreen.light .splash-name { color: #0a1310; }
-#splashScreen .splash-subtitle {
-  font-size: 13px; color: #7a8a83; font-weight: 500; margin-bottom: 36px;
+#splash .splash-logo-wrap::before {
+  content: '';
+  position: absolute;
+  inset: -20px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(16,185,129,.18) 0%, transparent 65%);
+  animation: splashPulse 2s ease-in-out infinite;
 }
-#splashScreen .splash-message {
-  font-size: 14px; color: #7a8a83; font-weight: 500;
-  margin-bottom: 18px; text-align: center;
+@keyframes splashPulse {
+  0%, 100% { transform: scale(1); opacity: .7; }
+  50% { transform: scale(1.15); opacity: .35; }
 }
-#splashScreen .splash-loader {
-  position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%);
-  width: 180px; height: 3px; background: rgba(255, 255, 255, 0.08);
-  border-radius: 3px; overflow: hidden;
+#splash .splash-logo-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  position: relative;
+  z-index: 1;
+  animation: splashLogoIn .7s cubic-bezier(.32,.72,0,1) both;
 }
-#splashScreen.light .splash-loader { background: rgba(0, 0, 0, 0.08); }
-#splashScreen .splash-loader-bar {
-  width: 40%; height: 100%; background: #10b981; border-radius: 3px;
-  animation: splashLoaderMove 1.2s cubic-bezier(0.65, 0.05, 0.36, 1) infinite;
+@keyframes splashLogoIn {
+  0% { opacity: 0; transform: scale(.75) rotate(-8deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0); }
 }
-@keyframes splashLogoIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
-@keyframes splashLoaderMove { 0% { transform: translateX(-100%); } 100% { transform: translateX(500%); } }
+#splash .splash-name {
+  font-size: 32px;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: 2px;
+  margin-bottom: 6px;
+  animation: splashFadeUp .6s cubic-bezier(.32,.72,0,1) .15s both;
+}
+body:not(.dark) #splash .splash-name { color: #0a1310; }
+#splash .splash-tagline {
+  font-size: 12.5px;
+  color: #7a8a83;
+  font-weight: 500;
+  margin-bottom: 40px;
+  animation: splashFadeUp .6s cubic-bezier(.32,.72,0,1) .25s both;
+}
+#splash .splash-loader {
+  position: relative;
+  width: 200px;
+  height: 3px;
+  background: rgba(255, 255, 255, .06);
+  border-radius: 3px;
+  overflow: hidden;
+  animation: splashFadeUp .6s cubic-bezier(.32,.72,0,1) .35s both;
+}
+body:not(.dark) #splash .splash-loader { background: rgba(0, 0, 0, .06); }
+#splash .splash-loader-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, #10b981, #34d399, #10b981, transparent);
+  border-radius: 3px;
+  animation: splashLoader 1.6s cubic-bezier(.65,.05,.36,1) infinite;
+  box-shadow: 0 0 12px rgba(16, 185, 129, .6);
+}
+@keyframes splashLoader {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(500%); }
+}
+@keyframes splashFadeUp {
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+#splash .splash-steps {
+  position: absolute;
+  bottom: 70px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  animation: splashFadeUp .6s cubic-bezier(.32,.72,0,1) .45s both;
+}
+#splash .splash-step {
+  font-size: 11px;
+  color: #6d7d76;
+  font-weight: 600;
+  transition: color .3s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+#splash .splash-step::before {
+  content: '○';
+  font-size: 9px;
+  color: #42544d;
+  transition: all .3s ease;
+}
+#splash .splash-step.is-active { color: #10b981; }
+#splash .splash-step.is-active::before { content: '●'; color: #10b981; }
+#splash .splash-step.is-done { color: #6d7d76; opacity: .5; }
+#splash .splash-step.is-done::before { content: '✓'; color: #10b981; font-size: 11px; }
 </style>
 </head>
 <body class="dark">
 
-<!-- ═══════════════ SPLASH ═══════════════ -->
-<div id="splashScreen">
-  <div class="splash-logo"><img src="assets/logo.png" alt="قیمتو"></div>
+<!-- ═══════════════════════════════════════════════════════════
+     SPLASH SCREEN 2.0
+═══════════════════════════════════════════════════════════ -->
+<div id="splash">
+  <div class="splash-logo-wrap">
+    <img src="assets/logo.webp" alt="قیمتو">
+  </div>
   <div class="splash-name">قیمتو</div>
-  <div class="splash-subtitle">پایش زنده بازار</div>
-  <div class="splash-message">لطفاً شکیبا باشید...</div>
+  <div class="splash-tagline">پایش زنده بازار</div>
   <div class="splash-loader"><div class="splash-loader-bar"></div></div>
+  <div class="splash-steps">
+    <div class="splash-step" data-splash-step="0">اتصال به سرور</div>
+    <div class="splash-step" data-splash-step="1">دریافت داده‌ها</div>
+    <div class="splash-step" data-splash-step="2">آماده‌سازی رابط</div>
+  </div>
 </div>
 
-<!-- ═══════════════ OFFLINE (iframe) ═══════════════ -->
+<!-- ═══════════════════════════════════════════════════════════
+     OFFLINE SCREEN
+═══════════════════════════════════════════════════════════ -->
 <iframe id="offlineScreen" src="offline.html"
   style="display:none;position:fixed;inset:0;width:100%;height:100%;border:0;z-index:9998"
   title="آفلاین"></iframe>
 
+<!-- ═══════════════════════════════════════════════════════════
+     BACKDROP
+═══════════════════════════════════════════════════════════ -->
 <div class="backdrop" data-backdrop></div>
 
+<!-- ═══════════════════════════════════════════════════════════
+     APP
+═══════════════════════════════════════════════════════════ -->
 <div class="app">
 
-  <!-- ═══════════════ SIDEBAR ═══════════════ -->
+  <!-- ═══════════════════════════════════════════════════════
+       SIDEBAR
+  ═══════════════════════════════════════════════════════ -->
   <aside class="sidebar">
     <div class="sidebar-head">
-      <img src="assets/logo.png" alt="قیمتو">
-      <div><strong>قیمتو</strong><small>پایش زنده بازار</small></div>
+      <img src="assets/logo.webp" alt="قیمتو">
+      <div>
+        <strong>قیمتو</strong>
+        <small>پایش زنده بازار</small>
+      </div>
     </div>
 
     <nav class="sidebar-nav">
       <div class="nav-group">نمایش بازار</div>
-      <button class="nav-link is-active" data-route="home"><span data-icon="home"></span>خانه</button>
-      <button class="nav-link" data-route="markets"><span data-icon="barChart"></span>بازارها</button>
-      <button class="nav-link" data-route="chart"><span data-icon="activity"></span>نمودار</button>
-      <button class="nav-link" data-route="compare"><span data-icon="swap"></span>مقایسه</button>
-      <button class="nav-link" data-route="favorites"><span data-icon="star"></span>علاقه‌مندی</button>
-      <button class="nav-link" data-route="cars"><span data-icon="car"></span>قیمت خودرو</button>
+      <button class="nav-link is-active" data-route="home">
+        <span data-icon="home"></span>خانه
+      </button>
+      <button class="nav-link" data-route="markets">
+        <span data-icon="barChart"></span>بازارها
+      </button>
+      <button class="nav-link" data-route="chart">
+        <span data-icon="activity"></span>نمودار
+      </button>
+      <button class="nav-link" data-route="compare">
+        <span data-icon="swap"></span>مقایسه
+      </button>
+      <button class="nav-link" data-route="favorites">
+        <span data-icon="star"></span>علاقه‌مندی
+      </button>
+      <button class="nav-link" data-route="cars">
+        <span data-icon="car"></span>قیمت خودرو
+      </button>
 
       <div class="nav-group">ابزارها</div>
-      <button class="nav-link" data-tool="gold"><span data-icon="calculator"></span>محاسبه‌گر طلا</button>
-      <button class="nav-link" data-tool="coin"><span data-icon="coins"></span>محاسبه‌گر سکه</button>
-      <button class="nav-link" data-tool="ounce"><span data-icon="diamond"></span>محاسبه‌گر انس</button>
-      <button class="nav-link" data-tool="silver"><span data-icon="diamond"></span>محاسبه‌گر نقره</button>
-      <button class="nav-link" data-tool="conv"><span data-icon="exchange"></span>مبدل ارز</button>
-      <button class="nav-link" data-tool="crypto-conv"><span data-icon="bitcoin"></span>مبدل کریپتو</button>
-      <button class="nav-link" data-tool="unit-conv"><span data-icon="swap"></span>مبدل واحد</button>
-      <button class="nav-link" data-tool="volume-conv"><span data-icon="swap"></span>مبدل حجم</button>
-      <button class="nav-link" data-tool="portfolio"><span data-icon="briefcase"></span>پرتفوی من</button>
-      <button class="nav-link" data-tool="alerts"><span data-icon="bell"></span>هشدار قیمت</button>
-      <button class="nav-link" data-tool="notes"><span data-icon="note"></span>یادداشت‌ها</button>
+      <button class="nav-link" data-tool="gold">
+        <span data-icon="calculator"></span>محاسبه‌گر طلا
+      </button>
+      <button class="nav-link" data-tool="coin">
+        <span data-icon="coins"></span>محاسبه‌گر سکه
+      </button>
+      <button class="nav-link" data-tool="ounce">
+        <span data-icon="diamond"></span>محاسبه‌گر انس
+      </button>
+      <button class="nav-link" data-tool="silver">
+        <span data-icon="diamond"></span>محاسبه‌گر نقره
+      </button>
+      <button class="nav-link" data-tool="conv">
+        <span data-icon="exchange"></span>مبدل ارز
+      </button>
+      <button class="nav-link" data-tool="crypto-conv">
+        <span data-icon="bitcoin"></span>مبدل کریپتو
+      </button>
+      <button class="nav-link" data-tool="unit-conv">
+        <span data-icon="swap"></span>مبدل واحد
+      </button>
+      <button class="nav-link" data-tool="volume-conv">
+        <span data-icon="swap"></span>مبدل حجم
+      </button>
+      <button class="nav-link" data-tool="portfolio">
+        <span data-icon="briefcase"></span>پرتفوی من
+      </button>
+      <button class="nav-link" data-tool="alerts">
+        <span data-icon="bell"></span>هشدار قیمت
+      </button>
+      <button class="nav-link" data-tool="notes">
+        <span data-icon="note"></span>یادداشت‌ها
+      </button>
 
       <div class="nav-group">تحلیل</div>
-      <button class="nav-link" data-tool="profit"><span data-icon="trendingUp"></span>محاسبه سود</button>
-      <button class="nav-link" data-tool="zakat"><span data-icon="check"></span>محاسبه زکات</button>
-      <button class="nav-link" data-tool="avg"><span data-icon="barChart"></span>میانگین خرید</button>
+      <button class="nav-link" data-tool="profit">
+        <span data-icon="trendingUp"></span>محاسبه سود
+      </button>
+      <button class="nav-link" data-tool="zakat">
+        <span data-icon="check"></span>محاسبه زکات
+      </button>
+      <button class="nav-link" data-tool="avg">
+        <span data-icon="barChart"></span>میانگین خرید
+      </button>
 
       <div class="nav-group">تنظیمات</div>
-      <button class="nav-link" data-tool="tv"><span data-icon="tv"></span>حالت TV</button>
-      <button class="nav-link" data-tool="fullscreen"><span data-icon="external"></span>تمام‌صفحه</button>
-      <button class="nav-link" data-route="settings"><span data-icon="settings"></span>تنظیمات</button>
+      <button class="nav-link" data-tool="tv">
+        <span data-icon="tv"></span>حالت TV
+      </button>
+      <button class="nav-link" data-tool="fullscreen">
+        <span data-icon="external"></span>تمام‌صفحه
+      </button>
+      <button class="nav-link" data-route="settings">
+        <span data-icon="settings"></span>تنظیمات
+      </button>
     </nav>
 
     <div class="sidebar-foot">
-      <div class="foot-status"><span class="dot"></span><span data-status>متصل</span></div>
+      <div class="foot-status">
+        <span class="dot"></span>
+        <span data-status>متصل</span>
+      </div>
       <small data-update>—</small>
     </div>
   </aside>
 
-  <!-- ═══════════════ MAIN ═══════════════ -->
+  <!-- ═══════════════════════════════════════════════════════
+       MAIN
+  ═══════════════════════════════════════════════════════ -->
   <main class="main">
 
-    <!-- HEADER -->
+    <!-- ═══ HEADER ═══ -->
     <header class="app-header">
-      <button class="hdr-btn" data-menu aria-label="منو"><span data-icon="menu"></span></button>
+      <button class="hdr-btn" data-menu aria-label="منو">
+        <span data-icon="menu"></span>
+      </button>
+      
       <div class="hdr-search-wrap">
         <div class="hdr-search">
           <span class="hdr-search-icon" data-icon="search"></span>
-          <input type="search" placeholder="جستجوی نماد، ارز، سکه، کریپتو، خودرو..." data-search-input autocomplete="off">
+          <input type="search" 
+                 placeholder="جستجوی نماد، ارز، سکه، کریپتو، خودرو..." 
+                 data-search-input 
+                 autocomplete="off"
+                 aria-label="جستجو">
         </div>
         <div class="hdr-search-results" data-search-results hidden></div>
       </div>
-      <button class="hdr-btn" data-action="refresh" aria-label="بروزرسانی"><span data-icon="refresh"></span></button>
+      
+      <button class="hdr-btn" data-action="refresh" aria-label="بروزرسانی">
+        <span data-icon="refresh"></span>
+      </button>
     </header>
 
-    <!-- HEADER TICKER -->
+    <!-- ═══ HEADER TICKER ═══ -->
     <div class="hdr-ticker" data-hdr-ticker>
       <div class="hdr-ticker-track" data-hdr-ticker-track></div>
     </div>
 
+    <!-- ═══ CONTENT ═══ -->
     <div class="content">
 
-      <!-- ═══════════════════════════════════════════
-           HOME
-      ═══════════════════════════════════════════ -->
+      <!-- ═══════════════════════════════════════════════════
+           صفحه اصلی (HOME)
+      ═══════════════════════════════════════════════════ -->
       <section class="page is-active" data-page="home">
 
-        <!-- ═══ 1. بنر اصلی (610×343) ═══ -->
-        <div class="banner-hero">
-          <img src="assets/banners/banner-home.jpg" alt="پایش زنده بازار" loading="eager">
+        <!-- ═══════════════════════════════════════════════
+             1. HERO BANNER — بنر اصلی
+        ═══════════════════════════════════════════════ -->
+        <!-- ═══════════════════════════════════════════════
+     1. HERO BANNER — فقط تصویر
+═══════════════════════════════════════════════ -->
+<div class="hero-banner">
+  <img src="assets/banners/banner-home.webp" alt="قیمتو" loading="eager">
+</div>
+
+        <!-- ═══════════════════════════════════════════════
+             2. LIVE STRIP — نوار قیمت‌های زنده
+        ═══════════════════════════════════════════════ -->
+        <div class="live-strip" data-live-strip></div>
+
+        <!-- ═══════════════════════════════════════════════
+             3. FEATURED — مورد علاقه
+        ═══════════════════════════════════════════════ -->
+        <div class="sec-head">
+          <div class="sec-title">
+            <span data-icon="star"></span>مورد علاقه
+          </div>
+          <button class="link" data-route="favorites">
+            همه<span data-icon="arrowLeft"></span>
+          </button>
+        </div>
+        <div class="scroll-wrap">
+          <div class="scroll-row" data-featured></div>
         </div>
 
-        <!-- ═══ 2. مورد علاقه (Featured) ═══ -->
+        <!-- ═══════════════════════════════════════════════
+             4. CATEGORIES — دسته‌بندی‌ها
+        ═══════════════════════════════════════════════ -->
         <div class="sec-head">
-          <div class="sec-title"><span data-icon="star"></span>مورد علاقه</div>
-          <button class="link" data-route="favorites">همه<span data-icon="arrowLeft"></span></button>
+          <div class="sec-title">
+            <span data-icon="grid"></span>دسته‌بندی‌ها
+          </div>
         </div>
-        <div class="scroll-wrap"><div class="scroll-row" data-featured></div></div>
-
-        <!-- ═══ 3. دسته‌بندی‌ها (Categories) ═══ -->
-        <div class="sec-head">
-          <div class="sec-title"><span data-icon="grid"></span>دسته‌بندی‌ها</div>
+        <div class="scroll-wrap">
+          <div class="scroll-row" data-cats></div>
         </div>
-        <div class="scroll-wrap"><div class="scroll-row" data-cats></div></div>
 
-        <!-- ═══ 4. کارت بانکی (Portfolio) — منتقل شد به اینجا ═══ -->
+        <!-- ═══════════════════════════════════════════════
+             5. PORTFOLIO — کارت بانکی پرتفوی
+        ═══════════════════════════════════════════════ -->
         <div class="sec-head">
-          <div class="sec-title"><span data-icon="briefcase"></span>پرتفوی من</div>
-          <button class="link" data-tool="portfolio">مدیریت<span data-icon="arrowLeft"></span></button>
+          <div class="sec-title">
+            <span data-icon="briefcase"></span>پرتفوی من
+          </div>
+          <button class="link" data-tool="portfolio">
+            مدیریت<span data-icon="arrowLeft"></span>
+          </button>
         </div>
         <div class="portfolio-card-wrap" data-portfolio-card></div>
 
-        <!-- ═══ 5. ابزارها (Tools — افقی) ═══ -->
+        <!-- ═══════════════════════════════════════════════
+             6. TOOLS — ابزارها (افقی)
+        ═══════════════════════════════════════════════ -->
         <div class="sec-head">
-          <div class="sec-title"><span data-icon="settings"></span>ابزارها</div>
+          <div class="sec-title">
+            <span data-icon="settings"></span>ابزارها
+          </div>
         </div>
         <div class="tools-horizontal" data-tools></div>
 
-        <!-- ═══ 6. بنر دوم (610×343) ═══ -->
-        <div class="banner-hero">
-          <img src="assets/banners/banner-home2.jpg" alt="تحلیل حرفه‌ای" loading="lazy">
-        </div>
-
-        <!-- ═══ 7. بیشترین کاربرد (Most Used) ═══ -->
+        <!-- ═══════════════════════════════════════════════
+             7. MOST USED — بیشترین کاربرد
+        ═══════════════════════════════════════════════ -->
         <div class="sec-head">
-          <div class="sec-title"><span data-icon="zap"></span>بیشترین کاربرد</div>
-          <button class="link" data-route="markets">همه<span data-icon="arrowLeft"></span></button>
+          <div class="sec-title">
+            <span data-icon="zap"></span>بیشترین کاربرد
+          </div>
+          <button class="link" data-route="markets">
+            همه<span data-icon="arrowLeft"></span>
+          </button>
         </div>
-        <div class="scroll-wrap"><div class="scroll-row" data-most></div></div>
+        <div class="scroll-wrap">
+          <div class="scroll-row" data-most></div>
+        </div>
 
-        <!-- ═══ 8. جدول خودروها — در انتهای صفحه ═══ -->
+        <!-- ═══════════════════════════════════════════════
+             8. CARS — قیمت خودرو (پیش‌نمایش)
+        ═══════════════════════════════════════════════ -->
         <div class="sec-head">
-          <div class="sec-title"><span data-icon="car"></span>قیمت خودرو</div>
-          <button class="link" data-route="cars">همه<span data-icon="arrowLeft"></span></button>
+          <div class="sec-title">
+            <span data-icon="car"></span>قیمت خودرو
+          </div>
+          <button class="link" data-route="cars">
+            همه<span data-icon="arrowLeft"></span>
+          </button>
         </div>
-
         <div class="cars-table-wrap" data-home-cars>
           <div class="empty">
             <h3>در حال بارگذاری...</h3>
           </div>
         </div>
 
-        <!-- ❌ شاخص‌ها (نمودار بازار) حذف شد -->
-
       </section>
 
-      <!-- ═══════════════════════════════════════════
-           MARKETS
-      ═══════════════════════════════════════════ -->
+      <!-- ═══════════════════════════════════════════════════
+           صفحه بازارها (MARKETS)
+      ═══════════════════════════════════════════════════ -->
       <section class="page" data-page="markets">
 
         <div class="banner-hero">
-          <img src="assets/banners/banner-markets.jpg" alt="بازارها" loading="lazy">
+          <img src="assets/banners/banner-markets.jpg" 
+               alt="بازارها" 
+               loading="lazy">
         </div>
 
         <div class="sec-head">
-          <div class="sec-title"><span data-icon="barChart"></span>همه بازارها</div>
+          <div class="sec-title">
+            <span data-icon="barChart"></span>همه بازارها
+          </div>
           <div style="display:flex;gap:8px;align-items:center">
             <span class="muted" data-count>—</span>
             <div class="view-toggle">
-              <button data-view="grid" class="is-active" title="کارتی"><span data-icon="grid"></span></button>
-              <button data-view="heat" title="نقشه"><span data-icon="activity"></span></button>
+              <button data-view="grid" class="is-active" title="کارتی" aria-label="نمایش کارتی">
+                <span data-icon="grid"></span>
+              </button>
+              <button data-view="list" title="ردیفی" aria-label="نمایش ردیفی">
+                <span data-icon="list"></span>
+              </button>
             </div>
           </div>
         </div>
@@ -249,16 +461,18 @@
         </div>
 
         <div class="grid-assets" data-market-grid></div>
-        <div class="heat-grid" data-market-heat style="display:none"></div>
+
       </section>
 
-      <!-- ═══════════════════════════════════════════
-           CHART
-      ═══════════════════════════════════════════ -->
+      <!-- ═══════════════════════════════════════════════════
+           صفحه نمودار (CHART)
+      ═══════════════════════════════════════════════════ -->
       <section class="page" data-page="chart">
 
         <div class="banner-hero">
-          <img src="assets/banners/banner-chart.jpg" alt="نمودار" loading="lazy">
+          <img src="assets/banners/banner-chart.jpg" 
+               alt="نمودار" 
+               loading="lazy">
         </div>
 
         <div class="chart-header">
@@ -296,7 +510,9 @@
 
         <div class="chart-questions-full">
           <div class="chart-q-header">
-            <span class="chart-q-title"><span data-icon="info"></span>سوالات متداول</span>
+            <span class="chart-q-title">
+              <span data-icon="info"></span>سوالات متداول
+            </span>
             <span class="chart-q-date" data-c-questions-date>—</span>
           </div>
           <div class="chart-q-list" data-c-questions></div>
@@ -304,28 +520,37 @@
 
         <div class="bubble-analysis" data-bubble-analysis hidden>
           <div class="bubble-header">
-            <span class="bubble-title"><span data-icon="diamond"></span>تحلیل حباب</span>
+            <span class="bubble-title">
+              <span data-icon="diamond"></span>تحلیل حباب
+            </span>
           </div>
           <div class="bubble-body" data-bubble-body></div>
         </div>
 
         <div class="sec-head">
-          <div class="sec-title"><span data-icon="list"></span>نمادهای مرتبط</div>
+          <div class="sec-title">
+            <span data-icon="list"></span>نمادهای مرتبط
+          </div>
         </div>
-        <div class="scroll-wrap"><div class="scroll-row" data-c-related></div></div>
+        <div class="scroll-wrap">
+          <div class="scroll-row" data-c-related></div>
+        </div>
+
       </section>
 
-      <!-- ═══════════════════════════════════════════
-           COMPARE
-      ═══════════════════════════════════════════ -->
+      <!-- ═══════════════════════════════════════════════════
+           صفحه مقایسه (COMPARE)
+      ═══════════════════════════════════════════════════ -->
       <section class="page" data-page="compare">
         <div class="sec-head">
-          <div class="sec-title"><span data-icon="swap"></span>مقایسه بازارها</div>
+          <div class="sec-title">
+            <span data-icon="swap"></span>مقایسه بازارها
+          </div>
         </div>
         <div class="compare-pick">
-          <select class="select" data-cmp="a"></select>
+          <select class="select" data-cmp="a" aria-label="نماد اول"></select>
           <div class="vs">VS</div>
-          <select class="select" data-cmp="b"></select>
+          <select class="select" data-cmp="b" aria-label="نماد دوم"></select>
         </div>
         <div class="panel">
           <div class="chart-canvas-wrap" style="height:280px">
@@ -335,12 +560,14 @@
         <div class="cmp-stats" data-cmp-stats></div>
       </section>
 
-      <!-- ═══════════════════════════════════════════
-           FAVORITES
-      ═══════════════════════════════════════════ -->
+      <!-- ═══════════════════════════════════════════════════
+           صفحه علاقه‌مندی‌ها (FAVORITES)
+      ═══════════════════════════════════════════════════ -->
       <section class="page" data-page="favorites">
         <div class="sec-head">
-          <div class="sec-title"><span data-icon="star"></span>علاقه‌مندی‌ها</div>
+          <div class="sec-title">
+            <span data-icon="star"></span>علاقه‌مندی‌ها
+          </div>
           <span class="muted" data-fav-count>—</span>
         </div>
         <div class="grid-assets" data-fav-grid></div>
@@ -350,30 +577,35 @@
         </div>
       </section>
 
-      <!-- ═══════════════════════════════════════════
-           CARS — صفحه کامل
-      ═══════════════════════════════════════════ -->
+      <!-- ═══════════════════════════════════════════════════
+           صفحه خودروها (CARS)
+      ═══════════════════════════════════════════════════ -->
       <section class="page" data-page="cars">
 
-        <!-- بنر خودرو -->
         <div class="banner-hero">
-          <img src="assets/banners/banner-cars.jpg" alt="قیمت خودرو" loading="lazy">
+          <img src="assets/banners/banner-cars.jpg" 
+               alt="قیمت خودرو" 
+               loading="lazy">
         </div>
 
         <div class="sec-head">
-          <div class="sec-title"><span data-icon="car"></span>قیمت خودرو</div>
+          <div class="sec-title">
+            <span data-icon="car"></span>قیمت خودرو
+          </div>
           <span class="muted" data-cars-count>—</span>
         </div>
 
-        <!-- جستجو -->
-        <div class="cars-search-wrap">
-          <div class="cars-search">
-            <span data-icon="search"></span>
-            <input type="search" placeholder="جستجوی خودرو..." data-cars-search autocomplete="off">
+        <div class="cars-search-wrap" style="margin-bottom:12px">
+          <div class="hdr-search">
+            <span class="hdr-search-icon" data-icon="search"></span>
+            <input type="search" 
+                   placeholder="جستجوی خودرو..." 
+                   data-cars-search 
+                   autocomplete="off"
+                   aria-label="جستجوی خودرو">
           </div>
         </div>
 
-        <!-- فیلترها -->
         <div class="chips" data-cars-filters>
           <button class="chip is-active" data-cars-filter="all">همه</button>
           <button class="chip" data-cars-filter="available">موجود</button>
@@ -382,7 +614,6 @@
           <button class="chip" data-cars-filter="discontinued">توقف</button>
         </div>
 
-        <!-- لیست خودروها -->
         <div class="cars-table-wrap cars-table-full" data-cars-list>
           <div class="empty">
             <h3>در حال بارگذاری...</h3>
@@ -394,31 +625,45 @@
           <p>فیلتر یا جستجو را تغییر دهید</p>
         </div>
 
-        <div class="cars-updated">
-          <span data-cars-updated>—</span>
+        <div style="text-align:center;padding:16px 0 8px">
+          <small class="muted" data-cars-updated>—</small>
         </div>
+
       </section>
 
-      <!-- ═══════════════════════════════════════════
-           SETTINGS
-      ═══════════════════════════════════════════ -->
+      <!-- ═══════════════════════════════════════════════════
+           صفحه تنظیمات (SETTINGS)
+      ═══════════════════════════════════════════════════ -->
       <section class="page" data-page="settings">
         <div class="sec-head">
-          <div class="sec-title"><span data-icon="settings"></span>تنظیمات</div>
+          <div class="sec-title">
+            <span data-icon="settings"></span>تنظیمات
+          </div>
         </div>
 
         <div class="set-card">
           <h3>پروفایل</h3>
           <div class="set-row">
-            <div><span>نام شما</span><small>روی کارت پرتفوی نمایش داده می‌شود</small></div>
-            <input class="input" type="text" placeholder="کاربر مهمان" data-input="userName" style="width:140px">
+            <div>
+              <span>نام شما</span>
+              <small>روی کارت پرتفوی نمایش داده می‌شود</small>
+            </div>
+            <input class="input" 
+                   type="text" 
+                   placeholder="کاربر مهمان" 
+                   data-input="userName" 
+                   style="width:140px"
+                   aria-label="نام کاربری">
           </div>
         </div>
 
         <div class="set-card">
           <h3>واحد پول</h3>
           <div class="set-row">
-            <div><span>واحد نمایش</span><small>همه قیمت‌ها و محاسبات بر این اساس</small></div>
+            <div>
+              <span>واحد نمایش</span>
+              <small>همه قیمت‌ها و محاسبات بر این اساس</small>
+            </div>
             <div class="unit-toggle">
               <button data-unit="toman" class="is-active">تومان</button>
               <button data-unit="rial">ریال</button>
@@ -430,11 +675,11 @@
           <h3>ظاهر</h3>
           <div class="set-row">
             <div><span>حالت تاریک</span></div>
-            <button class="switch is-on" data-toggle="darkTheme"></button>
+            <button class="switch is-on" data-toggle="darkTheme" aria-label="حالت تاریک"></button>
           </div>
           <div class="set-row">
             <div><span>نمایش تغییرات</span></div>
-            <button class="switch is-on" data-toggle="showChange"></button>
+            <button class="switch is-on" data-toggle="showChange" aria-label="نمایش تغییرات"></button>
           </div>
         </div>
 
@@ -442,11 +687,11 @@
           <h3>بروزرسانی</h3>
           <div class="set-row">
             <div><span>بروزرسانی خودکار</span></div>
-            <button class="switch is-on" data-toggle="autoRefresh"></button>
+            <button class="switch is-on" data-toggle="autoRefresh" aria-label="بروزرسانی خودکار"></button>
           </div>
           <div class="set-row">
             <div><span>فاصله</span></div>
-            <select class="select" data-input="interval" style="width:130px">
+            <select class="select" data-input="interval" style="width:130px" aria-label="فاصله بروزرسانی">
               <option value="30000">۳۰ ثانیه</option>
               <option value="60000" selected>۶۰ ثانیه</option>
               <option value="120000">۲ دقیقه</option>
@@ -472,43 +717,79 @@
   </main>
 </div>
 
-<!-- ═══════════════ MOBILE NAV ═══════════════ -->
+<!-- ═══════════════════════════════════════════════════════════
+     MOBILE NAV
+═══════════════════════════════════════════════════════════ -->
 <nav class="mobile-nav">
-  <button class="mnav-btn is-active" data-route="home"><span data-icon="home"></span><span>خانه</span></button>
-  <button class="mnav-btn" data-route="markets"><span data-icon="barChart"></span><span>بازار</span></button>
-  <button class="mnav-btn" data-route="cars"><span data-icon="car"></span><span>خودرو</span></button>
-  <button class="mnav-btn" data-tool="portfolio"><span data-icon="briefcase"></span><span>پرتفوی</span></button>
-  <button class="mnav-btn" data-route="settings"><span data-icon="settings"></span><span>تنظیمات</span></button>
+  <button class="mnav-btn is-active" data-route="home" aria-label="خانه">
+    <span data-icon="home"></span>
+    <span>خانه</span>
+  </button>
+  <button class="mnav-btn" data-route="markets" aria-label="بازار">
+    <span data-icon="barChart"></span>
+    <span>بازار</span>
+  </button>
+  <button class="mnav-btn" data-route="cars" aria-label="خودرو">
+    <span data-icon="car"></span>
+    <span>خودرو</span>
+  </button>
+  <button class="mnav-btn" data-tool="portfolio" aria-label="پرتفوی">
+    <span data-icon="briefcase"></span>
+    <span>پرتفوی</span>
+  </button>
+  <button class="mnav-btn" data-route="settings" aria-label="تنظیمات">
+    <span data-icon="settings"></span>
+    <span>تنظیمات</span>
+  </button>
 </nav>
 
-<!-- ═══════════════ MODAL ═══════════════ -->
+<!-- ═══════════════════════════════════════════════════════════
+     MODAL
+═══════════════════════════════════════════════════════════ -->
 <div class="modal" data-modal>
   <div class="modal-backdrop" data-modal-close></div>
   <div class="modal-sheet">
     <div class="modal-head">
       <div class="modal-title" data-modal-title>—</div>
-      <button class="icon-btn" data-modal-close>×</button>
+      <button class="icon-btn" data-modal-close aria-label="بستن">×</button>
     </div>
     <div class="modal-body" data-modal-body></div>
   </div>
 </div>
 
-<!-- ═══════════════ TOAST ═══════════════ -->
+<!-- ═══════════════════════════════════════════════════════════
+     TOAST
+═══════════════════════════════════════════════════════════ -->
 <div class="toast" data-toast></div>
 
-<!-- ═══════════════ TV MODE ═══════════════ -->
+<!-- ═══════════════════════════════════════════════════════════
+     TV MODE
+═══════════════════════════════════════════════════════════ -->
 <div class="tv" data-tv hidden>
   <header class="tv-head">
     <div class="tv-brand">
-      <img src="assets/logo.png" alt="قیمتو">
-      <div><strong>قیمتو — TV</strong><small data-tv-label>کارت بزرگ</small></div>
+      <img src="assets/logo.webp" alt="قیمتو">
+      <div>
+        <strong>قیمتو — TV</strong>
+        <small data-tv-label>کارت بزرگ</small>
+      </div>
     </div>
     <div class="tv-ctrl">
-      <button type="button" class="icon-btn" data-tv-prev title="قبلی"><span data-icon="arrowRight"></span></button>
-      <button type="button" class="icon-btn" data-tv-auto title="تعویض خودکار"><span data-icon="activity"></span></button>
-      <button type="button" class="icon-btn" data-tv-settings title="تنظیمات"><span data-icon="settings"></span></button>
-      <button type="button" class="icon-btn" data-tv-next title="بعدی"><span data-icon="arrowLeft"></span></button>
-      <button type="button" class="icon-btn" data-tv-close title="بستن"><span data-icon="close"></span></button>
+      <button type="button" class="icon-btn" data-tv-prev title="قبلی" aria-label="قبلی">
+        <span data-icon="arrowRight"></span>
+      </button>
+      <button type="button" class="icon-btn" data-tv-auto title="تعویض خودکار" aria-label="تعویض خودکار">
+        <span data-icon="activity"></span>
+      </button>
+      <button type="button" class="icon-btn" data-tv-settings title="تنظیمات" aria-label="تنظیمات TV">
+        <span data-icon="settings"></span>
+      </button>
+      <button type="button" class="icon-btn" data-tv-next title="بعدی" aria-label="بعدی">
+        <span data-icon="arrowLeft"></span>
+      </button>
+      <button type="button" class="icon-btn" data-tv-close title="بستن" aria-label="بستن TV">
+        <span data-icon="close"></span>
+      </button>
     </div>
   </header>
   <div class="tv-body" data-tv-body></div>
@@ -516,90 +797,106 @@
   <div class="tv-bar"><i data-tv-progress></i></div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════════════
+     SPLASH SCRIPT
+═══════════════════════════════════════════════════════════ -->
 <script>
-/* ═══════════════ SPLASH + OFFLINE FAST SCRIPT ═══════════════ */
 (function(){
   'use strict';
+  var splash = document.getElementById('splash');
+  var hidden = false;
+  var steps = document.querySelectorAll('[data-splash-step]');
+  var currentStep = -1;
 
-  var splash = document.getElementById('splashScreen');
-  var offline = document.getElementById('offlineScreen');
-  var splashHidden = false;
+  function setStep(idx){
+    if(idx <= currentStep) return;
+    currentStep = idx;
+    steps.forEach(function(s, i){
+      s.classList.remove('is-active', 'is-done');
+      if(i < idx) s.classList.add('is-done');
+      else if(i === idx) s.classList.add('is-active');
+    });
+  }
 
-  /* ─── تشخیص تم ─── */
-  try {
-    var cfg = JSON.parse(localStorage.getItem('gheymato.cfg.v6') || '{}');
-    if(cfg.theme === 'light'){
-      splash.classList.add('light');
-    }
-  } catch(e){}
-
-  /* ═══ مخفی کردن Splash ═══ */
   function hideSplash(){
-    if(splashHidden || !splash) return;
-    splashHidden = true;
-    splash.classList.add('is-hidden');
+    if(hidden || !splash) return;
+    hidden = true;
+    setStep(3);
     setTimeout(function(){
-      if(splash && splash.parentNode) splash.parentNode.removeChild(splash);
-    }, 500);
+      splash.classList.add('is-hidden');
+      setTimeout(function(){
+        if(splash && splash.parentNode) splash.parentNode.removeChild(splash);
+      }, 500);
+    }, 200);
   }
 
-  function showSplash(){
-    if(!splash) return;
-    splashHidden = false;
-    splash.classList.remove('is-hidden');
-  }
-
-  setTimeout(hideSplash, 1500);
+  var minTime = 1200;
+  var startTime = Date.now();
 
   window.addEventListener('load', function(){
-    setTimeout(hideSplash, 300);
+    setStep(1);
+    setTimeout(function(){
+      setStep(2);
+      var elapsed = Date.now() - startTime;
+      var wait = Math.max(0, minTime - elapsed);
+      setTimeout(hideSplash, wait + 300);
+    }, 500);
   });
 
-  window.Splash = { hide: hideSplash, show: showSplash };
+  setTimeout(hideSplash, 5000);
 
-  /* ═══════════════ OFFLINE (iframe) ═══════════════ */
+  window.Splash = {
+    hide: hideSplash,
+    setStep: setStep,
+    step: function(name){
+      if(name === 'connect') setStep(0);
+      else if(name === 'data') setStep(1);
+      else if(name === 'ui') setStep(2);
+    }
+  };
+})();
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════
+     OFFLINE SCRIPT
+═══════════════════════════════════════════════════════════ -->
+<script>
+(function(){
+  'use strict';
+  var offline = document.getElementById('offlineScreen');
+
   function showOffline(){
     if(!offline) return;
     offline.style.display = 'block';
     document.documentElement.style.overflow = 'hidden';
   }
-
   function hideOffline(){
     if(!offline) return;
     offline.style.display = 'none';
     document.documentElement.style.overflow = '';
   }
 
-  /* ═══ گوش دادن به پیام‌های iframe ═══ */
-let lastReconnectTime = 0;
-window.addEventListener('message', function(e){
-  if(e.data === 'offline:retry-success' || e.data === 'offline:reconnect'){
-    hideOffline();
-    // ❌ toast حذف شد
-    if(window.API && window.API.fetchData){
-      window.API.fetchData(true).catch(function(){});
+  window.addEventListener('message', function(e){
+    if(e.data === 'offline:retry-success' || e.data === 'offline:reconnect'){
+      hideOffline();
+      if(window.API && window.API.fetchData){
+        window.API.fetchData(true).catch(function(){});
+      }
     }
-  }
-});
-  /* ═══ Event Listeners ═══ */
-  window.addEventListener('offline', function(){
-    showOffline();
   });
 
-  window.addEventListener('online', function(){
-    hideOffline();
-  });
+  window.addEventListener('offline', showOffline);
+  window.addEventListener('online', hideOffline);
 
-  /* ═══ بررسی اولیه ═══ */
-  if(!navigator.onLine){
-    showOffline();
-  }
+  if(!navigator.onLine) showOffline();
 
-  /* ═══ API ═══ */
   window.Offline = { show: showOffline, hide: hideOffline };
 })();
 </script>
 
+<!-- ═══════════════════════════════════════════════════════════
+     MAIN SCRIPTS
+═══════════════════════════════════════════════════════════ -->
 <script src="js/icons.js"></script>
 <script src="js/core.js"></script>
 <script src="js/data.js"></script>
@@ -608,8 +905,11 @@ window.addEventListener('message', function(e){
 <script src="js/tv.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/app.js"></script>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SERVICE WORKER
+═══════════════════════════════════════════════════════════ -->
 <script>
-/* ═══ Service Worker Registration ═══ */
 if('serviceWorker' in navigator){
   window.addEventListener('load', function(){
     navigator.serviceWorker.register('sw.js')
@@ -622,5 +922,6 @@ if('serviceWorker' in navigator){
   });
 }
 </script>
+
 </body>
 </html>

@@ -129,7 +129,7 @@ function assetSVG(asset){
   const fileName = getIconFileName(asset);
 
   if(fileName){
-    return `<img src="assets/icons/${fileName}.png"
+    return `<img src="assets/icons/${fileName}.webp"
                  alt="${(asset.code || '').replace(/"/g, '&quot;')}"
                  loading="lazy"
                  draggable="false"

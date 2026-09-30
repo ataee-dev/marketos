@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>تست فونت Dana و IranYekanWeb</title>
+<style>
+  /* ============ Dana ============ */
+  @font-face { font-family: 'Dana'; src: url('dana-regular.woff')  format('woff'); font-weight: 400; }
+  @font-face { font-family: 'Dana'; src: url('dana-medium.woff')   format('woff'); font-weight: 500; }
+  @font-face { font-family: 'Dana'; src: url('dana-demibold.woff') format('woff'); font-weight: 600; }
+  @font-face { font-family: 'Dana'; src: url('dana-bold.woff')     format('woff'); font-weight: 700; }
+  @font-face { font-family: 'Dana'; src: url('dana-black.woff')    format('woff'); font-weight: 900; }
+
+  /* ============ IranYekanWeb ============ */
+  @font-face { font-family: 'IranYekanWeb'; src: url('iranyekanwebregular.woff')   format('woff'); font-weight: 400; }
+  @font-face { font-family: 'IranYekanWeb'; src: url('iranyekanwebmedium.woff')    format('woff'); font-weight: 500; }
+  @font-face { font-family: 'IranYekanWeb'; src: url('iranyekanwebmedium.woff')    format('woff'); font-weight: 600; }
+  @font-face { font-family: 'IranYekanWeb'; src: url('iranyekanwebbold.woff')      format('woff'); font-weight: 700; }
+  @font-face { font-family: 'IranYekanWeb'; src: url('iranyekanwebblack.woff')     format('woff'); font-weight: 900; }
+
+  /* ============ استایل کلی ============ */
+  body {
+    background: #f5f5f5;
+    padding: 30px;
+    margin: 0;
+    font-size: 16px;
+    color: #222;
+  }
+  h1 {
+    text-align: center;
+    font-size: 22px;
+    margin-bottom: 30px;
+  }
+  .row {
+    background: #fff;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.06);
+  }
+  .row h2 {
+    margin: 0 0 15px;
+    font-size: 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #eee;
+  }
+  .sample {
+    margin-bottom: 12px;
+    padding: 10px;
+    background: #fafafa;
+    border-radius: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+  }
+  .label {
+    font-size: 12px;
+    color: #888;
+    font-family: monospace;
+    direction: ltr;
+  }
+  .text {
+    font-size: 18px;
+    flex: 1;
+  }
+  .dana      { font-family: 'Dana', sans-serif; }
+  .iranyekan { font-family: 'IranYekanWeb', sans-serif; }
+
+  /* توان */
+  .sup {
+    vertical-align: super;
+    font-size: 0.7em;
+    line-height: 1;
+  }
+
+  /* برچسب واحد پول برای تمایز بهتر */
+  .unit {
+    display: inline-block;
+    background: #eef;
+    color: #338;
+    border-radius: 4px;
+    padding: 0 6px;
+    font-size: 0.85em;
+    margin-right: 4px;
+  }
+</style>
+</head>
+<body>
+
+<h1>مقایسه فونت Dana و IranYekanWeb — ریال و تومان</h1>
+
+<!-- ==================== DANA ==================== -->
+<div class="row dana">
+  <h2>Dana — خانواده فونت</h2>
+
+  <div class="sample">
+    <span class="label">400 - dana-regular</span>
+    <span class="text" style="font-weight:400;">قیمت این محصول ۲۵۰٬۰۰۰ ﷼ است</span>
+  </div>
+  <div class="sample">
+    <span class="label">500 - dana-medium</span>
+    <span class="text" style="font-weight:500;">قیمت این محصول ۲۵۰٬۰۰۰ ﷼ است</span>
+  </div>
+  <div class="sample">
+    <span class="label">600 - dana-demibold</span>
+    <span class="text" style="font-weight:600;">قیمت این محصول ۲۵۰٬۰۰۰ ﷼ است</span>
+  </div>
+  <div class="sample">
+    <span class="label">700 - dana-bold</span>
+    <span class="text" style="font-weight:700;">قیمت این محصول ۲۵۰٬۰۰۰ ﷼ است</span>
+  </div>
+  <div class="sample">
+    <span class="label">900 - dana-black</span>
+    <span class="text" style="font-weight:900;">قیمت این محصول ۲۵۰٬۰۰۰ ﷼ است</span>
+  </div>
+</div>
+
+<!-- ==================== IRANYEKAN ==================== -->
+<div class="row iranyekan">
+  <h2>IranYekanWeb — خانواده فونت</h2>
+
+  <div class="sample">
+    <span class="label">400 - iranyekanwebregular</span>
+    <span class="text" style="font-weight:400;">قیمت این محصول ۲۵۰٬۰۰۰ ﷼ است</span>
+  </div>
+  <div class="sample">
+    <span class="label">500 - iranyekanwebmedium</span>
+    <span class="text" style="font-weight:500;">قیمت این محصول ۲۵۰٬۰۰۰ ﷼ است</span>
+  </div>
+  <div class="sample">
+    <span class="label">600 - iranyekanwebmedium (جای DemiBold)</span>
+    <span class="text" style="font-weight:600;">قیمت این محصول ۲۵۰٬۰۰۰ ﷼ است</span>
+  </div>
+  <div class="sample">
+    <span class="label">700 - iranyekanwebbold</span>
+    <span class="text" style="font-weight:700;">قیمت این محصول ۲۵۰٬۰۰۰ ﷼ است</span>
+  </div>
+  <div class="sample">
+    <span class="label">900 - iranyekanwebblack</span>
+    <span class="text" style="font-weight:900;">قیمت این محصول ۲۵۰٬۰۰۰ ﷼ است</span>
+  </div>
+</div>
+
+<!-- ==================== آزمون ریال ==================== -->
+<div class="row">
+  <h2>آزمون نماد ریال (﷼)</h2>
+
+  <div class="sample dana">
+    <span class="label">Dana - کاراکتر مستقیم</span>
+    <span class="text">۱۲۳٬۴۵۶ <span class="unit">﷼</span></span>
+  </div>
+  <div class="sample dana">
+    <span class="label">Dana - کد یونیکد</span>
+    <span class="text">۱۲۳٬۴۵۶ <span class="unit">&#65020;</span></span>
+  </div>
+  <div class="sample iranyekan">
+    <span class="label">IranYekanWeb - کاراکتر مستقیم</span>
+    <span class="text">۱۲۳٬۴۵۶ <span class="unit">﷼</span></span>
+  </div>
+  <div class="sample iranyekan">
+    <span class="label">IranYekanWeb - کد یونیکد</span>
+    <span class="text">۱۲۳٬۴۵۶ <span class="unit">&#65020;</span></span>
+  </div>
+</div>
+
+<!-- ==================== آزمون تومان ==================== -->
+<div class="row">
+  <h2>آزمون تومان</h2>
+
+  <div class="sample dana">
+    <span class="label">Dana - متن فارسی «تومان»</span>
+    <span class="text">۱۲۳٬۴۵۶ <span class="unit">تومان</span></span>
+  </div>
+  <div class="sample dana">
+    <span class="label">Dana - مخفف «ت»</span>
+    <span class="text">۱۲۳٬۴۵۶ <span class="unit">ت</span></span>
+  </div>
+  <div class="sample dana">
+    <span class="label">Dana - کد یونیکد «تومان» (U+062A)</span>
+    <span class="text">۱۲۳٬۴۵۶ <span class="unit">&#1578;&#1608;&#1605;&#1575;&#1606;</span></span>
+  </div>
+
+  <div class="sample iranyekan">
+    <span class="label">IranYekanWeb - متن فارسی «تومان»</span>
+    <span class="text">۱۲۳٬۴۵۶ <span class="unit">تومان</span></span>
+  </div>
+  <div class="sample iranyekan">
+    <span class="label">IranYekanWeb - مخفف «ت»</span>
+    <span class="text">۱۲۳٬۴۵۶ <span class="unit">ت</span></span>
+  </div>
+  <div class="sample iranyekan">
+    <span class="label">IranYekanWeb - کد یونیکد «تومان» (U+062A)</span>
+    <span class="text">۱۲۳٬۴۵۶ <span class="unit">&#1578;&#1608;&#1605;&#1575;&#1606;</span></span>
+  </div>
+</div>
+
+<!-- ==================== مقایسه ریال و تومان ==================== -->
+<div class="row">
+  <h2>مقایسه ریال، تومان و مخفف‌ها</h2>
+
+  <div class="sample dana">
+    <span class="label">Dana Regular</span>
+    <span class="text" style="font-weight:400;">
+      قیمت: ۲۵٬۰۰۰٬۰۰۰ ﷼ &nbsp;|&nbsp; ۲٬۵۰۰٬۰۰۰ تومان &nbsp;|&nbsp; ۲٬۵۰۰٬۰۰۰ ت &nbsp;|&nbsp; ۲٫۵ میلیون تومان
+    </span>
+  </div>
+  <div class="sample iranyekan">
+    <span class="label">IranYekanWeb Regular</span>
+    <span class="text" style="font-weight:400;">
+      قیمت: ۲۵٬۰۰۰٬۰۰۰ ﷼ &nbsp;|&nbsp; ۲٬۵۰۰٬۰۰۰ تومان &nbsp;|&nbsp; ۲٬۵۰۰٬۰۰۰ ت &nbsp;|&nbsp; ۲٫۵ میلیون تومان
+    </span>
+  </div>
+
+  <div class="sample dana">
+    <span class="label">Dana Bold</span>
+    <span class="text" style="font-weight:700;">
+      قیمت: ۲۵٬۰۰۰٬۰۰۰ ﷼ &nbsp;|&nbsp; ۲٬۵۰۰٬۰۰۰ تومان &nbsp;|&nbsp; ۲٬۵۰۰٬۰۰۰ ت &nbsp;|&nbsp; ۲٫۵ میلیون تومان
+    </span>
+  </div>
+  <div class="sample iranyekan">
+    <span class="label">IranYekanWeb Bold</span>
+    <span class="text" style="font-weight:700;">
+      قیمت: ۲۵٬۰۰۰٬۰۰۰ ﷼ &nbsp;|&nbsp; ۲٬۵۰۰٬۰۰۰ تومان &nbsp;|&nbsp; ۲٬۵۰۰٬۰۰۰ ت &nbsp;|&nbsp; ۲٫۵ میلیون تومان
+    </span>
+  </div>
+</div>
+
+<!-- ==================== توان ==================== -->
+<div class="row">
+  <h2>نمایش توان با &lt;sup&gt;</h2>
+
+  <div class="sample dana">
+    <span class="label">Dana</span>
+    <span class="text">۱۰<sup>۶</sup> = یک میلیون &nbsp;|&nbsp; ۲<sup>۳</sup> = ۸ &nbsp;|&nbsp; x<sup>۲</sup> + y<sup>۲</sup></span>
+  </div>
+  <div class="sample iranyekan">
+    <span class="label">IranYekanWeb</span>
+    <span class="text">۱۰<sup>۶</sup> = یک میلیون &nbsp;|&nbsp; ۲<sup>۳</sup> = ۸ &nbsp;|&nbsp; x<sup>۲</sup> + y<sup>۲</sup></span>
+  </div>
+</div>
+
+<!-- ==================== متن کامل ==================== -->
+<div class="row">
+  <h2>متن کامل نمونه</h2>
+
+  <div class="sample dana">
+    <span class="label">Dana Regular</span>
+    <span class="text" style="font-weight:400;">
+      این یک متن آزمایشی با فونت <b>دانا</b> است. قیمت کل: ۱٬۲۵۰٬۰۰۰ ﷼ معادل ۱۲۵٬۰۰۰ تومان.
+      مساحت: ۲۵۰<sup>۲</sup> متر مربع.
+    </span>
+  </div>
+  <div class="sample iranyekan">
+    <span class="label">IranYekanWeb Regular</span>
+    <span class="text" style="font-weight:400;">
+      این یک متن آزمایشی با فونت <b>ایران‌یکان</b> است. قیمت کل: ۱٬۲۵۰٬۰۰۰ ﷼ معادل ۱۲۵٬۰۰۰ تومان.
+      مساحت: ۲۵۰<sup>۲</sup> متر مربع.
+    </span>
+  </div>
+</div>
+
+<!-- ==================== راهنمای کاراکترها ==================== -->
+<div class="row">
+  <h2>راهنمای کاراکترهای واحد پول</h2>
+  <div class="sample dana">
+    <span class="label">نمادها</span>
+    <span class="text" style="font-weight:400;">
+      ریال: <span class="unit">﷼</span> (U+FDFC) &nbsp;|&nbsp;
+      تومان: <span class="unit">ت</span> (U+062A) &nbsp;|&nbsp;
+      هزار: <span class="unit">هزار</span> &nbsp;|&nbsp;
+      میلیون: <span class="unit">میلیون</span>
+    </span>
+  </div>
+</div>
+
+</body>
+</html>

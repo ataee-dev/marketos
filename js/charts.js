@@ -1,11 +1,12 @@
 /**
- * قیمتو 6.0 — CHARTS (نسخه کامل و نهایی)
- * ✅ نقاط قابل کلیک و هاور
- * ✅ Tooltip با تاریخ شمسی و میلادی + قیمت
- * ✅ خط راهنما (Crosshair) عمودی
+ * قیمتو 7.0 — CHARTS (نسخه کامل اصلاح‌شده)
+ * ✅ Tooltip با تاریخ شمسی + قیمت
+ * ✅ Crosshair عمودی
  * ✅ پشتیبانی از Mouse و Touch
- * ✅ سازگار با داده‌های annual-history.json و history/
- * ✅ رسم مجدد بهینه (بدون پرش)
+ * ✅ hidePoints — حذف نقاط
+ * ✅ glow — درخشش خط
+ * ✅ fillColor — رنگ فیل سفارشی
+ * ✅ smooth — خط نرم
  */
 
 window.Charts = (function(){
@@ -42,7 +43,7 @@ function setup(canvas){
 }
 
 /* ============================================================
-   HELPERS
+   HELPERS — رنگ
 ============================================================ */
 function hexRgba(hex, a){
   if(!hex) return 'rgba(16,185,129,' + a + ')';
@@ -119,11 +120,9 @@ function formatTooltipContent(point, formatter){
 
   let dateText = '';
 
-  // اولویت: تاریخ شمسی
   if(point.pd){
     dateText = point.pd;
   } else if(point.gd){
-    // تبدیل میلادی به شمسی
     try {
       const d = new Date(point.gd);
       if(!isNaN(d.getTime())){
@@ -139,7 +138,6 @@ function formatTooltipContent(point, formatter){
       dateText = point.gd;
     }
   } else if(point.t){
-    // از timestamp
     try {
       const d = new Date(point.t);
       dateText = d.toLocaleDateString('fa-IR', {
@@ -160,6 +158,32 @@ function formatTooltipContent(point, formatter){
 }
 
 /* ============================================================
+   SMOOTH PATH — رسم خط نرم با منحنی Bezier
+============================================================ */
+function drawSmoothPath(ctx, pts){
+  if(pts.length < 2) return;
+
+  ctx.moveTo(pts[0].x, pts[0].y);
+
+  for(let i = 1; i < pts.length; i++){
+    const prev = pts[i - 1];
+    const curr = pts[i];
+
+    /* میانه بین دو نقطه */
+    const midX = (prev.x + curr.x) / 2;
+    const midY = (prev.y + curr.y) / 2;
+
+    /* منحنی از prev به curr با نقطه کنترل میانه */
+    ctx.quadraticCurveTo(prev.x, prev.y, midX, midY);
+
+    if(i === pts.length - 1){
+      /* آخرین نقطه — مستقیم به curr */
+      ctx.lineTo(curr.x, curr.y);
+    }
+  }
+}
+
+/* ============================================================
    DRAW LINE — رسم نمودار اصلی
 ============================================================ */
 function drawLine(canvas, data, opts){
@@ -175,25 +199,26 @@ function drawLine(canvas, data, opts){
   const pad = opts.padding != null ? opts.padding : 20;
   const padTop = opts.paddingTop != null ? opts.paddingTop : 30;
 
-  /* ─── استخراج قیمت‌ها (پشتیبانی از p یا value) ─── */
+  /* ═══ استخراج قیمت‌ها ═══ */
   const prices = data.map(function(d){
     return d.p != null ? d.p : d.value;
   }).filter(function(p){ return p != null && !isNaN(p); });
 
   if(prices.length < 2) return;
 
-  /* ─── رنگ بر اساس جهت ─── */
+  /* ═══ رنگ‌ها ═══ */
   const up = prices[prices.length - 1] >= prices[0];
   const color = opts.color || (up ? '#10b981' : '#ef4444');
+  const fillColor = opts.fillColor || color;
 
-  /* ─── محدوده ─── */
+  /* ═══ محدوده ═══ */
   const max = Math.max.apply(null, prices);
   const min = Math.min.apply(null, prices);
   const range = max - min || 1;
 
   const chartH = h - pad - padTop;
 
-  /* ─── محاسبه مختصات نقاط ─── */
+  /* ═══ محاسبه مختصات نقاط ═══ */
   const pts = [];
   for(let i = 0; i < data.length; i++){
     const item = data[i];
@@ -216,12 +241,13 @@ function drawLine(canvas, data, opts){
 
   if(pts.length < 2) return;
 
-  /* ─── ذخیره state برای استفاده در redraw ─── */
+  /* ═══ ذخیره state ═══ */
   const state = {
     canvas: canvas,
     ctx: ctx,
     pts: pts,
     color: color,
+    fillColor: fillColor,
     w: w,
     h: h,
     pad: pad,
@@ -232,10 +258,7 @@ function drawLine(canvas, data, opts){
     chartH: chartH
   };
 
-  /* ─── رسم اولیه ─── */
   renderChart(state, null);
-
-  /* ─── اتصال listener ها ─── */
   attachListeners(state);
 }
 
@@ -246,23 +269,28 @@ function renderChart(state, hoverPoint){
   const ctx = state.ctx;
   const pts = state.pts;
   const color = state.color;
+  const fillColor = state.fillColor || state.color;
   const w = state.w;
   const h = state.h;
   const opts = state.opts;
+  const smooth = opts.smooth !== false; /* پیش‌فرض: نرم */
 
-  /* ─── پاک کردن ─── */
   ctx.clearRect(0, 0, w, h);
 
-  /* ─── فیل گرادیانت ─── */
+  /* ═══ فیل گرادیانت ═══ */
   if(opts.fill !== false){
     const g = ctx.createLinearGradient(0, 0, 0, h);
-    g.addColorStop(0, hexRgba(color, 0.28));
-    g.addColorStop(1, hexRgba(color, 0));
+    g.addColorStop(0, hexRgba(fillColor, 0.35));
+    g.addColorStop(1, hexRgba(fillColor, 0));
 
     ctx.beginPath();
-    for(let i = 0; i < pts.length; i++){
-      if(i === 0) ctx.moveTo(pts[i].x, pts[i].y);
-      else ctx.lineTo(pts[i].x, pts[i].y);
+    if(smooth){
+      drawSmoothPath(ctx, pts);
+    } else {
+      for(let i = 0; i < pts.length; i++){
+        if(i === 0) ctx.moveTo(pts[i].x, pts[i].y);
+        else ctx.lineTo(pts[i].x, pts[i].y);
+      }
     }
     ctx.lineTo(pts[pts.length - 1].x, h);
     ctx.lineTo(pts[0].x, h);
@@ -271,74 +299,88 @@ function renderChart(state, hoverPoint){
     ctx.fill();
   }
 
-  /* ─── خط اصلی ─── */
+  /* ═══ خط اصلی ═══ */
   ctx.beginPath();
-  for(let i = 0; i < pts.length; i++){
-    if(i === 0) ctx.moveTo(pts[i].x, pts[i].y);
-    else ctx.lineTo(pts[i].x, pts[i].y);
+  if(smooth){
+    drawSmoothPath(ctx, pts);
+  } else {
+    for(let i = 0; i < pts.length; i++){
+      if(i === 0) ctx.moveTo(pts[i].x, pts[i].y);
+      else ctx.lineTo(pts[i].x, pts[i].y);
+    }
   }
   ctx.lineWidth = opts.lineWidth || 2.5;
   ctx.strokeStyle = color;
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
-  ctx.stroke();
 
-  /* ─── نقاط کلیدی ─── */
-  const step = Math.max(1, Math.floor(pts.length / 20));
-
-  for(let i = 0; i < pts.length; i++){
-    const isKey = i === 0 || i === pts.length - 1 || i % step === 0;
-    if(!isKey) continue;
-
-    const p = pts[i];
-
-    // نقطه اصلی
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, 3.5, 0, Math.PI * 2);
-    ctx.fillStyle = color;
-    ctx.fill();
-
-    // حلقه دور
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
-    ctx.strokeStyle = hexRgba(color, 0.4);
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
+  /* ═══ درخشش ═══ */
+  if(opts.glow){
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 8;
   }
 
-  /* ─── نقطه آخر ─── */
-  const last = pts[pts.length - 1];
-  ctx.beginPath();
-  ctx.arc(last.x, last.y, 10, 0, Math.PI * 2);
-  ctx.fillStyle = hexRgba(color, 0.25);
-  ctx.fill();
+  ctx.stroke();
+  ctx.shadowBlur = 0;
 
-  ctx.beginPath();
-  ctx.arc(last.x, last.y, 5, 0, Math.PI * 2);
-  ctx.fillStyle = color;
-  ctx.fill();
+  /* ═══ نقاط کلیدی — اگر hidePoints نباشد ═══ */
+  if(!opts.hidePoints){
+    const step = Math.max(1, Math.floor(pts.length / 20));
 
-  /* ─── نقطه هاور (اگر وجود دارد) ─── */
+    for(let i = 0; i < pts.length; i++){
+      const isKey = i === 0 || i === pts.length - 1 || i % step === 0;
+      if(!isKey) continue;
+
+      const p = pts[i];
+
+      /* نقطه اصلی */
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+
+      /* حلقه دور */
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+      ctx.strokeStyle = hexRgba(color, 0.4);
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+
+    /* نقطه آخر */
+    const last = pts[pts.length - 1];
+    ctx.beginPath();
+    ctx.arc(last.x, last.y, 10, 0, Math.PI * 2);
+    ctx.fillStyle = hexRgba(color, 0.25);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(last.x, last.y, 5, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+  }
+
+  /* ═══ نقطه هاور ═══ */
   if(hoverPoint){
-    // هاله بزرگ
+    /* هاله بزرگ */
     ctx.beginPath();
     ctx.arc(hoverPoint.x, hoverPoint.y, 14, 0, Math.PI * 2);
     ctx.fillStyle = hexRgba(color, 0.15);
     ctx.fill();
 
-    // نقطه اصلی
+    /* نقطه اصلی */
     ctx.beginPath();
     ctx.arc(hoverPoint.x, hoverPoint.y, 8, 0, Math.PI * 2);
     ctx.fillStyle = color;
     ctx.fill();
 
-    // مرکز سفید
+    /* مرکز سفید */
     ctx.beginPath();
     ctx.arc(hoverPoint.x, hoverPoint.y, 4, 0, Math.PI * 2);
     ctx.fillStyle = '#fff';
     ctx.fill();
 
-    // خط عمودی از نقطه تا پایین
+    /* خط عمودی */
     ctx.beginPath();
     ctx.setLineDash([4, 4]);
     ctx.moveTo(hoverPoint.x, hoverPoint.y + 8);
@@ -365,7 +407,6 @@ function findNearest(pts, mx){
     }
   }
 
-  // حساسیت ۴۰ پیکسل
   if(minDist < 40) return nearest;
   return null;
 }
@@ -376,7 +417,7 @@ function findNearest(pts, mx){
 function attachListeners(state){
   const canvas = state.canvas;
 
-  // پاک کردن listener های قبلی
+  /* پاک کردن listener های قبلی */
   if(canvas._chartHandlers){
     const h = canvas._chartHandlers;
     canvas.removeEventListener('mousemove', h.onMouseMove);
@@ -397,16 +438,14 @@ function attachListeners(state){
     const nearest = findNearest(state.pts, mx);
 
     if(nearest){
-      // ─── Tooltip ───
+      /* Tooltip */
       tip.innerHTML = formatTooltipContent(nearest, state.opts.formatter);
       tip.style.opacity = '1';
 
-      // موقعیت Tooltip
       const tipRect = tip.getBoundingClientRect();
       let tipX = clientX + 15;
       let tipY = clientY - tipRect.height - 15;
 
-      // جلوگیری از خروج از صفحه
       if(tipX + tipRect.width > window.innerWidth - 10){
         tipX = clientX - tipRect.width - 15;
       }
@@ -417,15 +456,13 @@ function attachListeners(state){
       tip.style.left = tipX + 'px';
       tip.style.top = tipY + 'px';
 
-      // ─── Crosshair ───
+      /* Crosshair */
       crosshair.style.opacity = '1';
       crosshair.style.left = (rect.left + nearest.x) + 'px';
       crosshair.style.top = rect.top + 'px';
       crosshair.style.height = rect.height + 'px';
 
-      // ─── رسم مجدد با نقطه هاور ───
       renderChart(state, nearest);
-
     } else {
       tip.style.opacity = '0';
       crosshair.style.opacity = '0';
@@ -471,7 +508,6 @@ function attachListeners(state){
   canvas.addEventListener('touchend', onTouchEnd);
   canvas.addEventListener('touchcancel', onTouchEnd);
 
-  // ذخیره برای پاک کردن در آینده
   canvas._chartHandlers = {
     onMouseMove: onMouseMove,
     onMouseLeave: onMouseLeave,
@@ -488,7 +524,6 @@ function drawCompare(canvas, A, B){
   const s = setup(canvas);
   if(!s) return;
 
-  // پشتیبانی از آرایه ساده یا آرایه اشیاء
   const extractPrices = function(arr){
     if(!arr || !arr.length) return [];
     return arr.map(function(item){
@@ -528,28 +563,22 @@ function drawCompare(canvas, A, B){
       };
     });
 
-    // فیل
+    /* فیل */
     const g = ctx.createLinearGradient(0, 0, 0, h);
     g.addColorStop(0, hexRgba(color, 0.15));
     g.addColorStop(1, hexRgba(color, 0));
 
     ctx.beginPath();
-    for(let i = 0; i < pts.length; i++){
-      if(i === 0) ctx.moveTo(pts[i].x, pts[i].y);
-      else ctx.lineTo(pts[i].x, pts[i].y);
-    }
+    drawSmoothPath(ctx, pts);
     ctx.lineTo(pts[pts.length - 1].x, h);
     ctx.lineTo(pts[0].x, h);
     ctx.closePath();
     ctx.fillStyle = g;
     ctx.fill();
 
-    // خط
+    /* خط */
     ctx.beginPath();
-    for(let i = 0; i < pts.length; i++){
-      if(i === 0) ctx.moveTo(pts[i].x, pts[i].y);
-      else ctx.lineTo(pts[i].x, pts[i].y);
-    }
+    drawSmoothPath(ctx, pts);
     ctx.lineWidth = 2.5;
     ctx.strokeStyle = color;
     ctx.lineJoin = 'round';
@@ -562,7 +591,7 @@ function drawCompare(canvas, A, B){
 }
 
 /* ============================================================
-   CLEANUP — پاک کردن Tooltip و Crosshair
+   CLEANUP
 ============================================================ */
 function cleanup(){
   if(tooltipEl && tooltipEl.parentNode){

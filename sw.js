@@ -12,7 +12,7 @@ const CORE = [
   './',
   './index.html',
   './manifest.json',
-  './assets/logo.png',        // ✅ png نه svg
+  './assets/logo.webp',        // ✅ png نه svg
   './css/app.css',
   './js/icons.js',
   './js/core.js',

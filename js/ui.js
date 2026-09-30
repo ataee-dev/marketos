@@ -1,12 +1,11 @@
 /**
- * قیمتو 6.0 — UI (نسخه نهایی اصلاح‌شده)
- * ✅ حذف کامل swipe بین تب‌ها
- * ✅ حذف کامل pinch/zoom
- * ✅ رفع باگ برگشت نوار قیمت
- * ✅ رفع حلقه بی‌نهایت go()
- * ✅ کارت خودرو با تصویر و واترمارک
- * ✅ مودال خودرو
- * ✅ تکرارشونده هشدارها
+ * قیمتو 7.1 — UI (نسخه کامل اصلاح‌شده)
+ * ✅ حذف Hero Slider و جایگزینی با Live Strip
+ * ✅ Sparkline روی همه کارت‌ها
+ * ✅ حالت Grid / List برای بازارها
+ * ✅ Lazy loading با IntersectionObserver
+ * ✅ انیمیشن‌های نرم و بهینه
+ * ✅ جستجوی ترکیبی (نماد + خودرو)
  */
 
 window.UI = (function(){
@@ -15,37 +14,36 @@ window.UI = (function(){
 const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
 
+/* ═══════════════ STATE ═══════════════ */
 let filter = 'all';
 let search = '';
 let currentPage = 'home';
 let activeChartId = 'gold18';
-let homeChartId = 'gold18';
+let carsFilter = 'all';
+let carsSearch = '';
+let marketView = 'grid'; /* 'grid' | 'list' */
 
-const PAGES = ['home', 'markets', 'chart', 'cars', 'settings'];
+const PAGES = ['home', 'markets', 'chart', 'compare', 'favorites', 'cars', 'settings'];
+
+/* ═══════════════ SPARKLINE OBSERVER ═══════════════ */
+let _sparkObserver = null;
 
 /* ============================================================
-   غیرفعال‌سازی کامل حرکت انگشت / swipe / gesture
-   ═══ رفع باگ: dx و dy قبلاً تعریف نشده بودند ═══
+   GESTURES — غیرفعال‌سازی کامل swipe/zoom
 ============================================================ */
 function disableAllGestures(){
   const opts = { passive: false };
 
-  // ═══ لغو pinch/zoom (Safari iOS) ═══
   document.addEventListener('gesturestart', e => e.preventDefault(), opts);
   document.addEventListener('gesturechange', e => e.preventDefault(), opts);
   document.addEventListener('gestureend', e => e.preventDefault(), opts);
 
-  // ═══ فقط چند انگشت = لغو کامل ═══
   document.addEventListener('touchstart', e => {
-    if(e.touches.length > 1){
-      e.preventDefault();
-    }
+    if(e.touches.length > 1) e.preventDefault();
   }, opts);
 
-  // ═══ جلوگیری از swipe افقی فقط روی بدنه صفحه ═══
-  // ✅ نکته: چک می‌کند که کاربر روی یک اسکرول‌رول افقی نباشد
   let startX = 0, startY = 0;
-  
+
   document.addEventListener('touchstart', e => {
     if(e.touches.length === 1){
       startX = e.touches[0].clientX;
@@ -54,103 +52,66 @@ function disableAllGestures(){
   }, { passive: true });
 
   document.addEventListener('touchmove', e => {
-    // چند انگشت = pinch
-    if(e.touches.length > 1){
-      e.preventDefault();
-      return;
-    }
+    if(e.touches.length > 1){ e.preventDefault(); return; }
 
-    // ═══ اگر داخل یک اسکرول افقی هستیم، مداخله نکن ═══
     const inScrollable = e.target.closest(
-      '.scroll-row, .tools-horizontal, .chips, .pills, .hdr-ticker, ' +
-      '.tv-ticker, .tv-heatmap, .tv-compact, .mobile-nav, ' +
-      '[data-featured], [data-most], [data-tools], [data-cats], ' +
-      '[data-related], [data-c-related]'
+      '.scroll-row, .tools-horizontal, .chips, .pills, .hdr-ticker, .live-strip, .mobile-nav'
     );
-    if(inScrollable){
-      return;  // ← اجازه بده مرورگر طبیعی اسکرول کند
-    }
+    if(inScrollable) return;
 
-    // ═══ اگر روی سایدبار یا مودال هستیم، مداخله نکن ═══
-    if(e.target.closest('.sidebar, .modal, .tv, input, textarea, select')){
-      return;
-    }
+    if(e.target.closest('.sidebar, .modal, .tv, input, textarea, select')) return;
 
-    // ═══ فقط اگر حرکت افقی در بدنه صفحه بود، جلوگیری کن ═══
     if(e.touches[0]){
       const dx = Math.abs(e.touches[0].clientX - startX);
       const dy = Math.abs(e.touches[0].clientY - startY);
-
-      // اگر حرکت افقی غالب و بزرگ بود → swipe بین تب‌ها → جلوگیری
-      if(dx > dy && dx > 10){
-        e.preventDefault();
-      }
+      if(dx > dy && dx > 10) e.preventDefault();
     }
   }, opts);
 
-  // ═══ لغو double-tap zoom ═══
   let lastTouch = 0;
   document.addEventListener('touchend', e => {
     const now = Date.now();
     if(now - lastTouch <= 300){
-      // فقط اگر روی بدنه صفحه بود
-      const inScrollable = e.target.closest('.scroll-row, .tools-horizontal, .chips, .pills, .hdr-ticker');
-      if(!inScrollable){
-        e.preventDefault();
-      }
+      const inScrollable = e.target.closest('.scroll-row, .tools-horizontal, .chips, .pills, .hdr-ticker, .live-strip');
+      if(!inScrollable) e.preventDefault();
     }
     lastTouch = now;
   }, opts);
 
-  // ═══ غیرفعال کردن Gestures در app.js ═══
-  if(window.Gestures && window.Gestures.destroy){
-    try { window.Gestures.destroy(); } catch(e){}
-  }
   window.Gestures = {
-    init: function(){ console.log('[Gestures] disabled by ui.js'); },
+    init: function(){},
     destroy: function(){},
     isActive: function(){ return false; }
   };
-
-  console.log('[UI] ✅ All gestures disabled (scroll-safe)');
 }
+
 /* ============================================================
-   NUMBER FORMATTING
+   NUMBER FORMATTING — اعداد فارسی
 ============================================================ */
 function formatNumber(num, decimals){
   if(num == null || isNaN(num)) return '—';
-
   decimals = decimals || 0;
   const fixed = Number(num).toFixed(decimals);
   const parts = fixed.split('.');
   const intPart = parts[0];
   const decPart = parts[1];
-
   const sign = intPart.startsWith('-') ? '-' : '';
   const absInt = intPart.replace('-', '');
   const withCommas = absInt.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-
   let result = sign + withCommas;
   if(decPart) result += '.' + decPart;
-
-  result = result.replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
-  return result;
+  return result.replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
 }
 
 function parseFormattedNumber(str){
   if(str == null) return null;
-
   const persian = '۰۱۲۳۴۵۶۷۸۹';
   const arabic = '٠١٢٣٤٥٦٧٨٩';
-
   let s = String(str)
     .replace(/[۰-۹]/g, d => persian.indexOf(d))
     .replace(/[٠-٩]/g, d => arabic.indexOf(d));
-
   s = s.replace(/[^\d.\-]/g, '');
-
   if(!s || s === '-' || s === '.') return null;
-
   const n = parseFloat(s);
   return isNaN(n) ? null : n;
 }
@@ -159,9 +120,15 @@ function parseFormattedNumber(str){
    ICON HELPERS
 ============================================================ */
 const CAT_COLOR = {
-  gold: 'gold', currency: 'blue', metal: 'purple',
-  energy: 'orange', crypto: 'orange', commodity: 'green',
-  index: 'cyan', goldCrypto: 'gold', ratio: 'purple'
+  gold: 'gold',
+  currency: 'blue',
+  metal: 'purple',
+  energy: 'orange',
+  crypto: 'orange',
+  commodity: 'green',
+  index: 'cyan',
+  goldCrypto: 'gold',
+  ratio: 'purple'
 };
 
 function assetIcon(asset){
@@ -175,44 +142,34 @@ function catColor(asset){ return CAT_COLOR[asset.cat] || 'gold'; }
 /* ============================================================
    UNIT SYSTEM
 ============================================================ */
-function getUnit(){
-  return window.CFG.get('currency') || 'toman';
-}
+function getUnit(){ return window.CFG.get('currency') || 'toman'; }
 
 function userToBase(value){
   if(value == null || isNaN(value)) return null;
-  const unit = getUnit();
-  return unit === 'toman' ? value * 10 : value;
+  return getUnit() === 'toman' ? value * 10 : value;
 }
 
 function baseToUser(value){
   if(value == null || isNaN(value)) return null;
-  const unit = getUnit();
-  return unit === 'toman' ? value / 10 : value;
+  return getUnit() === 'toman' ? value / 10 : value;
 }
 
-function unitLabel(){
-  return getUnit() === 'toman' ? 'تومان' : 'ریال';
-}
+function unitLabel(){ return getUnit() === 'toman' ? 'تومان' : 'ریال'; }
 
 function fullUnitLabel(asset){
   if(!asset) return '';
   const unit = asset.unit || '';
-  if(asset.ptype === 'usd'){
-    return unit ? '$/' + unit : '$';
-  }
+  if(asset.ptype === 'usd') return unit ? '$/' + unit : '$';
   const money = unitLabel();
   return unit ? money + '/' + unit : money;
 }
 
 function formatPrice(asset, rialValue){
   if(rialValue == null || isNaN(rialValue)) return '—';
-
   if(asset && asset.ptype === 'usd'){
     const dec = asset.dec != null ? asset.dec : 2;
     return '$' + formatNumber(rialValue, dec);
   }
-
   const val = baseToUser(rialValue);
   const abs = Math.abs(val);
   const d = abs < 10 ? 4 : (abs < 1000 ? 2 : 0);
@@ -227,7 +184,7 @@ function formatPriceWithUnit(asset, rialValue){
 }
 
 /* ============================================================
-   CARD HTML
+   MARKET CARD HTML — با اسپارک‌لاین
 ============================================================ */
 function marketCardHTML(asset){
   const live = window.API && window.API.getById ? window.API.getById(asset.id) : null;
@@ -239,7 +196,7 @@ function marketCardHTML(asset){
   const noPrice = price == null;
 
   return `
-    <article class="m-card ${noPrice ? 'm-card-empty' : ''}" data-card-id="${asset.id}" role="button" tabindex="${noPrice ? '-1' : '0'}" aria-label="${window.U.esc(asset.name)}${noPrice ? ' - بدون داده' : ''}">
+    <article class="m-card ${noPrice ? 'm-card-empty' : ''}" data-card-id="${asset.id}" role="button" tabindex="${noPrice ? '-1' : '0'}">
       <div class="m-card-head">
         <div class="m-card-icon ${color}">${assetIcon(asset)}</div>
         <div class="m-card-info">
@@ -247,9 +204,7 @@ function marketCardHTML(asset){
           <small>${asset.code}</small>
         </div>
         <button type="button" class="icon-btn" data-fav-toggle="${asset.id}"
-          title="${isFav ? 'حذف از علاقه‌مندی' : 'افزودن به علاقه‌مندی'}"
-          aria-label="${isFav ? 'حذف از علاقه‌مندی' : 'افزودن به علاقه‌مندی'}"
-          style="width:24px;height:24px;color:${isFav?'var(--warn)':'var(--dim)'};font-size:14px;flex-shrink:0;padding:0;background:none;border:0">
+          style="width:22px;height:22px;color:${isFav?'var(--warn)':'var(--dim)'};flex-shrink:0;padding:0;background:none;border:0">
           ${window.Icons.get('star')}
         </button>
       </div>
@@ -261,8 +216,211 @@ function marketCardHTML(asset){
       ` : noPrice ? `
         <span class="m-card-change muted">بدون داده</span>
       ` : ''}
+      ${!noPrice ? `
+        <div class="m-card-spark">
+          <canvas data-spark-canvas="${asset.id}"></canvas>
+        </div>
+      ` : ''}
     </article>
   `;
+}
+
+/* ============================================================
+   LIVE STRIP — نوار قیمت‌های زنده (جایگزین Hero Slider)
+============================================================ */
+const LIVE_STRIP_IDS = ['dollar', 'gold18', 'coin', 'ounce', 'oil_brent', 'btc', 'mesghal', 'euro'];
+
+function liveStripCardHTML(asset){
+  const live = window.API.getById(asset.id);
+  const price = live && live.price != null ? live.price : null;
+  const cp = live ? live.changePercent : null;
+  const up = (cp || 0) >= 0;
+  const color = catColor(asset);
+  const noPrice = price == null;
+
+  return `
+    <div class="live-strip-card ${noPrice ? 'm-card-empty' : (up ? 'is-up' : 'is-down')}"
+         data-card-id="${asset.id}"
+         role="button"
+         tabindex="${noPrice ? '-1' : '0'}">
+      <div class="live-strip-head">
+        <div class="live-strip-icon ${color}">${assetIcon(asset)}</div>
+        <div class="live-strip-info">
+          <strong>${window.U.esc(asset.short || asset.name)}</strong>
+          <small>${asset.code}</small>
+        </div>
+      </div>
+      <div class="live-strip-price">${noPrice ? '—' : formatPrice(asset, price)}</div>
+      ${cp != null && !noPrice ? `
+        <span class="live-strip-change ${up ? 'up' : 'down'}">
+          ${up ? '▲' : '▼'} ${Math.abs(cp).toFixed(2)}٪
+        </span>
+      ` : noPrice ? `
+        <span class="live-strip-change muted">بدون داده</span>
+      ` : ''}
+      ${!noPrice ? `
+        <div class="live-strip-spark">
+          <canvas data-spark-canvas="${asset.id}"></canvas>
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+
+function renderLiveStrip(){
+  const wrap = $('[data-live-strip]');
+  if(!wrap) return;
+
+  const assets = LIVE_STRIP_IDS.map(id => window.DATA.find(id)).filter(Boolean);
+  if(!assets.length) return;
+
+  wrap.innerHTML = assets.map(liveStripCardHTML).join('');
+
+  /* ✅ رسم اسپارک‌لاین‌ها */
+  drawAllSparklines(wrap);
+}
+
+/* ============================================================
+   SPARKLINE — نمودار کوچک روی کارت‌ها
+============================================================ */
+async function drawSparkline(canvas, asset){
+  try {
+    /* ✅ تعیین رنگ بر اساس تغییر واقعی (changePercent) */
+    const live = window.API && window.API.getById ? window.API.getById(asset.id) : null;
+    const cp = live ? live.changePercent : null;
+    const isUp = (cp || 0) >= 0;
+
+    /* ✅ کش داده‌ها */
+    const cacheKey = 'spark_' + asset.id;
+    let prices = _sparkCache.get(cacheKey);
+
+    if(!prices){
+      const history = await window.API.getHistory(asset, 14);
+      if(!history || history.length < 2) return;
+      prices = history.map(h => h.p).filter(p => p != null);
+      if(prices.length < 2) return;
+      _sparkCache.set(cacheKey, prices);
+    }
+
+    const r = canvas.getBoundingClientRect();
+    if(!r.width || !r.height) return;
+
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = r.width * dpr;
+    canvas.height = r.height * dpr;
+
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, r.width, r.height);
+
+    const max = Math.max(...prices);
+    const min = Math.min(...prices);
+    const range = max - min || 1;
+
+    /* ✅ رنگ بر اساس جهت واقعی تغییر (نه اولین/آخرین قیمت) */
+    const color = isUp ? '#10b981' : '#ef4444';
+    const fillStart = isUp ? 'rgba(16,185,129,.30)' : 'rgba(239,68,68,.30)';
+
+    const w = r.width;
+    const h = r.height;
+    const pad = 2;
+
+    const pts = prices.map((p, i) => ({
+      x: pad + (i / (prices.length - 1)) * (w - pad * 2),
+      y: h - pad - ((p - min) / range) * (h - pad * 2)
+    }));
+
+    /* فیل گرادیانت */
+    const g = ctx.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, fillStart);
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for(let i = 1; i < pts.length; i++){
+      ctx.lineTo(pts[i].x, pts[i].y);
+    }
+    ctx.lineTo(pts[pts.length - 1].x, h);
+    ctx.lineTo(pts[0].x, h);
+    ctx.closePath();
+    ctx.fillStyle = g;
+    ctx.fill();
+
+    /* خط */
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for(let i = 1; i < pts.length; i++){
+      ctx.lineTo(pts[i].x, pts[i].y);
+    }
+    ctx.lineWidth = 1.6;
+    ctx.strokeStyle = color;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.stroke();
+
+    /* نقطه آخر با رنگ مربوطه */
+    const last = pts[pts.length - 1];
+    ctx.beginPath();
+    ctx.arc(last.x, last.y, 2.5, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+
+  } catch(e){
+    /* بی‌صدا */
+  }
+}
+
+/* ✅ کش اسپارک‌لاین */
+const _sparkCache = new Map();
+
+/* ✅ رسم همه اسپارک‌لاین‌ها با Lazy Loading */
+/* ✅ رسم همه اسپارک‌لاین‌ها با Lazy Loading مطمئن */
+function drawAllSparklines(container){
+  if(!container) return;
+
+  const canvases = container.querySelectorAll('[data-spark-canvas]');
+  if(!canvases.length) return;
+
+  /* ✅ استفاده از requestAnimationFrame برای اطمینان از layout */
+  requestAnimationFrame(() => {
+    canvases.forEach(canvas => {
+      const id = canvas.dataset.sparkCanvas;
+      const asset = window.DATA.find(id);
+      if(!asset) return;
+
+      /* ✅ اگه canvas قابل دیدن باشه، فوری رسم کن */
+      const rect = canvas.getBoundingClientRect();
+      if(rect.width > 0 && rect.height > 0){
+        drawSparkline(canvas, asset).catch(() => {});
+      } else {
+        /* ✅ در غیر این صورت با observer رصد کن */
+        if(!_sparkObserver) initSparkObserver();
+        _sparkObserver.observe(canvas);
+      }
+    });
+  });
+}
+
+/* ✅ ساخت IntersectionObserver یک‌بار */
+function initSparkObserver(){
+  if(_sparkObserver) return;
+
+  _sparkObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if(entry.isIntersecting){
+        const canvas = entry.target;
+        const id = canvas.dataset.sparkCanvas;
+        const asset = window.DATA.find(id);
+        if(asset){
+          drawSparkline(canvas, asset).catch(() => {});
+        }
+        _sparkObserver.unobserve(canvas);
+      }
+    });
+  }, {
+    rootMargin: '100px',
+    threshold: 0.01
+  });
 }
 
 /* ============================================================
@@ -273,6 +431,7 @@ function renderFeatured(){
   if(!c) return;
   const list = window.DATA.FEATURED.map(id => window.DATA.find(id)).filter(Boolean);
   c.innerHTML = list.map(marketCardHTML).join('');
+  drawAllSparklines(c);
 }
 
 function renderMostUsed(){
@@ -280,6 +439,7 @@ function renderMostUsed(){
   if(!c) return;
   const list = window.DATA.MOST_USED.map(id => window.DATA.find(id)).filter(Boolean);
   c.innerHTML = list.map(marketCardHTML).join('');
+  drawAllSparklines(c);
 }
 
 function renderCats(){
@@ -288,7 +448,7 @@ function renderCats(){
   const counts = window.DATA.countByCat();
 
   c.innerHTML = Object.entries(window.DATA.CATEGORIES).map(([k, cat]) => `
-    <button class="cat-chip" data-filter-jump="${k}" type="button" aria-label="${cat.label}">
+    <button class="cat-chip" data-filter-jump="${k}" type="button">
       <span class="cat-chip-icon">${window.Icons.get(cat.icon)}</span>
       <span>${cat.label}</span>
       <small style="opacity:.6">${counts[k] || 0}</small>
@@ -319,7 +479,7 @@ function renderTools(){
     { id:'silver',      name:'محاسبه‌گر نقره',  icon:'diamond' },
     { id:'conv',        name:'مبدل ارز',        icon:'exchange' },
     { id:'crypto-conv', name:'مبدل کریپتو',     icon:'bitcoin' },
-    { id:'unit-conv',   name:'مبدل واحد و حجم', icon:'swap' },
+    { id:'unit-conv',   name:'مبدل واحد',       icon:'swap' },
     { id:'portfolio',   name:'پرتفوی من',       icon:'briefcase' },
     { id:'alerts',      name:'هشدار قیمت',      icon:'bell' },
     { id:'notes',       name:'یادداشت‌ها',       icon:'note' },
@@ -340,7 +500,7 @@ function renderTools(){
 }
 
 /* ============================================================
-   BANK CARD
+   BANK CARD — پرتفوی
 ============================================================ */
 function getUserName(){
   return window.Storage.get('gheymato.username', '') || 'کاربر مهمان';
@@ -354,8 +514,7 @@ function renderBankCard(){
   const wrap = $('[data-portfolio-card]');
   if(!wrap) return;
 
-  if(!window.DATA || !window.DATA.find || !window.DATA.ASSETS) return;
-  if(!window.API || !window.API.getById) return;
+  if(!window.DATA || !window.DATA.find || !window.API) return;
 
   const list = window.Storage.pf.get();
   const userName = getUserName();
@@ -384,9 +543,8 @@ function renderBankCard(){
   let subtitle = 'برای شروع دارایی اضافه کنید';
 
   if(!isEmpty){
-    const unitText = unitLabel();
     const val = baseToUser(totalNow);
-    displayValue = formatNumber(val, 0) + ' ' + unitText;
+    displayValue = formatNumber(val, 0) + ' ' + unitLabel();
     subtitle = formatNumber(list.length, 0) + ' دارایی';
     displayChange = `
       <span class="bank-card-change">
@@ -399,7 +557,7 @@ function renderBankCard(){
     <div class="bank-card ${isEmpty ? 'is-empty' : ''}" data-tool="portfolio" role="button" tabindex="0" aria-label="پرتفوی من">
       <div class="bank-card-top">
         <div class="bank-card-brand">
-          <img src="assets/logo.png" alt="قیمتو">
+          <img src="assets/logo.webp" alt="قیمتو">
           <div class="bank-card-brand-text">
             <strong>قیمتو</strong>
             <small>${isEmpty ? 'پرتفوی خالی' : subtitle}</small>
@@ -407,13 +565,11 @@ function renderBankCard(){
         </div>
         <div class="bank-card-chip"></div>
       </div>
-
       <div class="bank-card-center">
         <span class="bank-card-label">ارزش کل پرتفوی</span>
         <span class="bank-card-value">${displayValue}</span>
         ${displayChange}
       </div>
-
       <div class="bank-card-bottom">
         <div class="bank-card-user">
           <div class="bank-card-avatar">${firstChar}</div>
@@ -431,7 +587,7 @@ function renderBankCard(){
 }
 
 /* ============================================================
-   MARKETS
+   MARKETS — رندر بازارها (Grid / List)
 ============================================================ */
 function renderMarkets(){
   const g = $('[data-market-grid]');
@@ -451,7 +607,11 @@ function renderMarkets(){
   const cnt = $('[data-count]');
   if(cnt) cnt.textContent = formatNumber(list.length, 0) + ' نماد';
 
+  /* ✅ حفظ حالت نمایش */
+  g.classList.toggle('view-list', marketView === 'list');
+
   g.innerHTML = list.map(marketCardHTML).join('');
+  drawAllSparklines(g);
 }
 
 /* ============================================================
@@ -522,23 +682,22 @@ const CAR_IMAGE_MAP = {
 };
 
 function getCarImage(car){
-  if(!car || !car.id) return 'assets/cars/x-car.png';
+  if(!car || !car.id) return 'assets/cars/x-car.webp';
   const img = CAR_IMAGE_MAP[car.id];
-  return img ? 'assets/cars/' + img : 'assets/cars/x-car.png';
+  return img ? 'assets/cars/' + img : 'assets/cars/x-car.webp';
 }
 
 /* ============================================================
-   CARS — کارت خودرو
+   CAR CARD HTML
 ============================================================ */
 function carCardHTML(car){
   const imgSrc = getCarImage(car);
-  
   const priceMarket = car.priceMarket;
   const priceFactory = car.priceFactory;
   const changePercent = car.changePercent != null ? car.changePercent : 0;
   const up = changePercent >= 0;
   const hasChange = changePercent !== 0;
-  
+
   const statusMap = {
     'available':    { label: 'موجود',       cls: 'success' },
     'unavailable':  { label: 'ناموجود',     cls: 'muted' },
@@ -547,22 +706,19 @@ function carCardHTML(car){
     'not-selling':  { label: 'توقف فروش',   cls: 'danger' }
   };
   const status = statusMap[car.status] || { label: '', cls: '' };
-  
-  const fmt = (v) => v != null 
-    ? formatPrice({ ptype: 'rial', dec: 0 }, v) 
-    : '—';
-  
+
+  const fmt = (v) => v != null ? formatPrice({ ptype: 'rial', dec: 0 }, v) : '—';
   const isPlaceholder = priceMarket == null && priceFactory == null;
-  
+
   return `
     <article class="car-card" data-car-id="${window.U.esc(car.id || '')}" role="button" tabindex="0" aria-label="${window.U.esc(car.name)}">
       <div class="car-card-image">
         <img src="${imgSrc}" 
              alt="${window.U.esc(car.name)}" 
              loading="lazy"
-             onerror="this.onerror=null;this.src='assets/cars/x-car.png'">
+             onerror="this.onerror=null;this.src='assets/cars/x-car.webp'">
         <img class="car-card-watermark" 
-             src="assets/logo.png" 
+             src="assets/logo.webp" 
              alt=""
              aria-hidden="true">
         ${status.label ? `<span class="car-card-status ${status.cls}">${status.label}</span>` : ''}
@@ -608,11 +764,8 @@ function carCardHTML(car){
 }
 
 /* ============================================================
-   CARS — رندر
+   CARS — رندر کامل
 ============================================================ */
-let carsFilter = 'all';
-let carsSearch = '';
-
 async function renderCars(){
   const wrap = $('[data-home-cars]');
   const listEl = $('[data-cars-list]');
@@ -689,10 +842,7 @@ async function renderCars(){
 }
 
 /* ============================================================
-   CARS — مودال
-============================================================ */
-/* ============================================================
-   CARS — مودال جزئیات کامل خودرو
+   CAR MODAL — مودال جزئیات خودرو
 ============================================================ */
 function openCarModal(carId){
   const cars = window.API.getCars && window.API.getCars();
@@ -700,21 +850,18 @@ function openCarModal(carId){
     toast('داده خودرو در دسترس نیست', 'warning');
     return;
   }
-  
+
   const car = cars.cars.find(function(c){ return c.id === carId; });
   if(!car){
     toast('خودرو پیدا نشد', 'error');
     return;
   }
-  
-  // ═══ دریافت مشخصات از cars_specs_only ═══
+
   const specs = window.API.getCarSpecsById ? window.API.getCarSpecsById(carId) : null;
-  
+
   const imgSrc = getCarImage(car);
-  const fmt = (v) => v != null 
-    ? formatPrice({ ptype: 'rial', dec: 0 }, v) 
-    : '—';
-  
+  const fmt = (v) => v != null ? formatPrice({ ptype: 'rial', dec: 0 }, v) : '—';
+
   const statusMap = {
     'available':    'موجود',
     'unavailable':  'ناموجود',
@@ -722,13 +869,13 @@ function openCarModal(carId){
     'discontinued': 'توقف تولید',
     'not-selling':  'توقف فروش'
   };
-  
+
   const changePercent = car.changePercent || 0;
   const up = changePercent >= 0;
   const changeVal = car.change || 0;
   const changeValAbs = Math.abs(changeVal);
-  
-  // ═══ آماده‌سازی مشخصات فنی ═══
+
+  /* ═══ مشخصات فنی ═══ */
   let specsHTML = '';
   if(specs && specs.specifications && Object.keys(specs.specifications).length > 0){
     const specRows = Object.entries(specs.specifications)
@@ -739,7 +886,7 @@ function openCarModal(carId){
           <strong class="car-spec-value">${window.U.esc(String(v))}</strong>
         </div>
       `).join('');
-    
+
     if(specRows){
       specsHTML = `
         <details class="car-modal-section" open>
@@ -755,8 +902,8 @@ function openCarModal(carId){
       `;
     }
   }
-  
-  // ═══ آماده‌سازی امکانات و تجهیزات ═══
+
+  /* ═══ امکانات و تجهیزات ═══ */
   let featuresHTML = '';
   if(specs && specs.features && Object.keys(specs.features).length > 0){
     const featRows = Object.entries(specs.features)
@@ -767,7 +914,7 @@ function openCarModal(carId){
           <div class="car-feature-value">${window.U.esc(String(v))}</div>
         </div>
       `).join('');
-    
+
     if(featRows){
       featuresHTML = `
         <details class="car-modal-section" open>
@@ -783,15 +930,15 @@ function openCarModal(carId){
       `;
     }
   }
-  
-  // ═══ آماده‌سازی توضیحات ═══
+
+  /* ═══ توضیحات ═══ */
   let descriptionHTML = '';
   if(specs && specs.description && Array.isArray(specs.description) && specs.description.length > 0){
     const descHTML = specs.description
       .filter(d => d && d.trim())
       .map(d => `<p class="car-desc-paragraph">${window.U.esc(d)}</p>`)
       .join('');
-    
+
     if(descHTML){
       descriptionHTML = `
         <details class="car-modal-section">
@@ -806,8 +953,8 @@ function openCarModal(carId){
       `;
     }
   }
-  
-  // ═══ اگر هیچ داده‌ای نیست ═══
+
+  /* ═══ خالی ═══ */
   const hasDetails = specsHTML || featuresHTML || descriptionHTML;
   const emptySpecsHTML = !hasDetails ? `
     <div class="car-modal-empty-details">
@@ -815,25 +962,23 @@ function openCarModal(carId){
       <span>مشخصات تکمیلی برای این خودرو در دسترس نیست</span>
     </div>
   ` : '';
-  
-  // ═══ ساختار مودال ═══
+
+  /* ═══ ساختار مودال ═══ */
   openModal(`<span data-icon="car"></span> ${window.U.esc(car.name)}`, `
     <div class="car-modal-image">
       <img src="${imgSrc}" 
            alt="${window.U.esc(car.name)}"
-           onerror="this.onerror=null;this.src='assets/cars/x-car.png'">
-      <img class="car-modal-watermark" src="assets/logo.png" alt="">
+           onerror="this.onerror=null;this.src='assets/cars/x-car.webp'">
+      <img class="car-modal-watermark" src="assets/logo.webp" alt="">
       <span class="car-modal-badge-floating ${car.status || ''}">${statusMap[car.status] || '—'}</span>
     </div>
     
     <div class="car-modal-info">
-      <!-- ═══ هدر: دسته‌بندی ═══ -->
       <div class="car-modal-badge-row">
         <span class="car-modal-badge category">${window.U.esc(car.category || '—')}</span>
         ${specs && specs.title ? `<span class="car-modal-badge title" title="${window.U.esc(specs.title)}">${window.U.esc(specs.title.length > 60 ? specs.title.slice(0, 60) + '...' : specs.title)}</span>` : ''}
       </div>
       
-      <!-- ═══ قیمت‌ها ═══ -->
       <div class="car-modal-prices">
         ${car.priceFactory != null ? `
           <div class="car-modal-price-card">
@@ -849,24 +994,21 @@ function openCarModal(carId){
         ` : ''}
       </div>
       
-      <!-- ═══ تغییر قیمت ═══ -->
       ${changePercent !== 0 ? `
         <div class="car-modal-change ${up ? 'up' : 'down'}">
           <span>${up ? '▲' : '▼'}</span>
           <span>${Math.abs(changePercent).toFixed(2)}٪</span>
-          ${changeValAbs > 0 ? `<span style="font-size:11px;opacity:.7">(${up ? '+' : '-'}${formatPrice({ptype:'rial'}, changeValAbs)})</span>` : ''}
+          ${changeValAbs > 0 ? `<span style="font-size:10.5px;opacity:.7">(${up ? '+' : '-'}${formatPrice({ptype:'rial'}, changeValAbs)})</span>` : ''}
         </div>
       ` : ''}
       
-      <!-- ═══ مشخصات فنی + امکانات + توضیحات ═══ -->
       ${specsHTML}
       ${featuresHTML}
       ${descriptionHTML}
       ${emptySpecsHTML}
     </div>
   `);
-  
-  // ═══ hydrate آیکون‌ها ═══
+
   const modalBody = $('[data-modal-body]');
   if(window.Icons && window.Icons.hydrate && modalBody){
     window.Icons.hydrate(modalBody);
@@ -888,15 +1030,15 @@ function renderFavs(){
   if(empty) empty.hidden = list.length > 0;
 
   g.innerHTML = list.map(marketCardHTML).join('');
+  drawAllSparklines(g);
 }
 
 /* ============================================================
-   HEADER TICKER — با رفع باگ برگشت نوار
+   HEADER TICKER
 ============================================================ */
 function renderHdrTicker(){
   const track = $('[data-hdr-ticker-track]');
   if(!track) return;
-
   if(!window.API || !window.API.getById) return;
   if(!window.DATA || !window.DATA.find) return;
 
@@ -924,26 +1066,20 @@ function renderHdrTicker(){
 
   if(!items) return;
 
-  // ═══ اگر قبلاً محتوا وجود دارد و یکسان است، دوباره رندر نکن ═══
   const newContent = items + items;
   if(track.dataset.content === newContent && track.children.length > 0){
-    return;  // ← جلوگیری از پرش نوار
+    return;
   }
   track.dataset.content = newContent;
-
-  // ═══ استفاده از requestAnimationFrame برای ریست صحیح انیمیشن ═══
   track.innerHTML = newContent;
 
-  // ═══ ریست انیمیشن با روش صحیح ═══
-  // حذف کلاس انیمیشن، force reflow، سپس افزودن دوباره
   track.style.animation = 'none';
-  // force reflow
   void track.offsetWidth;
-  // دوباره فعال کن — در فریم بعدی
   requestAnimationFrame(() => {
     track.style.animation = '';
   });
 }
+
 /* ============================================================
    CHART PAGE
 ============================================================ */
@@ -1004,6 +1140,7 @@ async function renderChartPage(){
       .filter(a => a.id !== asset.id)
       .slice(0, 10);
     relEl.innerHTML = related.map(marketCardHTML).join('');
+    drawAllSparklines(relEl);
   }
 }
 
@@ -1034,6 +1171,7 @@ async function renderChartQuestions(asset, live){
 
   let history = [];
   let historyWarning = false;
+
   try {
     if(window.API.getHistory){
       history = await window.API.getHistory(asset, 365);
@@ -1043,7 +1181,6 @@ async function renderChartQuestions(asset, live){
       }
     }
   } catch(e){
-    console.warn('[Questions] history failed:', e.message);
     historyWarning = true;
   }
 
@@ -1347,7 +1484,7 @@ function renderBubbleAnalysis(asset, live){
 }
 
 /* ============================================================
-   نمودار
+   نمودار اصلی
 ============================================================ */
 async function drawChartAsync(canvas, asset){
   try {
@@ -1451,23 +1588,23 @@ function renderCompare(){
     const lA = window.API.getById(A.id);
     const lB = window.API.getById(B.id);
     st.innerHTML = `
-      <div style="padding:16px;border-radius:14px;background:var(--card);border:1px solid var(--border)">
-        <small style="display:block;font-size:11.5px;color:var(--muted);margin-bottom:6px;font-weight:600">${window.U.esc(A.name)}</small>
-        <strong style="display:block;font-size:16px;font-weight:800;direction:ltr">${lA ? formatPrice(A, lA.price) : '—'}</strong>
+      <div style="padding:14px;border-radius:13px;background:var(--card);border:1px solid var(--border)">
+        <small style="display:block;font-size:11px;color:var(--muted);margin-bottom:5px;font-weight:600">${window.U.esc(A.name)}</small>
+        <strong style="display:block;font-size:15px;font-weight:800;direction:ltr">${lA ? formatPrice(A, lA.price) : '—'}</strong>
       </div>
-      <div style="padding:16px;border-radius:14px;background:var(--card);border:1px solid var(--border)">
-        <small style="display:block;font-size:11.5px;color:var(--muted);margin-bottom:6px;font-weight:600">تغییر ${A.code}</small>
-        <strong style="display:block;font-size:16px;font-weight:800;direction:ltr;color:${(lA?.changePercent || 0) >= 0 ? 'var(--up)' : 'var(--down)'}">
+      <div style="padding:14px;border-radius:13px;background:var(--card);border:1px solid var(--border)">
+        <small style="display:block;font-size:11px;color:var(--muted);margin-bottom:5px;font-weight:600">تغییر ${A.code}</small>
+        <strong style="display:block;font-size:15px;font-weight:800;direction:ltr;color:${(lA?.changePercent || 0) >= 0 ? 'var(--up)' : 'var(--down)'}">
           ${(lA?.changePercent || 0) >= 0 ? '+' : ''}${(lA?.changePercent || 0).toFixed(2)}%
         </strong>
       </div>
-      <div style="padding:16px;border-radius:14px;background:var(--card);border:1px solid var(--border)">
-        <small style="display:block;font-size:11.5px;color:var(--muted);margin-bottom:6px;font-weight:600">${window.U.esc(B.name)}</small>
-        <strong style="display:block;font-size:16px;font-weight:800;direction:ltr">${lB ? formatPrice(B, lB.price) : '—'}</strong>
+      <div style="padding:14px;border-radius:13px;background:var(--card);border:1px solid var(--border)">
+        <small style="display:block;font-size:11px;color:var(--muted);margin-bottom:5px;font-weight:600">${window.U.esc(B.name)}</small>
+        <strong style="display:block;font-size:15px;font-weight:800;direction:ltr">${lB ? formatPrice(B, lB.price) : '—'}</strong>
       </div>
-      <div style="padding:16px;border-radius:14px;background:var(--card);border:1px solid var(--border)">
-        <small style="display:block;font-size:11.5px;color:var(--muted);margin-bottom:6px;font-weight:600">تغییر ${B.code}</small>
-        <strong style="display:block;font-size:16px;font-weight:800;direction:ltr;color:${(lB?.changePercent || 0) >= 0 ? 'var(--up)' : 'var(--down)'}">
+      <div style="padding:14px;border-radius:13px;background:var(--card);border:1px solid var(--border)">
+        <small style="display:block;font-size:11px;color:var(--muted);margin-bottom:5px;font-weight:600">تغییر ${B.code}</small>
+        <strong style="display:block;font-size:15px;font-weight:800;direction:ltr;color:${(lB?.changePercent || 0) >= 0 ? 'var(--up)' : 'var(--down)'}">
           ${(lB?.changePercent || 0) >= 0 ? '+' : ''}${(lB?.changePercent || 0).toFixed(2)}%
         </strong>
       </div>
@@ -1476,14 +1613,6 @@ function renderCompare(){
 
   sA.onchange = renderCompare;
   sB.onchange = renderCompare;
-}
-
-async function renderHomeChart(){
-  const c = $('[data-home-chart]');
-  if(!c) return;
-  const asset = window.DATA.find(homeChartId) || window.DATA.find('gold18');
-  if(!asset) return;
-  await drawChartAsync(c, asset);
 }
 
 /* ============================================================
@@ -1528,27 +1657,36 @@ function go(page){
 
   try {
     if(page === 'home'){
+      renderLiveStrip();
       renderBankCard();
       renderFeatured();
       renderMostUsed();
       renderCats();
       renderTools();
-      renderCars().catch(function(){});
+      renderCars().catch(() => {});
     }
-    else if(page === 'markets'){ renderMarkets(); }
+    else if(page === 'markets'){
+      renderMarkets();
+    }
     else if(page === 'chart'){
       if(!activeChartId && window.DATA.ASSETS.length){
         activeChartId = window.DATA.ASSETS[0].id;
       }
-      renderChartPage().catch(function(){});
+      renderChartPage().catch(() => {});
     }
-    else if(page === 'compare'){ renderCompare(); }
-    else if(page === 'favorites'){ renderFavs(); }
-    else if(page === 'cars'){ renderCars().catch(function(){}); }
+    else if(page === 'compare'){
+      renderCompare();
+    }
+    else if(page === 'favorites'){
+      renderFavs();
+    }
+    else if(page === 'cars'){
+      renderCars().catch(() => {});
+    }
 
     renderHdrTicker();
   } catch(err){
-    console.error('[UI.go] render error on page "' + page + '":', err);
+    console.error('[UI.go] error on page "' + page + '":', err);
   }
 }
 
@@ -1601,7 +1739,7 @@ function toast(msg, type = '', id = null){
 }
 
 /* ============================================================
-   HELPERS — اعتبارسنجی
+   HELPERS
 ============================================================ */
 function setFieldError(input, message){
   if(!input) return;
@@ -1635,7 +1773,7 @@ function validatePositive(input, fieldName){
 }
 
 /* ============================================================
-   TOOLS
+   TOOLS — (همه توابع اصلی بدون تغییر)
 ============================================================ */
 function money(v){ return formatPrice({ptype:'rial'}, v); }
 
@@ -1830,9 +1968,9 @@ function toolConv(){
       <label>مقدار (${unitLabel()})</label>
       <input class="input" type="text" inputmode="decimal" value="1000000" data-money data-va aria-label="مقدار">
     </div>
-    <div style="display:grid;grid-template-columns:1fr 48px 1fr;gap:10px;align-items:center">
+    <div style="display:grid;grid-template-columns:1fr 44px 1fr;gap:9px;align-items:center">
       <select class="select" data-vf aria-label="از واحد">${opts}</select>
-      <button type="button" class="btn btn-primary" data-vs style="padding:10px;width:48px;height:48px;border-radius:14px" aria-label="جابجایی">⇄</button>
+      <button type="button" class="btn btn-primary" data-vs style="padding:9px;width:44px;height:44px;border-radius:13px" aria-label="جابجایی">⇄</button>
       <select class="select" data-vt aria-label="به واحد">${opts}</select>
     </div>
     <div class="result-box" data-conv-out></div>
@@ -1886,9 +2024,9 @@ function toolCryptoConv(){
       <label>مقدار</label>
       <input class="input" type="text" inputmode="decimal" value="1" data-money data-cca aria-label="مقدار">
     </div>
-    <div style="display:grid;grid-template-columns:1fr 48px 1fr;gap:10px;align-items:center">
+    <div style="display:grid;grid-template-columns:1fr 44px 1fr;gap:9px;align-items:center">
       <select class="select" data-ccf aria-label="از کریپتو">${opts}</select>
-      <button type="button" class="btn btn-primary" data-ccs style="padding:10px;width:48px;height:48px;border-radius:14px" aria-label="جابجایی">⇄</button>
+      <button type="button" class="btn btn-primary" data-ccs style="padding:9px;width:44px;height:44px;border-radius:13px" aria-label="جابجایی">⇄</button>
       <select class="select" data-cct aria-label="به کریپتو">${opts}</select>
     </div>
     <div class="result-box" data-crypto-out></div>
@@ -1952,9 +2090,9 @@ function toolUnitConv(){
       <label>مقدار</label>
       <input class="input" type="text" inputmode="decimal" value="1" data-money data-ua aria-label="مقدار">
     </div>
-    <div style="display:grid;grid-template-columns:1fr 48px 1fr;gap:10px;align-items:center">
+    <div style="display:grid;grid-template-columns:1fr 44px 1fr;gap:9px;align-items:center">
       <select class="select" data-uf aria-label="از واحد"></select>
-      <button type="button" class="btn btn-primary" data-us style="padding:10px;width:48px;height:48px;border-radius:14px" aria-label="جابجایی">⇄</button>
+      <button type="button" class="btn btn-primary" data-us style="padding:9px;width:44px;height:44px;border-radius:13px" aria-label="جابجایی">⇄</button>
       <select class="select" data-ut aria-label="به واحد"></select>
     </div>
     <div class="result-box" data-unit-out></div>
@@ -2098,7 +2236,7 @@ function toolPortfolio(){
       <span data-icon="plus"></span>
       افزودن به پرتفوی
     </button>
-    <div style="margin-top:16px" data-pf-list></div>
+    <div style="margin-top:14px" data-pf-list></div>
   `);
 
   function render(){
@@ -2119,26 +2257,26 @@ function toolPortfolio(){
       const pl = nv - bv;
       const pct = bv > 0 ? (pl / bv) * 100 : 0;
       return `
-        <div class="result-row" style="padding:12px;border-radius:12px;background:var(--card-2);margin-bottom:8px">
-          <div style="display:flex;align-items:center;gap:10px">
-            <div class="m-card-icon" style="width:32px;height:32px;border-radius:10px">
+        <div class="result-row" style="padding:10px;border-radius:11px;background:var(--card-2);margin-bottom:7px">
+          <div style="display:flex;align-items:center;gap:9px">
+            <div class="m-card-icon" style="width:30px;height:30px;border-radius:9px">
               ${assetIcon(a)}
             </div>
             <div>
-              <strong style="display:block;font-size:13px">${window.U.esc(a.name)}</strong>
-              <small style="font-size:11px;color:var(--muted)">${formatNumber(item.qty, 0)} × ${formatPrice(a, item.buyPrice)}</small>
+              <strong style="display:block;font-size:12.5px">${window.U.esc(a.name)}</strong>
+              <small style="font-size:10.5px;color:var(--muted)">${formatNumber(item.qty, 0)} × ${formatPrice(a, item.buyPrice)}</small>
             </div>
           </div>
-          <div style="display:flex;align-items:center;gap:10px">
+          <div style="display:flex;align-items:center;gap:9px">
             <div style="text-align:end">
-              <strong style="display:block;font-size:13px;direction:ltr">${formatPrice(a, nv)}</strong>
+              <strong style="display:block;font-size:12.5px;direction:ltr">${formatPrice(a, nv)}</strong>
               <small style="color:${pl >= 0 ? 'var(--up)' : 'var(--down)'};font-weight:800;direction:ltr">
                 ${pl >= 0 ? '+' : ''}${pct.toFixed(2)}%
               </small>
             </div>
             <button type="button" class="icon-btn" data-pf-del2="${item.ts}"
               title="حذف" aria-label="حذف دارایی"
-              style="width:28px;height:28px;font-size:14px;color:var(--muted)">
+              style="width:26px;height:26px;color:var(--muted)">
               ${window.Icons.get('trash')}
             </button>
           </div>
@@ -2210,15 +2348,15 @@ function toolAlerts(){
         <input class="input" type="text" inputmode="decimal" data-money data-al-dn aria-label="پایین‌تر از">
       </div>
     </div>
-    <label style="display:flex;align-items:center;gap:8px;margin:12px 0;font-size:13px;color:var(--muted)">
+    <label style="display:flex;align-items:center;gap:7px;margin:11px 0;font-size:12px;color:var(--muted)">
       <input type="checkbox" data-al-repeat checked>
-      هشدار تکرارشونده (پس از فعال شدن حفظ شود)
+      هشدار تکرارشونده
     </label>
     <button type="button" class="btn btn-primary btn-block" data-al-save>
       <span data-icon="plus"></span>
       ذخیره هشدار
     </button>
-    <div style="margin-top:16px" data-al-list></div>
+    <div style="margin-top:14px" data-al-list></div>
   `);
 
   function render(){
@@ -2235,14 +2373,14 @@ function toolAlerts(){
       if(al.up) parts.push('بالاتر از ' + money(al.up));
       if(al.dn) parts.push('پایین‌تر از ' + money(al.dn));
       const repeatBadge = al.repeat !== false
-        ? '<span style="font-size:10px;background:var(--accent-soft);color:var(--accent);padding:2px 6px;border-radius:6px;margin-right:6px">تکرارشونده</span>'
+        ? '<span style="font-size:9.5px;background:var(--accent-soft);color:var(--accent);padding:2px 6px;border-radius:5px;margin-right:5px">تکرارشونده</span>'
         : '';
       return `
-        <div class="result-row" style="padding:10px;border-radius:10px;background:var(--card-2);margin-bottom:6px">
+        <div class="result-row" style="padding:9px;border-radius:10px;background:var(--card-2);margin-bottom:5px">
           <span>${window.U.esc(a?.name || '—')} — ${parts.join(' / ')} ${repeatBadge}</span>
           <button type="button" class="icon-btn" data-al-del="${al.ts}"
             title="حذف" aria-label="حذف هشدار"
-            style="font-size:14px;width:28px;height:28px;color:var(--muted)">
+            style="width:26px;height:26px;color:var(--muted)">
             ${window.Icons.get('trash')}
           </button>
         </div>
@@ -2283,7 +2421,7 @@ function toolAlerts(){
 function toolNotes(){
   const notes = window.Storage.notes.get() || '';
   openModal(`<span data-icon="note"></span> یادداشت‌ها`, `
-    <textarea class="textarea" data-notes placeholder="یادداشت خود را بنویسید..." style="min-height:220px" aria-label="یادداشت">${notes}</textarea>
+    <textarea class="textarea" data-notes placeholder="یادداشت خود را بنویسید..." style="min-height:200px" aria-label="یادداشت">${notes}</textarea>
     <button type="button" class="btn btn-primary btn-block" data-notes-save>
       <span data-icon="check"></span>
       ذخیره
@@ -2422,7 +2560,7 @@ function toolAvgBuy(){
       <select class="select" data-avg-a aria-label="دارایی">${opts}</select>
     </div>
     <div id="avg-rows"></div>
-    <button type="button" class="btn btn-ghost btn-block" data-avg-add style="margin-top:8px">
+    <button type="button" class="btn btn-ghost btn-block" data-avg-add style="margin-top:7px">
       <span data-icon="plus"></span>
       افزودن ردیف
     </button>
@@ -2434,11 +2572,11 @@ function toolAvgBuy(){
     if(!wrap) return;
     const row = document.createElement('div');
     row.setAttribute('data-avg-row', '');
-    row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 40px;gap:8px;margin-bottom:8px';
+    row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 36px;gap:7px;margin-bottom:7px';
     row.innerHTML = `
       <input class="input" type="text" inputmode="decimal" placeholder="قیمت (${unitLabel()})" data-money data-avg-p aria-label="قیمت">
       <input class="input" type="text" inputmode="decimal" placeholder="مقدار" data-money data-avg-q aria-label="مقدار">
-      <button type="button" class="btn btn-danger" data-avg-del style="padding:0;width:40px;font-size:18px" title="حذف ردیف" aria-label="حذف ردیف">×</button>
+      <button type="button" class="btn btn-danger" data-avg-del style="padding:0;width:36px;font-size:16px" title="حذف ردیف" aria-label="حذف ردیف">×</button>
     `;
     wrap.appendChild(row);
     row.querySelectorAll('input').forEach(i => i.addEventListener('input', calc));
@@ -2535,6 +2673,9 @@ function openTool(tool){
   }
 }
 
+/* ============================================================
+   جستجوی ترکیبی — نمادها + خودروها
+============================================================ */
 function doSearch(query){
   const res = $('[data-search-results]');
   if(!res) return;
@@ -2547,12 +2688,14 @@ function doSearch(query){
     return;
   }
 
+  /* ═══ جستجو در نمادها ═══ */
   const symbolList = window.DATA.ASSETS.filter(a =>
     a.name.toLowerCase().includes(q) ||
     a.code.toLowerCase().includes(q) ||
     a.id.toLowerCase().includes(q)
-  ).slice(0, 10);
+  ).slice(0, 8);
 
+  /* ═══ جستجو در خودروها ═══ */
   let carList = [];
   if(window.API && window.API.getCars){
     const cars = window.API.getCars();
@@ -2560,7 +2703,7 @@ function doSearch(query){
       carList = cars.cars.filter(function(c){
         return (c.name || '').toLowerCase().includes(q) ||
                (c.category || '').toLowerCase().includes(q);
-      }).slice(0, 8);
+      }).slice(0, 6);
     }
   }
 
@@ -2575,6 +2718,7 @@ function doSearch(query){
 
   let html = '';
 
+  /* ═══ بخش نمادها ═══ */
   if(hasSymbols){
     html += '<div class="ms-section-title">نمادها</div>';
     html += symbolList.map(function(a, i){
@@ -2593,6 +2737,7 @@ function doSearch(query){
     }).join('');
   }
 
+  /* ═══ بخش خودروها ═══ */
   if(hasCars){
     html += '<div class="ms-section-title">خودروها</div>';
     html += carList.map(function(c, i){
@@ -2630,6 +2775,7 @@ function doSearch(query){
   res.innerHTML = html;
   res.hidden = false;
 
+  /* ═══ اتصال رویدادها ═══ */
   res.querySelectorAll('.ms-item').forEach(function(el){
     el.addEventListener('click', function(e){
       e.stopPropagation();
@@ -2660,6 +2806,9 @@ function pickSearchCar(car){
   carsSearch = car.name || '';
   closeSearch();
   go('cars');
+  setTimeout(() => {
+    openCarModal(car.id);
+  }, 400);
 }
 
 function closeSearch(){
@@ -2672,6 +2821,9 @@ function closeSearch(){
   if(input) input.value = '';
 }
 
+/* ============================================================
+   CLICK HANDLER
+============================================================ */
 function handleClick(e){
   const menuBtn = e.target.closest('[data-menu]');
   if(menuBtn){
@@ -2706,6 +2858,7 @@ function handleClick(e){
     return;
   }
 
+  /* ═══ بستن نتایج جستجو ═══ */
   const results = $('[data-search-results]');
   if(results && !results.hidden){
     if(!e.target.closest('.hdr-search-wrap')) closeSearch();
@@ -2741,7 +2894,11 @@ function handleClick(e){
     toast('علاقه‌مندی بروزرسانی شد', 'success');
     if(currentPage === 'favorites') renderFavs();
     else if(currentPage === 'markets') renderMarkets();
-    else if(currentPage === 'home'){ renderFeatured(); renderMostUsed(); }
+    else if(currentPage === 'home'){
+      renderFeatured();
+      renderMostUsed();
+      renderLiveStrip();
+    }
     else if(currentPage === 'chart'){ renderChartPage().catch(function(){}); }
     return;
   }
@@ -2792,6 +2949,27 @@ function handleClick(e){
     return;
   }
 
+  /* ✅ دکمه تغییر حالت نمایش (Grid/List) */
+  const viewBtn = e.target.closest('[data-view]');
+  if(viewBtn){
+    e.preventDefault();
+    e.stopPropagation();
+    marketView = viewBtn.dataset.view;
+    window.CFG.set('marketView', marketView);
+
+    $$('[data-view]').forEach(b =>
+      b.classList.toggle('is-active', b.dataset.view === marketView)
+    );
+
+    const grid = $('[data-market-grid]');
+    if(grid){
+      grid.classList.toggle('view-list', marketView === 'list');
+      /* ✅ بازسازی کارت‌ها برای سازگاری با حالت جدید */
+      renderMarkets();
+    }
+    return;
+  }
+
   const chip = e.target.closest('[data-filter]');
   if(chip){
     e.preventDefault();
@@ -2822,6 +3000,8 @@ function handleClick(e){
     if(getUnit() === newUnit) return;
     window.CFG.set('currency', newUnit);
     $$('[data-unit]').forEach(b => b.classList.toggle('is-active', b.dataset.unit === newUnit));
+    /* ✅ پاک کردن کش اسپارک‌لاین */
+    _sparkCache.clear();
     refreshAll();
     toast(newUnit === 'toman' ? 'واحد: تومان' : 'واحد: ریال', 'success');
     return;
@@ -2843,6 +3023,7 @@ function handleClick(e){
         localStorage.setItem('gheymato.cfg.v6', JSON.stringify(window.CFG._c));
       } catch(err){}
     }
+    return;
   }
 
   const pill = e.target.closest('.pills button[data-period]');
@@ -2854,17 +3035,6 @@ function handleClick(e){
     pill.classList.add('is-active');
     window.CFG.set('chartPeriod', pill.dataset.period);
     if(currentPage === 'chart') renderChartPage().catch(function(){});
-    if(currentPage === 'home') renderHomeChart().catch(function(){});
-    return;
-  }
-
-  const homeAssetBtn = e.target.closest('[data-home-chart-asset]');
-  if(homeAssetBtn){
-    e.preventDefault();
-    e.stopPropagation();
-    homeChartId = homeAssetBtn.dataset.homeChartAsset;
-    $$('[data-home-chart-asset]').forEach(b => b.classList.toggle('is-active', b.dataset.homeChartAsset === homeChartId));
-    renderHomeChart().catch(function(){});
     return;
   }
 
@@ -2903,6 +3073,9 @@ function handleClick(e){
   }
 }
 
+/* ============================================================
+   MONEY FORMATTER
+============================================================ */
 function attachMoneyFormatter(){
   document.addEventListener('input', function(e){
     const input = e.target;
@@ -2943,8 +3116,12 @@ function attachMoneyFormatter(){
   }, true);
 }
 
+/* ============================================================
+   REFRESH ALL
+============================================================ */
 function refreshAll(){
   if(currentPage === 'home'){
+    renderLiveStrip();
     renderBankCard();
     renderFeatured();
     renderMostUsed();
@@ -2961,6 +3138,9 @@ function refreshAll(){
   if(window.TV && window.TV.isActive()) window.TV.refresh();
 }
 
+/* ============================================================
+   CHECK ALERTS
+============================================================ */
 function checkAlerts(){
   const list = window.Storage.alerts.get();
   if(!list.length) return;
@@ -2978,9 +3158,7 @@ function checkAlerts(){
       const direction = al.up && l.price >= al.up ? 'بالاتر از' : 'پایین‌تر از';
       toast('🔔 ' + name + ' ' + direction + ' حد تعیین‌شده', 'warning', 'alert_' + al.id + '_' + (al.up || al.dn));
 
-      if(al.repeat === false){
-        // حذف
-      } else {
+      if(al.repeat !== false){
         remaining.push(al);
       }
     } else {
@@ -2990,12 +3168,20 @@ function checkAlerts(){
   if(remaining.length !== list.length) window.Storage.alerts.save(remaining);
 }
 
+/* ============================================================
+   INIT
+============================================================ */
 function init(){
-  // ═══ اول از همه: غیرفعال‌سازی swipe ═══
   disableAllGestures();
 
   window.CFG.load();
   document.body.classList.toggle('dark', window.CFG.get('theme') === 'dark');
+
+  /* ✅ بازیابی حالت نمایش بازار */
+  marketView = window.CFG.get('marketView') || 'grid';
+  $$('[data-view]').forEach(b => 
+    b.classList.toggle('is-active', b.dataset.view === marketView)
+  );
 
   if(window.Icons && window.Icons.hydrate) window.Icons.hydrate();
   if(window.Icons && window.Icons.installImageFallback) window.Icons.installImageFallback();
@@ -3031,11 +3217,13 @@ function init(){
     }
   });
 
+  /* ═══ جستجوی نمادها ═══ */
   const si = $('[data-search-input]');
   if(si){
     si.addEventListener('input', window.U.debounce(e => doSearch(e.target.value), 150));
   }
 
+  /* ═══ جستجوی خودروها ═══ */
   const cs = $('[data-cars-search]');
   if(cs){
     cs.addEventListener('input', window.U.debounce(function(e){
@@ -3046,6 +3234,7 @@ function init(){
     }, 250));
   }
 
+  /* ═══ فیلتر خودروها ═══ */
   $$('[data-cars-filter]').forEach(function(btn){
     btn.addEventListener('click', function(e){
       e.preventDefault();
@@ -3088,6 +3277,9 @@ function init(){
     if(hash === lastRefreshHash) return;
     lastRefreshHash = hash;
 
+    /* ✅ پاک کردن کش اسپارک‌لاین هنگام بروزرسانی */
+    _sparkCache.clear();
+
     if(refreshTimer) clearTimeout(refreshTimer);
     refreshTimer = setTimeout(() => {
       refreshAll();
@@ -3098,6 +3290,9 @@ function init(){
   renderHdrTicker();
 }
 
+/* ============================================================
+   EXPORT
+============================================================ */
 return {
   init,
   go,
@@ -3115,6 +3310,9 @@ return {
   renderTools,
   renderCats,
   renderHdrTicker,
+  renderLiveStrip,
+  drawSparkline,
+  drawAllSparklines,
   getUserName,
   saveUserName,
   formatPrice,
@@ -3143,7 +3341,8 @@ return {
   getCarImage,
   openCarModal,
   doSearch,
-  disableAllGestures
+  disableAllGestures,
+  checkAlerts
 };
 
 })();
