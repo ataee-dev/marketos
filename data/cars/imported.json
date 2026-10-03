@@ -2,8 +2,8 @@
   "group": "imported",
   "label": "خودروهای وارداتی",
   "url": "https://www.iranjib.ir/showgroup/46/",
-  "updated": "2026-10-03T06:22:27.164Z",
-  "updatedTehran": "۱۴۰۵/۷/۱۱, ۶:۲۲:۲۷",
+  "updated": "2026-10-03T22:17:59.552Z",
+  "updatedTehran": "۱۴۰۵/۷/۱۱, ۲۲:۱۷:۵۹",
   "count": 136,
   "withUrl": 1,
   "error": null,
@@ -1359,12 +1359,12 @@
       "group": "imported",
       "url": null,
       "priceMarket": 102500000000,
-      "priceFactory": 55400000000,
+      "priceFactory": 96000000000,
       "change": 0,
       "changePercent": 0,
       "status": "available",
       "rawPriceMarket": "۱۰,۲۵۰,۰۰۰,۰۰۰",
-      "rawPriceFactory": "۵,۵۴۰,۰۰۰,۰۰۰"
+      "rawPriceFactory": "۹,۶۰۰,۰۰۰,۰۰۰"
     },
     {
       "id": "تیانا",
