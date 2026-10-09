@@ -1,11 +1,9 @@
 /**
- * قیمتو 7.1 — UI (نسخه کامل اصلاح‌شده)
- * ✅ حذف Hero Slider و جایگزینی با Live Strip
- * ✅ Sparkline روی همه کارت‌ها
- * ✅ حالت Grid / List برای بازارها
- * ✅ Lazy loading با IntersectionObserver
- * ✅ انیمیشن‌های نرم و بهینه
- * ✅ جستجوی ترکیبی (نماد + خودرو)
+ * قیمتو 8.0 — UI (نسخه بازنویسی‌شده)
+ * ✅ کارت‌ها به js/cards.js منتقل شدند
+ * ✅ Share به js/share.js منتقل شد
+ * ✅ Long-press + Right-click → Context Menu (در Cards)
+ * ✅ توابع کمکی قیمت/واحد حفظ شدند
  */
 
 window.UI = (function(){
@@ -25,11 +23,10 @@ let marketView = 'grid'; /* 'grid' | 'list' */
 
 const PAGES = ['home', 'markets', 'chart', 'compare', 'favorites', 'cars', 'settings'];
 
-/* ═══════════════ SPARKLINE OBSERVER ═══════════════ */
-let _sparkObserver = null;
+const LIVE_STRIP_IDS = ['dollar', 'gold18', 'coin', 'ounce', 'oil_brent', 'btc', 'mesghal', 'euro'];
 
 /* ============================================================
-   GESTURES — غیرفعال‌سازی کامل swipe/zoom
+   GESTURES — غیرفعال‌سازی swipe/zoom
 ============================================================ */
 function disableAllGestures(){
   const opts = { passive: false };
@@ -59,7 +56,7 @@ function disableAllGestures(){
     );
     if(inScrollable) return;
 
-    if(e.target.closest('.sidebar, .modal, .tv, input, textarea, select')) return;
+    if(e.target.closest('.sidebar, .modal, .tv, .ctx-menu, .share-modal, input, textarea, select')) return;
 
     if(e.touches[0]){
       const dx = Math.abs(e.touches[0].clientX - startX);
@@ -86,7 +83,7 @@ function disableAllGestures(){
 }
 
 /* ============================================================
-   NUMBER FORMATTING — اعداد فارسی
+   NUMBER FORMATTING
 ============================================================ */
 function formatNumber(num, decimals){
   if(num == null || isNaN(num)) return '—';
@@ -172,7 +169,7 @@ function formatPrice(asset, rialValue){
   }
   const val = baseToUser(rialValue);
   const abs = Math.abs(val);
-  const d = abs < 10 ? 4 : (abs < 1000 ? 2 : 0);
+  const d = abs < 10 ? 4 : (abs < 100 ? 2 : 0);
   return formatNumber(val, d) + ' ' + unitLabel();
 }
 
@@ -184,89 +181,8 @@ function formatPriceWithUnit(asset, rialValue){
 }
 
 /* ============================================================
-   MARKET CARD HTML — با اسپارک‌لاین
+   HOME RENDERS — با Cards
 ============================================================ */
-function marketCardHTML(asset){
-  const live = window.API && window.API.getById ? window.API.getById(asset.id) : null;
-  const price = live && live.price != null ? live.price : null;
-  const cp = live ? live.changePercent : null;
-  const up = (cp || 0) >= 0;
-  const color = catColor(asset);
-  const isFav = window.Storage.fav.get().includes(asset.id);
-  const noPrice = price == null;
-
-  return `
-    <article class="m-card ${noPrice ? 'm-card-empty' : ''}" data-card-id="${asset.id}" role="button" tabindex="${noPrice ? '-1' : '0'}">
-      <div class="m-card-head">
-        <div class="m-card-icon ${color}">${assetIcon(asset)}</div>
-        <div class="m-card-info">
-          <strong>${window.U.esc(asset.short || asset.name)}</strong>
-          <small>${asset.code}</small>
-        </div>
-        <button type="button" class="icon-btn" data-fav-toggle="${asset.id}"
-          style="width:22px;height:22px;color:${isFav?'var(--warn)':'var(--dim)'};flex-shrink:0;padding:0;background:none;border:0">
-          ${window.Icons.get('star')}
-        </button>
-      </div>
-      <div class="m-card-price">${noPrice ? '—' : formatPrice(asset, price)}</div>
-      ${cp != null && !noPrice ? `
-        <span class="m-card-change ${up?'up':'down'}">
-          ${up?'▲':'▼'} ${Math.abs(cp).toFixed(2)}٪
-        </span>
-      ` : noPrice ? `
-        <span class="m-card-change muted">بدون داده</span>
-      ` : ''}
-      ${!noPrice ? `
-        <div class="m-card-spark">
-          <canvas data-spark-canvas="${asset.id}"></canvas>
-        </div>
-      ` : ''}
-    </article>
-  `;
-}
-
-/* ============================================================
-   LIVE STRIP — نوار قیمت‌های زنده (جایگزین Hero Slider)
-============================================================ */
-const LIVE_STRIP_IDS = ['dollar', 'gold18', 'coin', 'ounce', 'oil_brent', 'btc', 'mesghal', 'euro'];
-
-function liveStripCardHTML(asset){
-  const live = window.API.getById(asset.id);
-  const price = live && live.price != null ? live.price : null;
-  const cp = live ? live.changePercent : null;
-  const up = (cp || 0) >= 0;
-  const color = catColor(asset);
-  const noPrice = price == null;
-
-  return `
-    <div class="live-strip-card ${noPrice ? 'm-card-empty' : (up ? 'is-up' : 'is-down')}"
-         data-card-id="${asset.id}"
-         role="button"
-         tabindex="${noPrice ? '-1' : '0'}">
-      <div class="live-strip-head">
-        <div class="live-strip-icon ${color}">${assetIcon(asset)}</div>
-        <div class="live-strip-info">
-          <strong>${window.U.esc(asset.short || asset.name)}</strong>
-          <small>${asset.code}</small>
-        </div>
-      </div>
-      <div class="live-strip-price">${noPrice ? '—' : formatPrice(asset, price)}</div>
-      ${cp != null && !noPrice ? `
-        <span class="live-strip-change ${up ? 'up' : 'down'}">
-          ${up ? '▲' : '▼'} ${Math.abs(cp).toFixed(2)}٪
-        </span>
-      ` : noPrice ? `
-        <span class="live-strip-change muted">بدون داده</span>
-      ` : ''}
-      ${!noPrice ? `
-        <div class="live-strip-spark">
-          <canvas data-spark-canvas="${asset.id}"></canvas>
-        </div>
-      ` : ''}
-    </div>
-  `;
-}
-
 function renderLiveStrip(){
   const wrap = $('[data-live-strip]');
   if(!wrap) return;
@@ -274,172 +190,24 @@ function renderLiveStrip(){
   const assets = LIVE_STRIP_IDS.map(id => window.DATA.find(id)).filter(Boolean);
   if(!assets.length) return;
 
-  wrap.innerHTML = assets.map(liveStripCardHTML).join('');
-
-  /* ✅ رسم اسپارک‌لاین‌ها */
-  drawAllSparklines(wrap);
+  wrap.innerHTML = assets.map(a => window.Cards.liveStripHTML(a)).join('');
+  window.Cards.drawAllSparklines(wrap);
 }
 
-/* ============================================================
-   SPARKLINE — نمودار کوچک روی کارت‌ها
-============================================================ */
-async function drawSparkline(canvas, asset){
-  try {
-    /* ✅ تعیین رنگ بر اساس تغییر واقعی (changePercent) */
-    const live = window.API && window.API.getById ? window.API.getById(asset.id) : null;
-    const cp = live ? live.changePercent : null;
-    const isUp = (cp || 0) >= 0;
-
-    /* ✅ کش داده‌ها */
-    const cacheKey = 'spark_' + asset.id;
-    let prices = _sparkCache.get(cacheKey);
-
-    if(!prices){
-      const history = await window.API.getHistory(asset, 14);
-      if(!history || history.length < 2) return;
-      prices = history.map(h => h.p).filter(p => p != null);
-      if(prices.length < 2) return;
-      _sparkCache.set(cacheKey, prices);
-    }
-
-    const r = canvas.getBoundingClientRect();
-    if(!r.width || !r.height) return;
-
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = r.width * dpr;
-    canvas.height = r.height * dpr;
-
-    const ctx = canvas.getContext('2d');
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, r.width, r.height);
-
-    const max = Math.max(...prices);
-    const min = Math.min(...prices);
-    const range = max - min || 1;
-
-    /* ✅ رنگ بر اساس جهت واقعی تغییر (نه اولین/آخرین قیمت) */
-    const color = isUp ? '#10b981' : '#ef4444';
-    const fillStart = isUp ? 'rgba(16,185,129,.30)' : 'rgba(239,68,68,.30)';
-
-    const w = r.width;
-    const h = r.height;
-    const pad = 2;
-
-    const pts = prices.map((p, i) => ({
-      x: pad + (i / (prices.length - 1)) * (w - pad * 2),
-      y: h - pad - ((p - min) / range) * (h - pad * 2)
-    }));
-
-    /* فیل گرادیانت */
-    const g = ctx.createLinearGradient(0, 0, 0, h);
-    g.addColorStop(0, fillStart);
-    g.addColorStop(1, 'rgba(0,0,0,0)');
-
-    ctx.beginPath();
-    ctx.moveTo(pts[0].x, pts[0].y);
-    for(let i = 1; i < pts.length; i++){
-      ctx.lineTo(pts[i].x, pts[i].y);
-    }
-    ctx.lineTo(pts[pts.length - 1].x, h);
-    ctx.lineTo(pts[0].x, h);
-    ctx.closePath();
-    ctx.fillStyle = g;
-    ctx.fill();
-
-    /* خط */
-    ctx.beginPath();
-    ctx.moveTo(pts[0].x, pts[0].y);
-    for(let i = 1; i < pts.length; i++){
-      ctx.lineTo(pts[i].x, pts[i].y);
-    }
-    ctx.lineWidth = 1.6;
-    ctx.strokeStyle = color;
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
-    ctx.stroke();
-
-    /* نقطه آخر با رنگ مربوطه */
-    const last = pts[pts.length - 1];
-    ctx.beginPath();
-    ctx.arc(last.x, last.y, 2.5, 0, Math.PI * 2);
-    ctx.fillStyle = color;
-    ctx.fill();
-
-  } catch(e){
-    /* بی‌صدا */
-  }
-}
-
-/* ✅ کش اسپارک‌لاین */
-const _sparkCache = new Map();
-
-/* ✅ رسم همه اسپارک‌لاین‌ها با Lazy Loading */
-/* ✅ رسم همه اسپارک‌لاین‌ها با Lazy Loading مطمئن */
-function drawAllSparklines(container){
-  if(!container) return;
-
-  const canvases = container.querySelectorAll('[data-spark-canvas]');
-  if(!canvases.length) return;
-
-  /* ✅ استفاده از requestAnimationFrame برای اطمینان از layout */
-  requestAnimationFrame(() => {
-    canvases.forEach(canvas => {
-      const id = canvas.dataset.sparkCanvas;
-      const asset = window.DATA.find(id);
-      if(!asset) return;
-
-      /* ✅ اگه canvas قابل دیدن باشه، فوری رسم کن */
-      const rect = canvas.getBoundingClientRect();
-      if(rect.width > 0 && rect.height > 0){
-        drawSparkline(canvas, asset).catch(() => {});
-      } else {
-        /* ✅ در غیر این صورت با observer رصد کن */
-        if(!_sparkObserver) initSparkObserver();
-        _sparkObserver.observe(canvas);
-      }
-    });
-  });
-}
-
-/* ✅ ساخت IntersectionObserver یک‌بار */
-function initSparkObserver(){
-  if(_sparkObserver) return;
-
-  _sparkObserver = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if(entry.isIntersecting){
-        const canvas = entry.target;
-        const id = canvas.dataset.sparkCanvas;
-        const asset = window.DATA.find(id);
-        if(asset){
-          drawSparkline(canvas, asset).catch(() => {});
-        }
-        _sparkObserver.unobserve(canvas);
-      }
-    });
-  }, {
-    rootMargin: '100px',
-    threshold: 0.01
-  });
-}
-
-/* ============================================================
-   HOME RENDERS
-============================================================ */
 function renderFeatured(){
   const c = $('[data-featured]');
   if(!c) return;
   const list = window.DATA.FEATURED.map(id => window.DATA.find(id)).filter(Boolean);
-  c.innerHTML = list.map(marketCardHTML).join('');
-  drawAllSparklines(c);
+  c.innerHTML = list.map(a => window.Cards.assetHTML(a)).join('');
+  window.Cards.drawAllSparklines(c);
 }
 
 function renderMostUsed(){
   const c = $('[data-most]');
   if(!c) return;
   const list = window.DATA.MOST_USED.map(id => window.DATA.find(id)).filter(Boolean);
-  c.innerHTML = list.map(marketCardHTML).join('');
-  drawAllSparklines(c);
+  c.innerHTML = list.map(a => window.Cards.assetHTML(a)).join('');
+  window.Cards.drawAllSparklines(c);
 }
 
 function renderCats(){
@@ -587,7 +355,7 @@ function renderBankCard(){
 }
 
 /* ============================================================
-   MARKETS — رندر بازارها (Grid / List)
+   MARKETS
 ============================================================ */
 function renderMarkets(){
   const g = $('[data-market-grid]');
@@ -607,164 +375,14 @@ function renderMarkets(){
   const cnt = $('[data-count]');
   if(cnt) cnt.textContent = formatNumber(list.length, 0) + ' نماد';
 
-  /* ✅ حفظ حالت نمایش */
   g.classList.toggle('view-list', marketView === 'list');
 
-  g.innerHTML = list.map(marketCardHTML).join('');
-  drawAllSparklines(g);
+  g.innerHTML = list.map(a => window.Cards.assetHTML(a)).join('');
+  window.Cards.drawAllSparklines(g);
 }
 
 /* ============================================================
-   CARS — نگاشت ID به تصویر
-============================================================ */
-const CAR_IMAGE_MAP = {
-  'وانت-آریسان': 'وانت-آریسان.jpg',
-  'سورن-TU5P': 'سورن-(TU5P).jpg',
-  'سورن-XU7P-رینگ-فولادی': 'سورن-XU7P-(رینگ-فولادی).jpg',
-  'سورن-XU7P': 'سورن-(TU5P).jpg',
-  'سورن-پلاس-دوگانه-سوز-کپسول-کوچک': 'سورن-پلاس-دوگانه-سوز-(کپسول-کوچک).jpg',
-  'سورن-پلاس-دوگانه-سوز-کپسول-بزرگ': 'سورن-پلاس-دوگانه-سوز-(کپسول-بزرگ).jpg',
-  'دنا-پلاس-MT6-رینگ-فولادی': 'دنا-پلاس-اتوماتیک.jpg',
-  'دنا-پلاس-MT6': 'دنا-پلاس-اتوماتیک.jpg',
-  'دنا-پلاس-اتوماتیک': 'دنا-پلاس-اتوماتیک.jpg',
-  'پژو-207-موتور-TU3': 'پژو-207-موتور-TU3.jpg',
-  'پژو-207-دنده-ای-هیدرولیک': 'پژو-207-دنده-ای-(هیدرولیک).jpg',
-  'پژو-207-دنده-ای-برقی': 'پژو-207-دنده-ای-(هیدرولیک).jpg',
-  'پژو-207-دنده-ای-پانوراما-رینگ-فولادی': 'پژو-207-دنده-ای-پانوراما-(رینگ-فولادی).jpg',
-  'پژو-207-دنده-ای-پانوراما': 'پژو-207-دنده-ای-پانوراما.jpg',
-  'پژو-207-اتوماتیک': 'پژو-207-اتوماتیک.jpg',
-  'پژو-207-اتوماتیک-پانوراما': 'پژو-207-اتوماتیک-پانوراما.jpg',
-  'راناپلاس': 'راناپلاس.jpg',
-  'تارا-دستی-V1': 'تارا-دستی-V1.jpg',
-  'تارا-اتوماتیک-V4': 'تارا-اتوماتیک-V4.jpg',
-  'تارا-اتوماتیک-توربو': 'تارا-اتوماتیک-(توربو).jpg',
-  'هایما-اس-5-S5-پرو': 'هایما-اس-5-(-S5-)-پرو.jpg',
-  'هایما-اس-7-S7-پرو': 'هایما-اس-7-(-S7-)-پرو.jpg',
-  'هایما-8-اس-8S-': 'هایما-8-اس-(-8S-).jpg',
-  'هایما-7X': 'هایما-7X.jpg',
-  'پیکاپ-فوتون-اتوماتیک': 'پیکاپ-فوتون-(اتوماتیک).jpg',
-  'ری-را': 'ری-را.jpg',
-  'سهند-S': 'سهند-S.jpg',
-  'اطلس-S': 'اطلس-S.jpg',
-  'اطلس-GL': 'اطلس-GL.jpg',
-  'اطلس-G': 'اطلس-G.jpg',
-  'اطلس-اتوماتیک': 'اطلس-اتوماتیک.jpg',
-  'ساینا-S': 'ساینا-S.jpg',
-  'ساینا-دوگانه-سوز': 'ساینا-دوگانه-سوز.jpg',
-  'شاهین-GL': 'شاهین-GL.jpg',
-  'شاهین-G-سانروف': 'شاهین-اتوماتیک-G.jpg',
-  'شاهین-اتوماتیک-G': 'شاهین-اتوماتیک-G.jpg',
-  'شاهین-دنده-پلاس': 'شاهین-دنده-پلاس.webp',
-  'شاهین-اتوماتیک-پلاس': 'شاهین-اتوماتیک-پلاس.jpg',
-  'سایپا-151-GX': 'سایپا-151-GX.jpg',
-  'سایپا-151-GX-پاششی': 'سایپا-151-GX.jpg',
-  'زامیاد-اکستند-EX': 'زامیاد-اکستند-EX-(دوگانه-سوز).jpg',
-  'زامیاد-اکستند-EX-دوگانه-سوز': 'زامیاد-اکستند-EX-(دوگانه-سوز).jpg',
-  'چانگان-CS35-مونتاژ': 'چانگان-CS35-(مونتاژ).jpg',
-  'چانگان-CS55-مونتاژ': 'چانگان-CS55-(مونتاژ).jpg',
-  'سیتروئن-C3-XR': 'سیتروئن-C3-XR.webp',
-  'X77-الیت': 'X77-(الیت).jpg',
-  'آریزو6-Z6-GT': 'آریزو6-(Z6-GT).jpg',
-  'تیگو7-F7-پرومکس-AWD': 'تیگو7-(F7)-پرومکس-AWD.jpg',
-  'تیگو-8-F8-پرومکس': 'تیگو-8-(F8)-پرومکس.jpg',
-  'اکستریم-TX': 'اکستریم-TX.jpg',
-  'اکستریم-QX': 'اکستریم-QX.jpg',
-  'بک-X3': 'بک-X3.jpg',
-  'جک-SR3': 'جک-SR3.jpg',
-  'کی-ام-سی-ایگل': 'کی-ام-سی-ایگل.jpg',
-  'کی-ام-سی-J7': 'کی-ام-سی-J7.jpg',
-  'کی-ام-سی-T8': 'کی-ام-سی-T8.jpg',
-  'کی-ام-سی-T9': 'کی-ام-سی-T9.jpg',
-  'فیدلیتی-پرستیژ-7-نفره': 'فیدلیتی-پرستیژ-(7-نفره).jpg',
-  'هاوال-H9-آپشنال': 'هاوال-H9-(آپشنال).jpg',
-  'هونگچی-H5': 'هونگچی-H5.jpg',
-  'اینوی-هیبریدی': 'اینوی-هیبریدی.jpg'
-};
-
-function getCarImage(car){
-  if(!car || !car.id) return 'assets/cars/x-car.webp';
-  const img = CAR_IMAGE_MAP[car.id];
-  return img ? 'assets/cars/' + img : 'assets/cars/x-car.webp';
-}
-
-/* ============================================================
-   CAR CARD HTML
-============================================================ */
-function carCardHTML(car){
-  const imgSrc = getCarImage(car);
-  const priceMarket = car.priceMarket;
-  const priceFactory = car.priceFactory;
-  const changePercent = car.changePercent != null ? car.changePercent : 0;
-  const up = changePercent >= 0;
-  const hasChange = changePercent !== 0;
-
-  const statusMap = {
-    'available':    { label: 'موجود',       cls: 'success' },
-    'unavailable':  { label: 'ناموجود',     cls: 'muted' },
-    'coming-soon':  { label: 'به زودی',     cls: 'info' },
-    'discontinued': { label: 'توقف تولید',  cls: 'danger' },
-    'not-selling':  { label: 'توقف فروش',   cls: 'danger' }
-  };
-  const status = statusMap[car.status] || { label: '', cls: '' };
-
-  const fmt = (v) => v != null ? formatPrice({ ptype: 'rial', dec: 0 }, v) : '—';
-  const isPlaceholder = priceMarket == null && priceFactory == null;
-
-  return `
-    <article class="car-card" data-car-id="${window.U.esc(car.id || '')}" role="button" tabindex="0" aria-label="${window.U.esc(car.name)}">
-      <div class="car-card-image">
-        <img src="${imgSrc}" 
-             alt="${window.U.esc(car.name)}" 
-             loading="lazy"
-             onerror="this.onerror=null;this.src='assets/cars/x-car.webp'">
-        <img class="car-card-watermark" 
-             src="assets/logo.webp" 
-             alt=""
-             aria-hidden="true">
-        ${status.label ? `<span class="car-card-status ${status.cls}">${status.label}</span>` : ''}
-      </div>
-      
-      <div class="car-card-body">
-        <h3 class="car-card-name">${window.U.esc(car.name || '—')}</h3>
-        <span class="car-card-category">${window.U.esc(car.category || '')}</span>
-        
-        ${!isPlaceholder ? `
-          <div class="car-card-prices">
-            ${priceFactory != null ? `
-              <div class="car-price-row">
-                <span class="car-price-label">
-                  <span data-icon="factory"></span>
-                  کارخانه
-                </span>
-                <strong class="car-price-value factory">${fmt(priceFactory)}</strong>
-              </div>
-            ` : ''}
-            ${priceMarket != null ? `
-              <div class="car-price-row">
-                <span class="car-price-label">
-                  <span data-icon="store"></span>
-                  بازار
-                </span>
-                <strong class="car-price-value market">${fmt(priceMarket)}</strong>
-              </div>
-            ` : ''}
-          </div>
-        ` : `
-          <div class="car-card-empty">قیمتی ثبت نشده</div>
-        `}
-        
-        ${hasChange ? `
-          <div class="car-card-change ${up ? 'up' : 'down'}">
-            ${up ? '▲' : '▼'} ${Math.abs(changePercent).toFixed(2)}٪
-          </div>
-        ` : ''}
-      </div>
-    </article>
-  `;
-}
-
-/* ============================================================
-   CARS — رندر کامل
+   CARS
 ============================================================ */
 async function renderCars(){
   const wrap = $('[data-home-cars]');
@@ -809,13 +427,13 @@ async function renderCars(){
     if(wrap){
       const homeList = list.slice(0, 4);
       wrap.innerHTML = homeList.map(function(c){
-        return carCardHTML(c);
+        return window.Cards.carHTML(c);
       }).join('');
     }
 
     if(listEl){
       listEl.innerHTML = list.map(function(c){
-        return carCardHTML(c);
+        return window.Cards.carHTML(c);
       }).join('');
     }
 
@@ -842,7 +460,7 @@ async function renderCars(){
 }
 
 /* ============================================================
-   CAR MODAL — مودال جزئیات خودرو
+   CAR MODAL
 ============================================================ */
 function openCarModal(carId){
   const cars = window.API.getCars && window.API.getCars();
@@ -859,7 +477,7 @@ function openCarModal(carId){
 
   const specs = window.API.getCarSpecsById ? window.API.getCarSpecsById(carId) : null;
 
-  const imgSrc = getCarImage(car);
+  const imgSrc = window.Cards.carImage ? window.Cards.carImage(car) : 'assets/cars/x-car.webp';
   const fmt = (v) => v != null ? formatPrice({ ptype: 'rial', dec: 0 }, v) : '—';
 
   const statusMap = {
@@ -875,7 +493,6 @@ function openCarModal(carId){
   const changeVal = car.change || 0;
   const changeValAbs = Math.abs(changeVal);
 
-  /* ═══ مشخصات فنی ═══ */
   let specsHTML = '';
   if(specs && specs.specifications && Object.keys(specs.specifications).length > 0){
     const specRows = Object.entries(specs.specifications)
@@ -903,7 +520,6 @@ function openCarModal(carId){
     }
   }
 
-  /* ═══ امکانات و تجهیزات ═══ */
   let featuresHTML = '';
   if(specs && specs.features && Object.keys(specs.features).length > 0){
     const featRows = Object.entries(specs.features)
@@ -931,7 +547,6 @@ function openCarModal(carId){
     }
   }
 
-  /* ═══ توضیحات ═══ */
   let descriptionHTML = '';
   if(specs && specs.description && Array.isArray(specs.description) && specs.description.length > 0){
     const descHTML = specs.description
@@ -954,7 +569,6 @@ function openCarModal(carId){
     }
   }
 
-  /* ═══ خالی ═══ */
   const hasDetails = specsHTML || featuresHTML || descriptionHTML;
   const emptySpecsHTML = !hasDetails ? `
     <div class="car-modal-empty-details">
@@ -963,22 +577,24 @@ function openCarModal(carId){
     </div>
   ` : '';
 
-  /* ═══ ساختار مودال ═══ */
   openModal(`<span data-icon="car"></span> ${window.U.esc(car.name)}`, `
     <div class="car-modal-image">
-      <img src="${imgSrc}" 
+      <img src="${imgSrc}"
            alt="${window.U.esc(car.name)}"
            onerror="this.onerror=null;this.src='assets/cars/x-car.webp'">
       <img class="car-modal-watermark" src="assets/logo.webp" alt="">
       <span class="car-modal-badge-floating ${car.status || ''}">${statusMap[car.status] || '—'}</span>
+      <button type="button" class="car-modal-share-btn" data-car-share="${window.U.esc(car.id)}" aria-label="اشتراک‌گذاری">
+        ${window.Icons.get('external')}
+      </button>
     </div>
-    
+
     <div class="car-modal-info">
       <div class="car-modal-badge-row">
         <span class="car-modal-badge category">${window.U.esc(car.category || '—')}</span>
         ${specs && specs.title ? `<span class="car-modal-badge title" title="${window.U.esc(specs.title)}">${window.U.esc(specs.title.length > 60 ? specs.title.slice(0, 60) + '...' : specs.title)}</span>` : ''}
       </div>
-      
+
       <div class="car-modal-prices">
         ${car.priceFactory != null ? `
           <div class="car-modal-price-card">
@@ -993,7 +609,7 @@ function openCarModal(carId){
           </div>
         ` : ''}
       </div>
-      
+
       ${changePercent !== 0 ? `
         <div class="car-modal-change ${up ? 'up' : 'down'}">
           <span>${up ? '▲' : '▼'}</span>
@@ -1001,7 +617,7 @@ function openCarModal(carId){
           ${changeValAbs > 0 ? `<span style="font-size:10.5px;opacity:.7">(${up ? '+' : '-'}${formatPrice({ptype:'rial'}, changeValAbs)})</span>` : ''}
         </div>
       ` : ''}
-      
+
       ${specsHTML}
       ${featuresHTML}
       ${descriptionHTML}
@@ -1029,8 +645,8 @@ function renderFavs(){
   if(cnt) cnt.textContent = formatNumber(list.length, 0) + ' مورد';
   if(empty) empty.hidden = list.length > 0;
 
-  g.innerHTML = list.map(marketCardHTML).join('');
-  drawAllSparklines(g);
+  g.innerHTML = list.map(a => window.Cards.assetHTML(a)).join('');
+  window.Cards.drawAllSparklines(g);
 }
 
 /* ============================================================
@@ -1139,8 +755,8 @@ async function renderChartPage(){
     const related = window.DATA.byCat(asset.cat)
       .filter(a => a.id !== asset.id)
       .slice(0, 10);
-    relEl.innerHTML = related.map(marketCardHTML).join('');
-    drawAllSparklines(relEl);
+    relEl.innerHTML = related.map(a => window.Cards.assetHTML(a)).join('');
+    window.Cards.drawAllSparklines(relEl);
   }
 }
 
@@ -1448,7 +1064,7 @@ function renderBubbleAnalysis(asset, live){
   const bubblePct = (bubble / worldValue) * 100;
 
   const bubbleClass = bubblePct > 2 ? 'bubble-positive' : (bubblePct < -2 ? 'bubble-negative' : 'bubble-neutral');
-  const bubbleLabel = bubblePct > 2 ? 'حباب مثبت' : (bubblePct < -2 ? 'حباب منفی' : 'متعادل');
+  const bubbleLabel = bubblePct > 2 ? 'حباب مثبت' : (bubblePct < -2 ? 'حباب منفی' : 'متادل');
 
   wrap.hidden = false;
 
@@ -1773,7 +1389,7 @@ function validatePositive(input, fieldName){
 }
 
 /* ============================================================
-   TOOLS — (همه توابع اصلی بدون تغییر)
+   TOOLS
 ============================================================ */
 function money(v){ return formatPrice({ptype:'rial'}, v); }
 
@@ -2674,7 +2290,7 @@ function openTool(tool){
 }
 
 /* ============================================================
-   جستجوی ترکیبی — نمادها + خودروها
+   جستجوی ترکیبی
 ============================================================ */
 function doSearch(query){
   const res = $('[data-search-results]');
@@ -2688,14 +2304,12 @@ function doSearch(query){
     return;
   }
 
-  /* ═══ جستجو در نمادها ═══ */
   const symbolList = window.DATA.ASSETS.filter(a =>
     a.name.toLowerCase().includes(q) ||
     a.code.toLowerCase().includes(q) ||
     a.id.toLowerCase().includes(q)
   ).slice(0, 8);
 
-  /* ═══ جستجو در خودروها ═══ */
   let carList = [];
   if(window.API && window.API.getCars){
     const cars = window.API.getCars();
@@ -2718,7 +2332,6 @@ function doSearch(query){
 
   let html = '';
 
-  /* ═══ بخش نمادها ═══ */
   if(hasSymbols){
     html += '<div class="ms-section-title">نمادها</div>';
     html += symbolList.map(function(a, i){
@@ -2737,7 +2350,6 @@ function doSearch(query){
     }).join('');
   }
 
-  /* ═══ بخش خودروها ═══ */
   if(hasCars){
     html += '<div class="ms-section-title">خودروها</div>';
     html += carList.map(function(c, i){
@@ -2775,7 +2387,6 @@ function doSearch(query){
   res.innerHTML = html;
   res.hidden = false;
 
-  /* ═══ اتصال رویدادها ═══ */
   res.querySelectorAll('.ms-item').forEach(function(el){
     el.addEventListener('click', function(e){
       e.stopPropagation();
@@ -2858,7 +2469,6 @@ function handleClick(e){
     return;
   }
 
-  /* ═══ بستن نتایج جستجو ═══ */
   const results = $('[data-search-results]');
   if(results && !results.hidden){
     if(!e.target.closest('.hdr-search-wrap')) closeSearch();
@@ -2868,6 +2478,20 @@ function handleClick(e){
     e.preventDefault();
     e.stopPropagation();
     closeModal();
+    return;
+  }
+
+  /* ✅ Share از مودال خودرو */
+  const carShareBtn = e.target.closest('[data-car-share]');
+  if(carShareBtn){
+    e.preventDefault();
+    e.stopPropagation();
+    const carId = carShareBtn.dataset.carShare;
+    const cars = window.API.getCars && window.API.getCars();
+    if(cars && cars.cars && window.Share){
+      const car = cars.cars.find(c => c.id === carId);
+      if(car) window.Share.openCar(car);
+    }
     return;
   }
 
@@ -2914,6 +2538,7 @@ function handleClick(e){
     return;
   }
 
+  /* ✅ کارت خودرو — کلیک ساده */
   const carCard = e.target.closest('[data-car-id]');
   if(carCard){
     e.preventDefault();
@@ -2922,9 +2547,10 @@ function handleClick(e){
     return;
   }
 
+  /* ✅ کارت نماد — کلیک ساده → صفحه Chart */
   const card = e.target.closest('[data-card-id]');
   if(card){
-    if(card.classList.contains('m-card-empty')) return;
+    if(card.classList.contains('is-empty')) return;
     e.preventDefault();
     e.stopPropagation();
     activeChartId = card.dataset.cardId;
@@ -2949,7 +2575,6 @@ function handleClick(e){
     return;
   }
 
-  /* ✅ دکمه تغییر حالت نمایش (Grid/List) */
   const viewBtn = e.target.closest('[data-view]');
   if(viewBtn){
     e.preventDefault();
@@ -2964,7 +2589,6 @@ function handleClick(e){
     const grid = $('[data-market-grid]');
     if(grid){
       grid.classList.toggle('view-list', marketView === 'list');
-      /* ✅ بازسازی کارت‌ها برای سازگاری با حالت جدید */
       renderMarkets();
     }
     return;
@@ -3000,8 +2624,7 @@ function handleClick(e){
     if(getUnit() === newUnit) return;
     window.CFG.set('currency', newUnit);
     $$('[data-unit]').forEach(b => b.classList.toggle('is-active', b.dataset.unit === newUnit));
-    /* ✅ پاک کردن کش اسپارک‌لاین */
-    _sparkCache.clear();
+    window.Cards.clearSparkCache();
     refreshAll();
     toast(newUnit === 'toman' ? 'واحد: تومان' : 'واحد: ریال', 'success');
     return;
@@ -3177,7 +2800,6 @@ function init(){
   window.CFG.load();
   document.body.classList.toggle('dark', window.CFG.get('theme') === 'dark');
 
-  /* ✅ بازیابی حالت نمایش بازار */
   marketView = window.CFG.get('marketView') || 'grid';
   $$('[data-view]').forEach(b => 
     b.classList.toggle('is-active', b.dataset.view === marketView)
@@ -3214,16 +2836,28 @@ function init(){
       closeSearch();
       closeModal();
       document.body.classList.remove('sidebar-open');
+      if(window.Cards && window.Cards.closeMenu) window.Cards.closeMenu();
     }
   });
 
-  /* ═══ جستجوی نمادها ═══ */
+  /* ✅ اتصال Long-press + Right-click */
+  if(window.Cards && window.Cards.attachLongPress){
+    window.Cards.attachLongPress(document.body);
+  }
+
+  /* ✅ گوش دادن به رویداد cards:chart (از Context Menu) */
+  window.addEventListener('cards:chart', e => {
+    if(e.detail && e.detail.id){
+      activeChartId = e.detail.id;
+      renderChartPage().catch(function(){});
+    }
+  });
+
   const si = $('[data-search-input]');
   if(si){
     si.addEventListener('input', window.U.debounce(e => doSearch(e.target.value), 150));
   }
 
-  /* ═══ جستجوی خودروها ═══ */
   const cs = $('[data-cars-search]');
   if(cs){
     cs.addEventListener('input', window.U.debounce(function(e){
@@ -3234,7 +2868,6 @@ function init(){
     }, 250));
   }
 
-  /* ═══ فیلتر خودروها ═══ */
   $$('[data-cars-filter]').forEach(function(btn){
     btn.addEventListener('click', function(e){
       e.preventDefault();
@@ -3277,8 +2910,9 @@ function init(){
     if(hash === lastRefreshHash) return;
     lastRefreshHash = hash;
 
-    /* ✅ پاک کردن کش اسپارک‌لاین هنگام بروزرسانی */
-    _sparkCache.clear();
+    if(window.Cards && window.Cards.clearSparkCache){
+      window.Cards.clearSparkCache();
+    }
 
     if(refreshTimer) clearTimeout(refreshTimer);
     refreshTimer = setTimeout(() => {
@@ -3311,8 +2945,8 @@ return {
   renderCats,
   renderHdrTicker,
   renderLiveStrip,
-  drawSparkline,
-  drawAllSparklines,
+  renderCars,
+  openCarModal,
   getUserName,
   saveUserName,
   formatPrice,
@@ -3336,10 +2970,6 @@ return {
   toolProfit,
   toolZakat,
   toolAvgBuy,
-  renderCars,
-  carCardHTML,
-  getCarImage,
-  openCarModal,
   doSearch,
   disableAllGestures,
   checkAlerts

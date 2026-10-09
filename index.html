@@ -14,6 +14,7 @@
 <link rel="icon" type="image/png" href="assets/logo.webp">
 <link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/cards.css">
 
 <!-- ═══════════════ SPLASH SCREEN 2.0 ═══════════════ -->
 <style>
@@ -321,24 +322,15 @@ body:not(.dark) #splash .splash-loader { background: rgba(0, 0, 0, .06); }
       ═══════════════════════════════════════════════════ -->
       <section class="page is-active" data-page="home">
 
-        <!-- ═══════════════════════════════════════════════
-             1. HERO BANNER — بنر اصلی
-        ═══════════════════════════════════════════════ -->
-        <!-- ═══════════════════════════════════════════════
-     1. HERO BANNER — فقط تصویر
-═══════════════════════════════════════════════ -->
-<div class="hero-banner">
-  <img src="assets/banners/banner-home.webp" alt="قیمتو" loading="eager">
-</div>
+        <!-- 1. HERO BANNER -->
+        <div class="hero-banner">
+          <img src="assets/banners/banner-home.webp" alt="قیمتو" loading="eager">
+        </div>
 
-        <!-- ═══════════════════════════════════════════════
-             2. LIVE STRIP — نوار قیمت‌های زنده
-        ═══════════════════════════════════════════════ -->
+        <!-- 2. LIVE STRIP -->
         <div class="live-strip" data-live-strip></div>
 
-        <!-- ═══════════════════════════════════════════════
-             3. FEATURED — مورد علاقه
-        ═══════════════════════════════════════════════ -->
+        <!-- 3. FEATURED -->
         <div class="sec-head">
           <div class="sec-title">
             <span data-icon="star"></span>مورد علاقه
@@ -351,9 +343,7 @@ body:not(.dark) #splash .splash-loader { background: rgba(0, 0, 0, .06); }
           <div class="scroll-row" data-featured></div>
         </div>
 
-        <!-- ═══════════════════════════════════════════════
-             4. CATEGORIES — دسته‌بندی‌ها
-        ═══════════════════════════════════════════════ -->
+        <!-- 4. CATEGORIES -->
         <div class="sec-head">
           <div class="sec-title">
             <span data-icon="grid"></span>دسته‌بندی‌ها
@@ -363,9 +353,7 @@ body:not(.dark) #splash .splash-loader { background: rgba(0, 0, 0, .06); }
           <div class="scroll-row" data-cats></div>
         </div>
 
-        <!-- ═══════════════════════════════════════════════
-             5. PORTFOLIO — کارت بانکی پرتفوی
-        ═══════════════════════════════════════════════ -->
+        <!-- 5. PORTFOLIO -->
         <div class="sec-head">
           <div class="sec-title">
             <span data-icon="briefcase"></span>پرتفوی من
@@ -376,9 +364,7 @@ body:not(.dark) #splash .splash-loader { background: rgba(0, 0, 0, .06); }
         </div>
         <div class="portfolio-card-wrap" data-portfolio-card></div>
 
-        <!-- ═══════════════════════════════════════════════
-             6. TOOLS — ابزارها (افقی)
-        ═══════════════════════════════════════════════ -->
+        <!-- 6. TOOLS -->
         <div class="sec-head">
           <div class="sec-title">
             <span data-icon="settings"></span>ابزارها
@@ -386,9 +372,7 @@ body:not(.dark) #splash .splash-loader { background: rgba(0, 0, 0, .06); }
         </div>
         <div class="tools-horizontal" data-tools></div>
 
-        <!-- ═══════════════════════════════════════════════
-             7. MOST USED — بیشترین کاربرد
-        ═══════════════════════════════════════════════ -->
+        <!-- 7. MOST USED -->
         <div class="sec-head">
           <div class="sec-title">
             <span data-icon="zap"></span>بیشترین کاربرد
@@ -401,9 +385,7 @@ body:not(.dark) #splash .splash-loader { background: rgba(0, 0, 0, .06); }
           <div class="scroll-row" data-most></div>
         </div>
 
-        <!-- ═══════════════════════════════════════════════
-             8. CARS — قیمت خودرو (پیش‌نمایش)
-        ═══════════════════════════════════════════════ -->
+        <!-- 8. CARS -->
         <div class="sec-head">
           <div class="sec-title">
             <span data-icon="car"></span>قیمت خودرو
@@ -412,7 +394,7 @@ body:not(.dark) #splash .splash-loader { background: rgba(0, 0, 0, .06); }
             همه<span data-icon="arrowLeft"></span>
           </button>
         </div>
-        <div class="cars-table-wrap" data-home-cars>
+        <div class="car-grid" data-home-cars>
           <div class="empty">
             <h3>در حال بارگذاری...</h3>
           </div>
@@ -460,7 +442,7 @@ body:not(.dark) #splash .splash-loader { background: rgba(0, 0, 0, .06); }
           <button class="chip" data-filter="goldCrypto">توکن طلا</button>
         </div>
 
-        <div class="grid-assets" data-market-grid></div>
+        <div class="asset-grid" data-market-grid></div>
 
       </section>
 
@@ -570,7 +552,7 @@ body:not(.dark) #splash .splash-loader { background: rgba(0, 0, 0, .06); }
           </div>
           <span class="muted" data-fav-count>—</span>
         </div>
-        <div class="grid-assets" data-fav-grid></div>
+        <div class="asset-grid" data-fav-grid></div>
         <div class="empty" data-fav-empty hidden>
           <h3>هنوز چیزی اضافه نکرده‌اید</h3>
           <p>روی ستاره هر کارت بزنید</p>
@@ -614,7 +596,7 @@ body:not(.dark) #splash .splash-loader { background: rgba(0, 0, 0, .06); }
           <button class="chip" data-cars-filter="discontinued">توقف</button>
         </div>
 
-        <div class="cars-table-wrap cars-table-full" data-cars-list>
+        <div class="car-grid" data-cars-list>
           <div class="empty">
             <h3>در حال بارگذاری...</h3>
           </div>
@@ -744,7 +726,7 @@ body:not(.dark) #splash .splash-loader { background: rgba(0, 0, 0, .06); }
 </nav>
 
 <!-- ═══════════════════════════════════════════════════════════
-     MODAL
+     MODAL (برای ابزارها)
 ═══════════════════════════════════════════════════════════ -->
 <div class="modal" data-modal>
   <div class="modal-backdrop" data-modal-close></div>
@@ -896,13 +878,23 @@ body:not(.dark) #splash .splash-loader { background: rgba(0, 0, 0, .06); }
 
 <!-- ═══════════════════════════════════════════════════════════
      MAIN SCRIPTS
+     ترتیب مهم است:
+     1. modern-screenshot (قبل از share.js)
+     2. icons → core → data → api → charts → tv
+     3. cards (نیاز به api)
+     4. share (نیاز به cards)
+     5. ui (نیاز به cards و share)
+     6. app
 ═══════════════════════════════════════════════════════════ -->
+<script src="https://cdn.jsdelivr.net/npm/modern-screenshot@4.6.1/dist/index.js"></script>
 <script src="js/icons.js"></script>
 <script src="js/core.js"></script>
 <script src="js/data.js"></script>
 <script src="js/api.js"></script>
 <script src="js/charts.js"></script>
 <script src="js/tv.js"></script>
+<script src="js/cards.js"></script>
+<script src="js/share.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/app.js"></script>
 
