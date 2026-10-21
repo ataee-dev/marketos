@@ -2,8 +2,8 @@
   "group": "imported",
   "label": "خودروهای وارداتی",
   "url": "https://www.iranjib.ir/showgroup/46/",
-  "updated": "2026-10-20T21:24:56.533Z",
-  "updatedTehran": "۱۴۰۵/۷/۲۸, ۲۱:۲۴:۵۶",
+  "updated": "2026-10-21T11:26:27.793Z",
+  "updatedTehran": "۱۴۰۵/۷/۲۹, ۱۱:۲۶:۲۷",
   "count": 132,
   "withUrl": 1,
   "error": null,
@@ -1848,12 +1848,12 @@
       "category": "بی‌وای‌دی - BYD",
       "group": "imported",
       "url": null,
-      "priceMarket": 104000000000,
+      "priceMarket": 113000000000,
       "priceFactory": 40950000000,
-      "change": 0,
-      "changePercent": 0,
+      "change": 9000000000,
+      "changePercent": 8.65,
       "status": "available",
-      "rawPriceMarket": "۱۰,۴۰۰,۰۰۰,۰۰۰",
+      "rawPriceMarket": "۱۱,۳۰۰,۰۰۰,۰۰۰",
       "rawPriceFactory": "۴,۰۹۵,۰۰۰,۰۰۰"
     }
   ]
