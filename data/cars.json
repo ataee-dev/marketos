@@ -1,6 +1,6 @@
 {
-  "updated": "2026-10-23T21:11:49.973Z",
-  "updatedTehran": "۱۴۰۵/۸/۱, ۲۱:۱۱:۴۹",
+  "updated": "2026-10-24T10:35:54.451Z",
+  "updatedTehran": "۱۴۰۵/۸/۲, ۱۰:۳۵:۵۴",
   "source": "iranjib.ir",
   "currency": "rial",
   "stats": {
@@ -24,7 +24,7 @@
       "withUrl": 55,
       "success": true,
       "error": null,
-      "duration": 1.7
+      "duration": 2.2
     },
     {
       "key": "imported",
@@ -36,7 +36,7 @@
       "withUrl": 1,
       "success": true,
       "error": null,
-      "duration": 1.7
+      "duration": 2.7
     }
   ],
   "categories": [
@@ -1029,12 +1029,12 @@
       "group": "domestic",
       "url": null,
       "priceMarket": 67000000000,
-      "priceFactory": 68000000000,
+      "priceFactory": 68210000000,
       "change": 0,
       "changePercent": 0,
       "status": "available",
       "rawPriceMarket": "۶,۷۰۰,۰۰۰,۰۰۰",
-      "rawPriceFactory": "۶,۸۰۰,۰۰۰,۰۰۰"
+      "rawPriceFactory": "۶,۸۲۱,۰۰۰,۰۰۰"
     },
     {
       "id": "تیگو-8-F8-هیبرید",
@@ -4410,12 +4410,12 @@
         "group": "domestic",
         "url": null,
         "priceMarket": 67000000000,
-        "priceFactory": 68000000000,
+        "priceFactory": 68210000000,
         "change": 0,
         "changePercent": 0,
         "status": "available",
         "rawPriceMarket": "۶,۷۰۰,۰۰۰,۰۰۰",
-        "rawPriceFactory": "۶,۸۰۰,۰۰۰,۰۰۰"
+        "rawPriceFactory": "۶,۸۲۱,۰۰۰,۰۰۰"
       },
       {
         "id": "تیگو-8-F8-هیبرید",
@@ -7836,12 +7836,12 @@
         "group": "domestic",
         "url": null,
         "priceMarket": 67000000000,
-        "priceFactory": 68000000000,
+        "priceFactory": 68210000000,
         "change": 0,
         "changePercent": 0,
         "status": "available",
         "rawPriceMarket": "۶,۷۰۰,۰۰۰,۰۰۰",
-        "rawPriceFactory": "۶,۸۰۰,۰۰۰,۰۰۰"
+        "rawPriceFactory": "۶,۸۲۱,۰۰۰,۰۰۰"
       },
       {
         "id": "تیگو-8-F8-هیبرید",
