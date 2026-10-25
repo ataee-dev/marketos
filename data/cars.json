@@ -1,6 +1,6 @@
 {
-  "updated": "2026-10-24T20:29:02.243Z",
-  "updatedTehran": "۱۴۰۵/۸/۲, ۲۰:۲۹:۰۲",
+  "updated": "2026-10-25T11:00:10.471Z",
+  "updatedTehran": "۱۴۰۵/۸/۳, ۱۱:۰۰:۱۰",
   "source": "iranjib.ir",
   "currency": "rial",
   "stats": {
@@ -24,7 +24,7 @@
       "withUrl": 55,
       "success": true,
       "error": null,
-      "duration": 1.7
+      "duration": 1.4
     },
     {
       "key": "imported",
@@ -36,7 +36,7 @@
       "withUrl": 1,
       "success": true,
       "error": null,
-      "duration": 1.7
+      "duration": 1.5
     }
   ],
   "categories": [
