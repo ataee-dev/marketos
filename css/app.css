@@ -2977,3 +2977,70 @@ body.sidebar-open .sidebar { transform: translateX(0); }
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+
+
+
+
+
+
+
+
+
+/* =========================================================
+   FIX: یکدست‌سازی بنرها (Home Hero Banner & Others)
+   ========================================================= */
+
+/* 1. تنظیم بنر صفحه اصلی برای هم‌اندازه شدن با بقیه بنرها */
+.hero-banner,
+.banner-hero {
+  width: 100%;
+  /* نسبت تصویر استاندارد برای بنرها (می‌توانید 16/7 یا 21/9 را امتحان کنید) */
+  aspect-ratio: 16 / 7; 
+  border-radius: 16px; /* گردی گوشه‌ها مشابه کارت‌ها */
+  overflow: hidden;
+  position: relative;
+  margin-bottom: 16px; /* فاصله از المان بعدی */
+  background: var(--surface-2, #f0f5f2); /* رنگ پس‌زمینه موقت تا لود عکس */
+}
+
+/* 2. تنظیم تصویر داخل بنرها برای جلوگیری از کشیدگی */
+.hero-banner img,
+.banner-hero img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* عکس را پر می‌کند بدون اینکه کشیده شود */
+  object-position: center; /* تمرکز روی مرکز تصویر */
+  display: block;
+}
+
+/* 3. واکنش‌گرایی (Responsive) برای موبایل */
+@media (max-width: 640px) {
+  .hero-banner,
+  .banner-hero {
+    /* در موبایل نسبت را کمی کوتاه‌تر می‌کنیم تا فضای کمتری بگیرد */
+    aspect-ratio: 2 / 1; 
+    border-radius: 12px; /* گردی گوشه‌ها در موبایل کمی کمتر */
+  }
+}
+
+/* =========================================================
+   FIX: بنر تیره (Alert Banner) که در تصویر دوم دیده می‌شود
+   ========================================================= */
+/* اگر این بنر کلاس مشخصی دارد (مثلاً .alert-banner) نام آن را جایگزین کنید */
+/* در اینجا فرض بر این است که این بنر یک تصویر درون کانتینر است */
+.alert-banner-wrapper {
+  width: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 16px;
+  /* نسبت تصویر برای بنر تبلیغاتی */
+  aspect-ratio: 16 / 9; 
+}
+
+.alert-banner-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
