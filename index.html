@@ -7,6 +7,8 @@
 <!-- تنظیم theme-color برای حالت روشن و تاریک -->
 <meta name="theme-color" content="#0a1310" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#f4f7f5" media="(prefers-color-scheme: light)">
+<meta name="color-scheme" content="dark light">
+<meta name="format-detection" content="telephone=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -30,7 +32,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  transition: opacity .45s cubic-bezier(.32,.72,0,1), visibility .45s;
+  transition: opacity .5s cubic-bezier(.32,.72,0,1), transform .6s cubic-bezier(.32,.72,0,1), visibility .5s;
 }
 body:not(.dark) #splash {
   background: radial-gradient(circle at 50% 35%, #f0f5f2 0%, #f4f7f5 100%);
@@ -39,6 +41,7 @@ body:not(.dark) #splash {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
+  transform: scale(1.06);
 }
 #splash .splash-logo-wrap {
   position: relative;
@@ -67,10 +70,10 @@ body:not(.dark) #splash {
   object-fit: contain;
   position: relative;
   z-index: 1;
-  animation: splashLogoIn .7s cubic-bezier(.32,.72,0,1) both;
+  animation: splashLogoIn .9s cubic-bezier(.2,.9,.25,1.15) both;
 }
 @keyframes splashLogoIn {
-  0% { opacity: 0; transform: scale(.75) rotate(-8deg); }
+  0% { opacity: 0; transform: scale(.6) rotate(-10deg); }
   100% { opacity: 1; transform: scale(1) rotate(0); }
 }
 #splash .splash-name {
@@ -120,7 +123,7 @@ body:not(.dark) #splash .splash-loader { background: rgba(0, 0, 0, .06); }
 }
 #splash .splash-steps {
   position: absolute;
-  bottom: 70px;
+  bottom: calc(70px + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -171,7 +174,7 @@ body:not(.dark) #splash .splash-loader { background: rgba(0, 0, 0, .06); }
   overflow: hidden;
   position: relative;
   margin-bottom: 16px;
-  background: var(--surface-2, #f0f5f2);
+  background: var(--card-2, #f0f5f2);
 }
 
 .hero-banner img,
@@ -200,6 +203,232 @@ body:not(.dark) #splash .splash-loader { background: rgba(0, 0, 0, .06); }
   clip: rect(0,0,0,0);
   white-space: nowrap;
   border-width: 0;
+}
+</style>
+
+<!-- ═══════════════════════════════════════════════════════════
+     iOS NATIVE LAYER  (فقط افزودنی؛ هیچ کلاسی از app.css / cards.css حذف نشده)
+     برای برگرداندن به حالت قبل: همین بلوک <style id="ios-layer"> و
+     <script id="ios-layer-js"> انتهای فایل را پاک کنید.
+═══════════════════════════════════════════════════════════ -->
+<style id="ios-layer">
+:root {
+  --ios-spring: cubic-bezier(.2, .9, .25, 1.15);
+  --ios-sheet: cubic-bezier(.32, .72, 0, 1);
+  --glass-blur: blur(24px) saturate(190%);
+  --glass-line: rgba(255, 255, 255, .08);
+  --glass-hi: inset 0 1px 0 rgba(255, 255, 255, .06);
+}
+body:not(.dark) {
+  --glass-line: rgba(0, 0, 0, .06);
+  --glass-hi: inset 0 1px 0 rgba(255, 255, 255, .9);
+}
+
+/* ── حس نیتیو ── */
+html { -webkit-touch-callout: none; }
+body { -webkit-user-select: none; user-select: none; touch-action: manipulation; }
+input, textarea, select, [contenteditable] { -webkit-user-select: text; user-select: text; }
+input, textarea, select { font-size: 16px; }              /* جلوگیری از زوم خودکار iOS */
+.hdr-search input { font-size: 16px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 8px; }
+
+/* ── هدر شیشه‌ای ── */
+.app-header {
+  border-bottom: .5px solid var(--glass-line);
+  box-shadow: var(--glass-hi);
+  transition: box-shadow .3s var(--ios-sheet);
+}
+.app-header.is-scrolled { box-shadow: 0 8px 24px rgba(0, 0, 0, .16); }
+.hdr-search { border-radius: 14px; }
+.hdr-search:focus-within {
+  transform: scale(1.012);
+  transition: transform .35s var(--ios-spring), border-color .2s, box-shadow .2s;
+}
+.hdr-search-results {
+  border-radius: 18px;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  transform-origin: top center;
+  animation: iosPop .35s var(--ios-spring);
+}
+@keyframes iosPop {
+  from { opacity: 0; transform: scale(.94) translateY(-6px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ── سایدبار ── */
+.sidebar {
+  border-radius: 26px 0 0 26px;
+  transition: transform .5s var(--ios-sheet);
+}
+body.sidebar-open .sidebar .nav-link {
+  animation: slideInRight .45s var(--ios-sheet) both;
+  animation-delay: calc(min(var(--i, 0), 14) * 22ms + 60ms);
+}
+.nav-link.is-active { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent); }
+.nav-link:active { transition-duration: .1s; }
+
+/* ── فشار فنری (با خاصیت scale تا با transformهای فایل‌های دیگر تداخل نکند) ── */
+.chip, .pills button, .view-toggle button, .unit-toggle button, .btn, .icon-btn,
+.mnav-btn, .switch, .tools-horizontal > *, .scroll-row > *, .asset-grid > *, .car-grid > * {
+  transition: scale .35s var(--ios-spring);
+}
+.chip:active, .pills button:active, .view-toggle button:active, .unit-toggle button:active,
+.btn:active, .icon-btn:active, .switch:active,
+.tools-horizontal > *:active, .scroll-row > *:active, .asset-grid > *:active, .car-grid > *:active {
+  scale: .96;
+  transition-duration: .12s;
+}
+
+/* ── ورود صفحه ── */
+.page.is-active { animation: iosPageIn .5s var(--ios-sheet) both; }
+@keyframes iosPageIn {
+  from { opacity: 0; transform: translate3d(0, 16px, 0) scale(.985); filter: blur(4px); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: blur(0); }
+}
+
+/* ── Reveal: فقط وقتی JS فعال است و فقط روی المان‌های ثابت ── */
+html.ios-js .reveal {
+  opacity: 0;
+  transform: translate3d(0, 20px, 0);
+  transition: opacity .6s var(--ios-sheet), transform .7s var(--ios-spring);
+  transition-delay: calc(var(--i, 0) * 55ms);
+}
+html.ios-js .reveal.is-in { opacity: 1; transform: none; }
+
+/* ── بنر ── */
+.hero-banner, .banner-hero { border: .5px solid var(--glass-line); box-shadow: var(--shadow-lg); }
+.hero-banner::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 38%, rgba(255, 255, 255, .13) 50%, transparent 62%);
+  transform: translateX(-120%);
+  animation: iosSheen 6s cubic-bezier(.4, 0, .2, 1) 1.5s infinite;
+  pointer-events: none;
+}
+@keyframes iosSheen { 0%, 70% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
+
+/* ── Live Strip ── */
+.live-strip { scroll-snap-type: x mandatory; scroll-padding: 0 12px; }
+.live-strip-card { border-radius: 20px; border: .5px solid var(--glass-line); box-shadow: var(--shadow-sm), var(--glass-hi); }
+.live-strip-card:nth-child(1) { animation-delay: .04s; }
+.live-strip-card:nth-child(2) { animation-delay: .09s; }
+.live-strip-card:nth-child(3) { animation-delay: .14s; }
+.live-strip-card:nth-child(4) { animation-delay: .19s; }
+.live-strip-card:nth-child(n+5) { animation-delay: .24s; }
+
+/* ── تب‌بار پایین (.mobile-nav) ── */
+.mobile-nav {
+  isolation: isolate;
+  background: var(--bg-glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: .5px solid var(--glass-line);
+  box-shadow: var(--shadow-xl), var(--glass-hi);
+}
+@media (max-width: 1023px) {
+  .mobile-nav {
+    left: 10px;
+    right: 10px;
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    width: auto;
+    border-radius: 26px;
+    animation: iosTabRise .6s var(--ios-sheet) .15s backwards;
+  }
+}
+@keyframes iosTabRise {
+  from { opacity: 0; transform: translate3d(0, 70px, 0) scale(.94); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+.mnav-btn { position: relative; transition: color .25s var(--ios-sheet), scale .35s var(--ios-spring); }
+.mnav-btn svg, .mnav-btn [data-icon] { transition: transform .45s var(--ios-spring); }
+.mnav-btn [data-icon] { display: inline-flex; }
+.mnav-btn.is-active svg, .mnav-btn.is-active [data-icon] { transform: translateY(-2px) scale(1.12); }
+.mnav-btn.is-active::before {
+  content: '';
+  position: absolute;
+  inset: 3px 4px;
+  border-radius: 20px;
+  background: var(--accent-soft);
+  z-index: -1;
+  animation: iosPill .4s var(--ios-spring);
+}
+@keyframes iosPill { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: scale(1); } }
+
+/* ── Modal = Bottom Sheet ── */
+.modal-backdrop { backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.modal-sheet {
+  border-radius: 28px 28px 0 0;
+  border-top: .5px solid var(--glass-line);
+  animation: iosSheetUp .55s var(--ios-sheet) both;
+  overscroll-behavior: contain;
+}
+.modal-head { position: relative; touch-action: none; }
+.modal-head::before {
+  content: '';
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  width: 38px;
+  height: 5px;
+  margin-left: -19px;
+  border-radius: 3px;
+  background: var(--border-2);
+  pointer-events: none;
+}
+@keyframes iosSheetUp {
+  from { opacity: 0; transform: translate3d(0, 60px, 0) scale(.98); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+/* ── Toast ── */
+.toast {
+  background: var(--bg-glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: .5px solid var(--glass-line);
+  box-shadow: var(--shadow-xl);
+}
+
+/* ── کارت‌های تنظیمات و حالت خالی ── */
+.set-card { border-radius: 20px; border: .5px solid var(--glass-line); box-shadow: var(--shadow-sm), var(--glass-hi); }
+.empty { animation: iosPop .45s var(--ios-spring) both; }
+
+/* ── Pull to Refresh ── */
+.ptr {
+  position: fixed;
+  top: calc(64px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  z-index: 25;
+  width: 36px;
+  height: 36px;
+  margin-left: -18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--card);
+  border: .5px solid var(--glass-line);
+  box-shadow: var(--shadow);
+  color: var(--accent);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-30px) scale(.6);
+  transition: transform .4s var(--ios-spring), opacity .25s;
+}
+.ptr svg { width: 18px; height: 18px; transform: rotate(var(--rot, 0deg)); }
+.ptr.is-pulling { opacity: 1; transform: translateY(var(--pull, 0px)) scale(1); transition: none; }
+.ptr.is-loading { opacity: 1; transform: translateY(16px) scale(1); }
+.ptr.is-loading svg { animation: spin .9s linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+  html.ios-js .reveal { opacity: 1; transform: none; }
 }
 </style>
 </head>
@@ -881,12 +1110,15 @@ body:not(.dark) #splash .splash-loader { background: rgba(0, 0, 0, .06); }
       splash.classList.add('is-hidden');
       setTimeout(function(){
         if(splash && splash.parentNode) splash.parentNode.removeChild(splash);
-      }, 500);
+      }, 700);
     }, 200);
   }
 
   var minTime = 1200;
   var startTime = Date.now();
+
+  // مرحلهٔ اول از همان ابتدا فعال می‌شود (قبلاً هیچ‌وقت فعال نمی‌شد)
+  setStep(0);
 
   window.addEventListener('load', function(){
     setStep(1);
@@ -973,6 +1205,159 @@ body:not(.dark) #splash .splash-loader { background: rgba(0, 0, 0, .06); }
 <script src="js/share.js" defer></script>
 <script src="js/ui.js" defer></script>
 <script src="js/app.js" defer></script>
+
+<!-- ═══════════════════════════════════════════════════════════
+     iOS NATIVE LAYER — JS (مستقل؛ به هیچ تابع یا فایل دیگری وابسته نیست)
+     فقط با کلیک روی دکمه‌های موجود (menu / refresh / modal-close) کار می‌کند.
+═══════════════════════════════════════════════════════════ -->
+<script id="ios-layer-js">
+(function(){
+  'use strict';
+  var d = document, root = d.documentElement;
+  var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function $(s, c){ return (c || d).querySelector(s); }
+  function $$(s, c){ return Array.prototype.slice.call((c || d).querySelectorAll(s)); }
+
+  root.classList.add('ios-js');
+
+  /* 1) سایهٔ هدر هنگام اسکرول */
+  var hdr = $('.app-header'), tick = false;
+  window.addEventListener('scroll', function(){
+    if(tick) return;
+    tick = true;
+    requestAnimationFrame(function(){
+      if(hdr) hdr.classList.toggle('is-scrolled', (window.scrollY || 0) > 6);
+      tick = false;
+    });
+  }, { passive: true });
+
+  /* 2) لرزش سبک (فقط روی دستگاه‌هایی که پشتیبانی می‌کنند) */
+  if(navigator.vibrate){
+    d.addEventListener('click', function(e){
+      var t = e.target.closest && e.target.closest('.mnav-btn,.chip,.switch,.nav-link,.hdr-btn,.pills button,.view-toggle button,.unit-toggle button');
+      if(t) navigator.vibrate(8);
+    }, true);
+  }
+
+  /* 3) ورود پلکانی آیتم‌های سایدبار */
+  $$('.sidebar .nav-link').forEach(function(el, i){ el.style.setProperty('--i', i); });
+
+  /* 4) Reveal فقط برای المان‌های ثابت (نه کارت‌های قیمت که مدام رندر می‌شوند) */
+  if('IntersectionObserver' in window && !reduce){
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){
+        if(en.isIntersecting){ en.target.classList.add('is-in'); io.unobserve(en.target); }
+      });
+    }, { threshold: .08, rootMargin: '0px 0px -4% 0px' });
+    $$('.page .sec-head, .page .set-card, .page .panel, .page .chart-header, .page .chart-main, .page .compare-pick, .page .chart-questions-full')
+      .forEach(function(el, i){
+        el.classList.add('reveal');
+        el.style.setProperty('--i', i % 6);
+        io.observe(el);
+      });
+  }
+
+  /* 5) Modal: انیمیشن هنگام باز شدن + کشیدن به پایین برای بستن */
+  var modal = $('[data-modal]'), sheet = modal && $('.modal-sheet', modal);
+  if(modal && sheet){
+    var prevCls = modal.className;
+    new MutationObserver(function(){
+      var before = prevCls.split(/\s+/);
+      var added = modal.className.split(/\s+/).filter(function(c){ return c && before.indexOf(c) < 0; });
+      prevCls = modal.className;
+      if(added.length){
+        sheet.style.animation = 'none';
+        void sheet.offsetWidth;
+        sheet.style.animation = '';
+      }
+    }).observe(modal, { attributes: true, attributeFilter: ['class'] });
+
+    var head = $('.modal-head', sheet), y0 = 0, dy = 0, drag = false;
+    if(head){
+      head.addEventListener('touchstart', function(e){
+        y0 = e.touches[0].clientY; dy = 0; drag = true;
+        sheet.style.transition = 'none';
+      }, { passive: true });
+      head.addEventListener('touchmove', function(e){
+        if(!drag) return;
+        dy = Math.max(0, e.touches[0].clientY - y0);
+        sheet.style.transform = 'translate3d(0,' + dy + 'px,0)';
+      }, { passive: true });
+      head.addEventListener('touchend', function(){
+        if(!drag) return;
+        drag = false;
+        sheet.style.transition = '';
+        if(dy > 110){
+          var c = $('[data-modal-close]', modal);
+          if(c) c.click();
+          setTimeout(function(){ sheet.style.transform = ''; }, 380);
+        } else {
+          sheet.style.transform = '';
+        }
+      });
+    }
+  }
+
+  /* 6) سوایپ از لبهٔ راست برای باز کردن منو، سوایپ به راست برای بستن */
+  var sx = 0, sy = 0, mode = null;
+  d.addEventListener('touchstart', function(e){
+    var t = e.touches[0];
+    sx = t.clientX; sy = t.clientY;
+    mode = d.body.classList.contains('sidebar-open') ? 'close' : (sx > window.innerWidth - 22 ? 'open' : null);
+  }, { passive: true });
+  d.addEventListener('touchend', function(e){
+    if(!mode) return;
+    var t = e.changedTouches[0], dx = t.clientX - sx, ady = Math.abs(t.clientY - sy);
+    if(ady < 60){
+      if(mode === 'open' && dx < -60){ var m = $('[data-menu]'); if(m) m.click(); }
+      if(mode === 'close' && dx > 60){ var b = $('[data-backdrop]'); if(b) b.click(); }
+    }
+    mode = null;
+  }, { passive: true });
+
+  /* 7) Pull to Refresh (از دکمهٔ بروزرسانی موجود استفاده می‌کند) */
+  var refreshBtn = $('[data-action="refresh"]');
+  if(refreshBtn){
+    var ptr = d.createElement('div');
+    ptr.className = 'ptr';
+    ptr.setAttribute('aria-hidden', 'true');
+    ptr.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v10"/><path d="m7 11 5 5 5-5"/></svg>';
+    d.body.appendChild(ptr);
+
+    var py = 0, pd = 0, pulling = false, busy = false;
+    d.addEventListener('touchstart', function(e){
+      var tg = e.target;
+      pulling = !busy && (window.scrollY || 0) <= 0 &&
+        !d.body.classList.contains('sidebar-open') &&
+        !(tg.closest && tg.closest('.modal,.sidebar,.tv,canvas,input,select,textarea'));
+      if(pulling){ py = e.touches[0].clientY; pd = 0; }
+    }, { passive: true });
+    d.addEventListener('touchmove', function(e){
+      if(!pulling) return;
+      pd = e.touches[0].clientY - py;
+      if(pd > 8){
+        ptr.classList.add('is-pulling');
+        ptr.style.setProperty('--pull', Math.min(pd * .45, 64) + 'px');
+        ptr.style.setProperty('--rot', Math.min(pd * 2, 180) + 'deg');
+      } else {
+        ptr.classList.remove('is-pulling');
+      }
+    }, { passive: true });
+    d.addEventListener('touchend', function(){
+      if(!pulling) return;
+      pulling = false;
+      ptr.classList.remove('is-pulling');
+      if(pd > 110){
+        busy = true;
+        ptr.classList.add('is-loading');
+        refreshBtn.click();
+        setTimeout(function(){ ptr.classList.remove('is-loading'); busy = false; }, 1300);
+      }
+      pd = 0;
+    }, { passive: true });
+  }
+})();
+</script>
 
 <!-- ═══════════════════════════════════════════════════════════
      SERVICE WORKER
