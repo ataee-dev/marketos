@@ -2,8 +2,8 @@
   "group": "domestic",
   "label": "خودروهای داخلی",
   "url": "https://www.iranjib.ir/showgroup/45/",
-  "updated": "2026-10-28T22:22:51.235Z",
-  "updatedTehran": "۱۴۰۵/۸/۶, ۲۲:۲۲:۵۱",
+  "updated": "2026-10-29T12:35:07.537Z",
+  "updatedTehran": "۱۴۰۵/۸/۷, ۱۲:۳۵:۰۷",
   "count": 109,
   "withUrl": 55,
   "error": null,
@@ -15,12 +15,12 @@
       "group": "domestic",
       "url": "https://www.iranjib.ir/shownews/140865/%D9%85%D8%B4%D8%AE%D8%B5%D8%A7%D8%AA-%DA%A9%D8%A7%D9%85%D9%84-%D9%88%D8%A7%D9%86%D8%AA-%D8%A2%D8%B1%DB%8C%D8%B3%D8%A7%D9%86-2-%D8%B4%D8%B1%DA%A9%D8%AA-%D8%A7%DB%8C%D8%B1%D8%A7%D9%86-%D8%AE%D9%88%D8%AF%D8%B1%D9%88/",
       "priceMarket": 20900000000,
-      "priceFactory": 20260000000,
+      "priceFactory": 20264000000,
       "change": 0,
       "changePercent": 0,
       "status": "available",
       "rawPriceMarket": "۲,۰۹۰,۰۰۰,۰۰۰",
-      "rawPriceFactory": "۲,۰۲۶,۰۰۰,۰۰۰"
+      "rawPriceFactory": "۲,۰۲۶,۴۰۰,۰۰۰"
     },
     {
       "id": "وانت-آریسان-مانیتور",
@@ -43,12 +43,12 @@
       "group": "domestic",
       "url": "https://www.iranjib.ir/shownews/143500/%D8%B3%D9%85%D9%86%D8%AF-%D8%B3%D9%88%D8%B1%D9%86-%D8%A8%D8%A7-%D9%85%D9%88%D8%AA%D9%88%D8%B1-TU5P-%D8%A8%D9%87-%D8%A8%D8%A7%D8%B2%D8%A7%D8%B1-%D9%85%DB%8C%E2%80%8C%D8%A2%DB%8C%D8%AF-+-%D9%85%D8%B4%D8%AE%D8%B5%D8%A7%D8%AA/",
       "priceMarket": 30200000000,
-      "priceFactory": 18700000000,
+      "priceFactory": 19313700000,
       "change": 0,
       "changePercent": 0,
       "status": "available",
       "rawPriceMarket": "۳,۰۲۰,۰۰۰,۰۰۰",
-      "rawPriceFactory": "۱,۸۷۰,۰۰۰,۰۰۰"
+      "rawPriceFactory": "۱,۹۳۱,۳۷۰,۰۰۰"
     },
     {
       "id": "سورن-XU7P-رینگ-فولادی",
@@ -85,12 +85,12 @@
       "group": "domestic",
       "url": "https://www.iranjib.ir/shownews/140867/%D9%85%D8%B9%D8%B1%D9%81%DB%8C-%D9%88-%D9%85%D8%B4%D8%AE%D8%B5%D8%A7%D8%AA-%D8%B3%D9%88%D8%B1%D9%86-%D9%BE%D9%84%D8%A7%D8%B3-%D8%AF%D9%88%DA%AF%D8%A7%D9%86%D9%87-%D8%B3%D9%88%D8%B2-%D8%A7%DB%8C%D8%B1%D8%A7%D9%86-%D8%AE%D9%88%D8%AF%D8%B1%D9%88/",
       "priceMarket": 29000000000,
-      "priceFactory": 192360000000,
+      "priceFactory": 19241000000,
       "change": 0,
       "changePercent": 0,
       "status": "available",
       "rawPriceMarket": "۲,۹۰۰,۰۰۰,۰۰۰",
-      "rawPriceFactory": "۱۹,۲۳۶,۰۰۰,۰۰۰"
+      "rawPriceFactory": "۱,۹۲۴,۱۰۰,۰۰۰"
     },
     {
       "id": "سورن-پلاس-دوگانه-سوز-کپسول-بزرگ",
@@ -113,12 +113,12 @@
       "group": "domestic",
       "url": null,
       "priceMarket": 30800000000,
-      "priceFactory": 20820000000,
+      "priceFactory": 20826000000,
       "change": 0,
       "changePercent": 0,
       "status": "available",
       "rawPriceMarket": "۳,۰۸۰,۰۰۰,۰۰۰",
-      "rawPriceFactory": "۲,۰۸۲,۰۰۰,۰۰۰"
+      "rawPriceFactory": "۲,۰۸۲,۶۰۰,۰۰۰"
     },
     {
       "id": "دنا-پلاس-MT6",
@@ -127,12 +127,12 @@
       "group": "domestic",
       "url": null,
       "priceMarket": 31300000000,
-      "priceFactory": 21720000000,
+      "priceFactory": 21727000000,
       "change": 0,
       "changePercent": 0,
       "status": "available",
       "rawPriceMarket": "۳,۱۳۰,۰۰۰,۰۰۰",
-      "rawPriceFactory": "۲,۱۷۲,۰۰۰,۰۰۰"
+      "rawPriceFactory": "۲,۱۷۲,۷۰۰,۰۰۰"
     },
     {
       "id": "دنا-پلاس-اتوماتیک",
@@ -183,12 +183,12 @@
       "group": "domestic",
       "url": null,
       "priceMarket": 29500000000,
-      "priceFactory": 18470000000,
+      "priceFactory": 18477000000,
       "change": 0,
       "changePercent": 0,
       "status": "available",
       "rawPriceMarket": "۲,۹۵۰,۰۰۰,۰۰۰",
-      "rawPriceFactory": "۱,۸۴۷,۰۰۰,۰۰۰"
+      "rawPriceFactory": "۱,۸۴۷,۷۰۰,۰۰۰"
     },
     {
       "id": "پژو-207-دنده-ای-پانوراما-رینگ-فولادی",
@@ -211,12 +211,12 @@
       "group": "domestic",
       "url": "https://www.iranjib.ir/shownews/140870/%D9%85%D8%B9%D8%B1%D9%81%DB%8C-%D9%88-%D9%85%D8%B4%D8%AE%D8%B5%D8%A7%D8%AA-%D9%BE%DA%98%D9%88-207-%D8%AF%D8%B3%D8%AA%DB%8C-TU5-%D9%BE%D9%84%D8%A7%D8%B3-(%D9%BE%D8%A7%D9%86%D9%88%D8%B1%D8%A7%D9%85%D8%A7)/",
       "priceMarket": 32400000000,
-      "priceFactory": 19666000000,
+      "priceFactory": 19670000000,
       "change": 0,
       "changePercent": 0,
       "status": "available",
       "rawPriceMarket": "۳,۲۴۰,۰۰۰,۰۰۰",
-      "rawPriceFactory": "۱,۹۶۶,۶۰۰,۰۰۰"
+      "rawPriceFactory": "۱,۹۶۷,۰۰۰,۰۰۰"
     },
     {
       "id": "پژو-207-اتوماتیک",
@@ -253,12 +253,12 @@
       "group": "domestic",
       "url": "https://www.iranjib.ir/shownews/137641/%D9%85%D8%B4%D8%AE%D8%B5%D8%A7%D8%AA-%D8%B1%D8%A7%D9%86%D8%A7-%D9%BE%D9%84%D8%A7%D8%B3-%D8%A7%D8%B1%D8%AA%D9%82%D8%A7%D8%A1-%DB%8C%D8%A7%D9%81%D8%AA%D9%87-%D8%A8%D8%A7-%D9%85%D9%88%D8%AA%D9%88%D8%B1-TU5P/",
       "priceMarket": 23850000000,
-      "priceFactory": 16220000000,
+      "priceFactory": 16227000000,
       "change": 0,
       "changePercent": 0,
       "status": "available",
       "rawPriceMarket": "۲,۳۸۵,۰۰۰,۰۰۰",
-      "rawPriceFactory": "۱,۶۲۲,۰۰۰,۰۰۰"
+      "rawPriceFactory": "۱,۶۲۲,۷۰۰,۰۰۰"
     },
     {
       "id": "تارا-دستی-V1",
@@ -267,12 +267,12 @@
       "group": "domestic",
       "url": "https://www.iranjib.ir/shownews/140943/%D9%85%D8%B9%D8%B1%D9%81%DB%8C-%D9%88-%D9%85%D8%B4%D8%AE%D8%B5%D8%A7%D8%AA-%D8%AA%D8%A7%D8%B1%D8%A7-6-%D8%B3%D8%B1%D8%B9%D8%AA%D9%87-%D8%AF%D8%B3%D8%AA%DB%8C-V1-%D8%A7%DB%8C%D8%B1%D8%A7%D9%86-%D8%AE%D9%88%D8%AF%D8%B1%D9%88/",
       "priceMarket": 31000000000,
-      "priceFactory": 20630000000,
+      "priceFactory": 20637000000,
       "change": 0,
       "changePercent": 0,
       "status": "available",
       "rawPriceMarket": "۳,۱۰۰,۰۰۰,۰۰۰",
-      "rawPriceFactory": "۲,۰۶۳,۰۰۰,۰۰۰"
+      "rawPriceFactory": "۲,۰۶۳,۷۰۰,۰۰۰"
     },
     {
       "id": "تارا-اتوماتیک-V4",
