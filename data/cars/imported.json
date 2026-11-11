@@ -2,8 +2,8 @@
   "group": "imported",
   "label": "خودروهای وارداتی",
   "url": "https://www.iranjib.ir/showgroup/46/",
-  "updated": "2026-11-10T22:59:58.001Z",
-  "updatedTehran": "۱۴۰۵/۸/۱۹, ۲۲:۵۹:۵۸",
+  "updated": "2026-11-11T13:50:23.372Z",
+  "updatedTehran": "۱۴۰۵/۸/۲۰, ۱۳:۵۰:۲۳",
   "count": 135,
   "withUrl": 1,
   "error": null,
@@ -308,12 +308,12 @@
       "category": "چانگان - CHangan",
       "group": "imported",
       "url": null,
-      "priceMarket": 102800000000,
+      "priceMarket": 99000000000,
       "priceFactory": 96900000000,
-      "change": 0,
-      "changePercent": 0,
+      "change": -3800000000,
+      "changePercent": -3.7,
       "status": "available",
-      "rawPriceMarket": "۱۰,۲۸۰,۰۰۰,۰۰۰",
+      "rawPriceMarket": "۹,۹۰۰,۰۰۰,۰۰۰",
       "rawPriceFactory": "۹,۶۹۰,۰۰۰,۰۰۰"
     },
     {
@@ -448,12 +448,12 @@
       "category": "تویوتا - Toyota",
       "group": "imported",
       "url": null,
-      "priceMarket": 100000000000,
+      "priceMarket": 98500000000,
       "priceFactory": 65400000000,
-      "change": 0,
-      "changePercent": 0,
+      "change": -1500000000,
+      "changePercent": -1.5,
       "status": "available",
-      "rawPriceMarket": "۱۰,۰۰۰,۰۰۰,۰۰۰",
+      "rawPriceMarket": "۹,۸۵۰,۰۰۰,۰۰۰",
       "rawPriceFactory": "۶,۵۴۰,۰۰۰,۰۰۰"
     },
     {
@@ -546,12 +546,12 @@
       "category": "تویوتا - Toyota",
       "group": "imported",
       "url": null,
-      "priceMarket": 180000000000,
+      "priceMarket": 181200000000,
       "priceFactory": 125000000000,
-      "change": 0,
-      "changePercent": 0,
+      "change": 1200000000,
+      "changePercent": 0.67,
       "status": "available",
-      "rawPriceMarket": "۱۸,۰۰۰,۰۰۰,۰۰۰",
+      "rawPriceMarket": "۱۸,۱۲۰,۰۰۰,۰۰۰",
       "rawPriceFactory": "۱۲,۵۰۰,۰۰۰,۰۰۰"
     },
     {
@@ -589,12 +589,12 @@
       "group": "imported",
       "url": null,
       "priceMarket": 141500000000,
-      "priceFactory": 79000000000,
+      "priceFactory": null,
       "change": 0,
       "changePercent": 0,
-      "status": "available",
+      "status": "not-selling",
       "rawPriceMarket": "۱۴,۱۵۰,۰۰۰,۰۰۰",
-      "rawPriceFactory": "۷,۹۰۰,۰۰۰,۰۰۰"
+      "rawPriceFactory": "توقف فروش"
     },
     {
       "id": "رافور-25-چین",
@@ -631,12 +631,12 @@
       "group": "imported",
       "url": null,
       "priceMarket": 152500000000,
-      "priceFactory": 32440000000,
+      "priceFactory": null,
       "change": 0,
       "changePercent": 0,
-      "status": "available",
+      "status": "not-selling",
       "rawPriceMarket": "۱۵,۲۵۰,۰۰۰,۰۰۰",
-      "rawPriceFactory": "۳,۲۴۴,۰۰۰,۰۰۰"
+      "rawPriceFactory": "توقف فروش"
     },
     {
       "id": "فرانتلندر",
@@ -645,12 +645,12 @@
       "group": "imported",
       "url": null,
       "priceMarket": 128000000000,
-      "priceFactory": 52000000000,
+      "priceFactory": 103800000000,
       "change": 0,
       "changePercent": 0,
       "status": "available",
       "rawPriceMarket": "۱۲,۸۰۰,۰۰۰,۰۰۰",
-      "rawPriceFactory": "۵,۲۰۰,۰۰۰,۰۰۰"
+      "rawPriceFactory": "۱۰,۳۸۰,۰۰۰,۰۰۰"
     },
     {
       "id": "CHR",
@@ -658,13 +658,13 @@
       "category": "تویوتا - Toyota",
       "group": "imported",
       "url": null,
-      "priceMarket": 35600000000,
+      "priceMarket": null,
       "priceFactory": null,
       "change": 0,
       "changePercent": 0,
       "status": "unavailable",
       "rawPriceMarket": "ناموجود",
-      "rawPriceFactory": "۳,۵۶۰,۰۰۰,۰۰۰"
+      "rawPriceFactory": "توقف فروش"
     },
     {
       "id": "ونزا",
@@ -673,12 +673,12 @@
       "group": "imported",
       "url": null,
       "priceMarket": 174000000000,
-      "priceFactory": 32650000000,
+      "priceFactory": null,
       "change": 0,
       "changePercent": 0,
-      "status": "available",
+      "status": "not-selling",
       "rawPriceMarket": "۱۷,۴۰۰,۰۰۰,۰۰۰",
-      "rawPriceFactory": "۳,۲۶۵,۰۰۰,۰۰۰"
+      "rawPriceFactory": "توقف فروش"
     },
     {
       "id": "هایلندر",
@@ -966,12 +966,12 @@
       "category": "مزدا - Mazda",
       "group": "imported",
       "url": null,
-      "priceMarket": 174000000000,
+      "priceMarket": 175000000000,
       "priceFactory": 86000000000,
-      "change": 0,
-      "changePercent": 0,
+      "change": 1000000000,
+      "changePercent": 0.57,
       "status": "available",
-      "rawPriceMarket": "۱۷,۴۰۰,۰۰۰,۰۰۰",
+      "rawPriceMarket": "۱۷,۵۰۰,۰۰۰,۰۰۰",
       "rawPriceFactory": "۸,۶۰۰,۰۰۰,۰۰۰"
     },
     {
@@ -1344,12 +1344,12 @@
       "category": "فولکس‌واگن - Volkswagen",
       "group": "imported",
       "url": null,
-      "priceMarket": 126000000000,
+      "priceMarket": 135000000000,
       "priceFactory": 115000000000,
-      "change": 0,
-      "changePercent": 0,
+      "change": 9000000000,
+      "changePercent": 7.14,
       "status": "available",
-      "rawPriceMarket": "۱۲,۶۰۰,۰۰۰,۰۰۰",
+      "rawPriceMarket": "۱۳,۵۰۰,۰۰۰,۰۰۰",
       "rawPriceFactory": "۱۱,۵۰۰,۰۰۰,۰۰۰"
     },
     {
@@ -1372,12 +1372,12 @@
       "category": "نیسان - Nissan",
       "group": "imported",
       "url": null,
-      "priceMarket": 72300000000,
+      "priceMarket": 100000000000,
       "priceFactory": 57000000000,
-      "change": 0,
-      "changePercent": 0,
+      "change": 2000000000,
+      "changePercent": 2.04,
       "status": "available",
-      "rawPriceMarket": "۷,۲۳۰,۰۰۰,۰۰۰",
+      "rawPriceMarket": "۱۰,۰۰۰,۰۰۰,۰۰۰",
       "rawPriceFactory": "۵,۷۰۰,۰۰۰,۰۰۰"
     },
     {
@@ -1386,12 +1386,12 @@
       "category": "نیسان - Nissan",
       "group": "imported",
       "url": null,
-      "priceMarket": 80700000000,
+      "priceMarket": null,
       "priceFactory": null,
       "change": 0,
       "changePercent": 0,
-      "status": "coming-soon",
-      "rawPriceMarket": "۸,۰۷۰,۰۰۰,۰۰۰",
+      "status": "unavailable",
+      "rawPriceMarket": "ناموجود",
       "rawPriceFactory": "به زودی"
     },
     {
@@ -1442,12 +1442,12 @@
       "category": "نیسان - Nissan",
       "group": "imported",
       "url": null,
-      "priceMarket": 100000000000,
+      "priceMarket": 124000000000,
       "priceFactory": 66800000000,
-      "change": 0,
-      "changePercent": 0,
+      "change": 2000000000,
+      "changePercent": 1.64,
       "status": "available",
-      "rawPriceMarket": "۱۰,۰۰۰,۰۰۰,۰۰۰",
+      "rawPriceMarket": "۱۲,۴۰۰,۰۰۰,۰۰۰",
       "rawPriceFactory": "۶,۶۸۰,۰۰۰,۰۰۰"
     },
     {
@@ -1871,17 +1871,17 @@
       "rawPriceFactory": "۴,۷۵۰,۰۰۰,۰۰۰"
     },
     {
-      "id": "چین-ال-Qin-L",
-      "name": "چین ال (Qin L)",
+      "id": "چین-پلاس",
+      "name": "چین پلاس",
       "category": "بی‌وای‌دی - BYD",
       "group": "imported",
       "url": null,
-      "priceMarket": 60500000000,
+      "priceMarket": 72200000000,
       "priceFactory": 33250000000,
-      "change": 0,
-      "changePercent": 0,
+      "change": 200000000,
+      "changePercent": 0.28,
       "status": "available",
-      "rawPriceMarket": "۶,۰۵۰,۰۰۰,۰۰۰",
+      "rawPriceMarket": "۷,۲۲۰,۰۰۰,۰۰۰",
       "rawPriceFactory": "۳,۳۲۵,۰۰۰,۰۰۰"
     },
     {
