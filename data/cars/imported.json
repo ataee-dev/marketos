@@ -2,8 +2,8 @@
   "group": "imported",
   "label": "خودروهای وارداتی",
   "url": "https://www.iranjib.ir/showgroup/46/",
-  "updated": "2026-11-14T22:08:56.035Z",
-  "updatedTehran": "۱۴۰۵/۸/۲۳, ۲۲:۰۸:۵۶",
+  "updated": "2026-11-15T13:41:51.113Z",
+  "updatedTehran": "۱۴۰۵/۸/۲۴, ۱۳:۴۱:۵۱",
   "count": 135,
   "withUrl": 1,
   "error": null,
@@ -308,12 +308,12 @@
       "category": "چانگان - CHangan",
       "group": "imported",
       "url": null,
-      "priceMarket": 99000000000,
+      "priceMarket": 101500000000,
       "priceFactory": 96900000000,
-      "change": 0,
-      "changePercent": 0,
+      "change": 2500000000,
+      "changePercent": 2.53,
       "status": "available",
-      "rawPriceMarket": "۹,۹۰۰,۰۰۰,۰۰۰",
+      "rawPriceMarket": "۱۰,۱۵۰,۰۰۰,۰۰۰",
       "rawPriceFactory": "۹,۶۹۰,۰۰۰,۰۰۰"
     },
     {
@@ -449,12 +449,12 @@
       "group": "imported",
       "url": null,
       "priceMarket": 101500000000,
-      "priceFactory": 65400000000,
+      "priceFactory": 91000000000,
       "change": 0,
       "changePercent": 0,
       "status": "available",
       "rawPriceMarket": "۱۰,۱۵۰,۰۰۰,۰۰۰",
-      "rawPriceFactory": "۶,۵۴۰,۰۰۰,۰۰۰"
+      "rawPriceFactory": "۹,۱۰۰,۰۰۰,۰۰۰"
     },
     {
       "id": "کرولا-کراس-2026-نیوفیس",
@@ -463,12 +463,12 @@
       "group": "imported",
       "url": null,
       "priceMarket": 111100000000,
-      "priceFactory": 91500000000,
+      "priceFactory": 100000000000,
       "change": 0,
       "changePercent": 0,
       "status": "available",
       "rawPriceMarket": "۱۱,۱۱۰,۰۰۰,۰۰۰",
-      "rawPriceFactory": "۹,۱۵۰,۰۰۰,۰۰۰"
+      "rawPriceFactory": "۱۰,۰۰۰,۰۰۰,۰۰۰"
     },
     {
       "id": "BZ3",
@@ -546,12 +546,12 @@
       "category": "تویوتا - Toyota",
       "group": "imported",
       "url": null,
-      "priceMarket": 180500000000,
+      "priceMarket": 181200000000,
       "priceFactory": 125000000000,
-      "change": 0,
-      "changePercent": 0,
+      "change": 700000000,
+      "changePercent": 0.39,
       "status": "available",
-      "rawPriceMarket": "۱۸,۰۵۰,۰۰۰,۰۰۰",
+      "rawPriceMarket": "۱۸,۱۲۰,۰۰۰,۰۰۰",
       "rawPriceFactory": "۱۲,۵۰۰,۰۰۰,۰۰۰"
     },
     {
@@ -1428,12 +1428,12 @@
       "category": "نیسان - Nissan",
       "group": "imported",
       "url": null,
-      "priceMarket": 144000000000,
+      "priceMarket": 144500000000,
       "priceFactory": 39800000000,
-      "change": 0,
-      "changePercent": 0,
+      "change": 500000000,
+      "changePercent": 0.35,
       "status": "available",
-      "rawPriceMarket": "۱۴,۴۰۰,۰۰۰,۰۰۰",
+      "rawPriceMarket": "۱۴,۴۵۰,۰۰۰,۰۰۰",
       "rawPriceFactory": "۳,۹۸۰,۰۰۰,۰۰۰"
     },
     {
